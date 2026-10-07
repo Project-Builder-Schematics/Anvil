@@ -86,7 +86,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-use-case
 
 ### `hex-route`
 
-`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _use_case_, _path_, _status_ (200|201|202|204). The use case must already be in the barrel.
+`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _use_case_, _path_, _status_ (200|201|202|204). The use case must already be in the barrel. The first controller of a slice also gets `<Slice>ErrorFilter` (`infrastructure/http/`, registered with `@UseFilters`), whose code → status map comes from the Answers cells that cite a rule (`422 rules 2–3`) and that rule's error code; a code no cell cites answers 500.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-route --context=billing --slice=invoicing --resource=invoices --method=POST

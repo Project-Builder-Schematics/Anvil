@@ -3,6 +3,7 @@ import {
   after,
   billingSeed,
   DOCS,
+  invoicingDocs,
   invoicingModel,
   LIB,
   run,
@@ -63,7 +64,7 @@ describe('hex-route', () => {
     expect(error).toBeUndefined();
     const source = tree.get(controller) ?? '';
     expect(source).toContain(
-      "import { Body, Controller, Inject, Post } from '@nestjs/common';",
+      "import { Body, Controller, Inject, Post, UseFilters } from '@nestjs/common';",
     );
     expect(source).toContain("import { z } from 'zod';");
     expect(source).toContain("} from '../../application/IssueInvoice';");
@@ -135,7 +136,7 @@ describe('hex-route', () => {
     expect(second.error).toBeUndefined();
     const source = second.tree.get(controller) ?? '';
     expect(source).toContain(
-      "import { Body, Controller, Delete, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';",
+      "import { Body, Controller, Delete, HttpCode, Inject, Param, Post, Query, UseFilters } from '@nestjs/common';",
     );
     expect(source.match(/@Controller\(/g)).toHaveLength(1);
     expect(source).toContain(
@@ -229,6 +230,121 @@ describe('hex-route', () => {
 
     expect(String(error)).toContain('app.module.ts not found');
     expect([...tree.keys()]).toEqual([]);
+  });
+
+  describe('the error filter', () => {
+    const filter = `${slice}/infrastructure/http/InvoicingErrorFilter.ts`;
+    const rules = (extra: string) =>
+      invoicingModel
+        .replace(
+          /## Business rules[\s\S]*?## Use cases/,
+          `## Business rules
+
+| # | Rule | Source |
+| --- | --- | --- |
+| 1 | No lines: \`LINES_REQUIRED\`. | decided |
+| 2 | Unknown customer: \`CUSTOMER_UNKNOWN\`. | decided |
+| 3 | No such invoice: \`INVOICE_NOT_FOUND\`. | decided |
+| 4 | Already void: \`ALREADY_VOID\`. | decided |
+| 5 | Not cited by any route: \`NEVER_ANSWERED\`. | decided |
+
+## Use cases`,
+        )
+        .replace('| 201 · 422 rule 1 |', `| ${extra} |`);
+    const withAnswers = (post: string, del: string) => ({
+      ...invoicingDocs,
+      [`${DOCS}/domain-model.md`]: rules(post).replace('| 204 |', `| ${del} |`),
+    });
+
+    it('maps each code to the status of the Answers cell that cites its rule, ranges and lists included', async () => {
+      const seed = await prepared();
+      const { tree, error } = await go(
+        {},
+        {
+          ...seed,
+          ...withAnswers(
+            '201 · 400 · 422 rules 1–2',
+            '204 · 404 rule 3 · 409 rule 4',
+          ),
+        },
+      );
+
+      expect(error).toBeUndefined();
+      const source = tree.get(filter) ?? '';
+      expect(source).toContain('LINES_REQUIRED: 422,');
+      expect(source).toContain('CUSTOMER_UNKNOWN: 422,');
+      expect(source).toContain('INVOICE_NOT_FOUND: 404,');
+      expect(source).toContain('ALREADY_VOID: 409,');
+      expect(source).not.toContain('NEVER_ANSWERED');
+      expect(source).not.toContain('400');
+    });
+
+    it('answers 500 for a domain error no route maps, and leaves every other exception to Nest', async () => {
+      const source = (await go()).tree.get(filter) ?? '';
+
+      expect(source).toContain('@Catch()');
+      expect(source).toContain('extends BaseExceptionFilter');
+      expect(source).toContain('Object.hasOwn(INVOICING_ERROR, error.code)');
+      expect(source).toContain('STATUS[exception.code] ?? 500');
+      expect(source).toContain('super.catch(exception, host)');
+    });
+
+    it('registers the filter on the generated controller', async () => {
+      const source = (await go()).tree.get(controller) ?? '';
+
+      expect(source).toContain(
+        "import { InvoicingErrorFilter } from './InvoicingErrorFilter';",
+      );
+      expect(source).toContain(
+        "@Controller('invoices')\n@UseFilters(InvoicingErrorFilter)\nexport class",
+      );
+    });
+
+    it('refuses a code two Answers cells map to different statuses', async () => {
+      const { tree, error } = await go(
+        {},
+        {
+          ...(await prepared()),
+          ...withAnswers('201 · 422 rule 1', '204 · 409 rule 1'),
+        },
+      );
+
+      expect(String(error)).toContain(
+        'LINES_REQUIRED is answered 422 and 409 in the Driving adapters table',
+      );
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    it('refuses an Answers cell that cites a rule the model does not have', async () => {
+      const { error } = await go(
+        {},
+        {
+          ...(await prepared()),
+          ...withAnswers('201 · 422 rule 9', '204'),
+        },
+      );
+
+      expect(String(error)).toContain('rule 9');
+    });
+
+    it('is not generated for a context without error codes', async () => {
+      const seed = await prepared();
+      const model = (seed[`${DOCS}/domain-model.md`] ?? '').replace(
+        /\| 1 \|.*\n\| 2 \|.*\n/,
+        '',
+      );
+      seed[`${DOCS}/domain-model.md`] = model.replace(
+        '201 · 422 rule 1',
+        '201',
+      );
+      seed[`${LIB}/src/invoicing/domain/errors.ts`] =
+        'export const INVOICING_ERROR = {} as const;\n';
+      const { tree, error } = await go({}, seed);
+
+      expect(error).toBeUndefined();
+      expect(tree.has(filter)).toBe(false);
+      expect(tree.get(controller)).not.toContain('UseFilters');
+    });
   });
 
   it('asks for the path when the resource has several rows for the method', async () => {

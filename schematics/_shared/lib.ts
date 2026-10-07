@@ -212,6 +212,43 @@ export const errorCodes = (model: string): string[] => {
   return [...codes];
 };
 
+/**
+ * Error code → HTTP status, from the Driving adapters `Answers` cells: `422 rules 2–3`
+ * gives the codes the business rules 2 and 3 name that status.
+ */
+export const errorStatuses = (model: string): Map<string, number> => {
+  const rules = numberedRules(model);
+  const statuses = new Map<string, number>();
+  for (const [, , answers] of table(model, 'Driving adapters')) {
+    for (const cited of (answers ?? '').matchAll(
+      /\b([45]\d\d)\s+rules?\s+([\d\s,–-]+)/g,
+    )) {
+      const status = Number(cited[1]);
+      for (const span of (cited[2] ?? '').matchAll(
+        /(\d+)(?:\s*[–-]\s*(\d+))?/g,
+      )) {
+        const from = Number(span[1]);
+        for (let n = from; n <= Number(span[2] ?? from); n += 1) {
+          const rule = rules.get(n);
+          if (rule === undefined)
+            throw new Error(
+              `${String(status)} cites rule ${String(n)}, which is not in the Business rules table`,
+            );
+          for (const [, code = ''] of rule.matchAll(CODE)) {
+            const known = statuses.get(code);
+            if (known !== undefined && known !== status)
+              throw new Error(
+                `${code} is answered ${String(known)} and ${String(status)} in the Driving adapters table`,
+              );
+            statuses.set(code, status);
+          }
+        }
+      }
+    }
+  }
+  return statuses;
+};
+
 /** `POST /orders/:id` → { method: "POST", resource: "orders", path: "/:id" } */
 export const parseRoute = (
   route: string,

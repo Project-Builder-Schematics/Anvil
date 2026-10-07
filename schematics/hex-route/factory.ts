@@ -8,6 +8,8 @@ import {
   camel,
   constant,
   dashed,
+  errorCodes,
+  errorStatuses,
   parseRoute,
   pascal,
   resolveSlice,
@@ -101,6 +103,46 @@ const decoratorsOf = (controller: string, name: string): string | undefined => {
   for (let i = at - 1; (lines[i] ?? '').startsWith('  @'); i -= 1)
     decorators.unshift(lines[i] ?? '');
   return decorators.join('\n');
+};
+
+/** Maps the domain errors the Answers cells cite to their status; an error nothing cites answers 500. */
+const errorFilterSource = (
+  slice: string,
+  statuses: Map<string, number>,
+): string => {
+  const errors = `${constant(slice)}_ERROR`;
+  return `import { Catch, type ArgumentsHost } from '@nestjs/common';
+import { BaseExceptionFilter } from '@nestjs/core';
+import { ${errors} } from '../../domain/errors';
+
+const STATUS: Record<string, number> = {
+${[...statuses].map(([code, status]) => `  ${code}: ${String(status)},`).join('\n')}
+};
+
+const isDomainError = (error: unknown): error is { code: string } =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  typeof error.code === 'string' &&
+  Object.hasOwn(${errors}, error.code);
+
+@Catch()
+export class ${pascal(slice)}ErrorFilter extends BaseExceptionFilter {
+  override catch(exception: unknown, host: ArgumentsHost): void {
+    const adapter = this.applicationRef ?? this.httpAdapterHost?.httpAdapter;
+    if (!adapter || !isDomainError(exception)) {
+      super.catch(exception, host);
+      return;
+    }
+    const statusCode = STATUS[exception.code] ?? 500;
+    adapter.reply(
+      host.switchToHttp().getResponse(),
+      { statusCode, code: exception.code },
+      statusCode,
+    );
+  }
+}
+`;
 };
 
 const injection = (useCase: string): string =>
@@ -208,12 +250,26 @@ export default async (input: Input, shared?: WriteBuffer) => {
       `${input.method} /${resource}${path === '/' ? '' : path} is already answered by ${className}`,
     );
   if (controller === undefined) {
+    const filter = `${pascal(slice)}ErrorFilter`;
+    const filtered = errorCodes(model).length > 0;
+    if (filtered)
+      await buffer.write(
+        `${code}/infrastructure/http/${filter}.ts`,
+        errorFilterSource(slice, errorStatuses(model)),
+      );
     await buffer.write(
       controllerPath,
-      `${withNamedImports(withImports(`import { z } from 'zod';\n`, [applicationImport(useCase)]), '@nestjs/common', op.nest)}
+      `${withNamedImports(
+        withImports(`import { z } from 'zod';\n`, [
+          applicationImport(useCase),
+          ...(filtered ? [`import { ${filter} } from './${filter}';`] : []),
+        ]),
+        '@nestjs/common',
+        [...op.nest, ...(filtered ? ['UseFilters'] : [])],
+      )}
 ${op.schemas.join('\n')}
 
-@Controller('${resource}')
+@Controller('${resource}')${filtered ? `\n@UseFilters(${filter})` : ''}
 export class ${className} {
   constructor(
 ${injection(useCase)}

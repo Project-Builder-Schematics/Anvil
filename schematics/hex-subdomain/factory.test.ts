@@ -41,6 +41,7 @@ describe('hex-subdomain', () => {
         'infrastructure/LedgerLedgerGateway.ts',
         'infrastructure/MemoryClock.ts',
         'infrastructure/MemoryInvoiceRepository.ts',
+        'infrastructure/http/InvoicingErrorFilter.ts',
         'infrastructure/http/invoices.controller.ts',
         'steps/IssueInvoice.steps.ts',
         'steps/VoidInvoice.steps.ts',
