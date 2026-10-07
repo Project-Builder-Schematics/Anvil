@@ -1,0 +1,10 @@
+node_modules
+dist
+.nx
+.angular
+.git
+coverage
+test-output
+.dev
+**/node_modules
+**/dist
