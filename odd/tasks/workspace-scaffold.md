@@ -160,6 +160,28 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - `ng-component` inputs are required-only; add optional inputs with defaults when a second component needs them.
   - Confirm the assumed classification of the six contexts in `docs/<ctx>/README.md`.
   - API libs have no `typecheck` target, so only `compiles.test.ts` typechecks the generated shape; consider an inferred target.
+- [ ] T12: harden the schematics. These are the advisory findings from the T9 reviews; none blocked approval.
+  - **Reviews** (2026-10-08, all approved and acknowledged):
+    - T9a (2c18703..164cc8e): review-25a0f245d5571d16.
+    - T9b (164cc8e..79aa448): review-881e0c913cb9705d.
+    - T9c (79aa448..2019fdc): review-de9682142b66b741.
+    - T9d and T9e were not reviewed, by the user's choice. They are regenerations, verified by diff.
+  - **`_shared`**
+    - Inline-slice prefix match (lib.ts:143).
+    - The side-effect import scan (lib.ts:233-238).
+    - Untested exports (lib.ts:254-275).
+    - A vacuous writeBuffer test (lib.test.ts:86-91).
+    - The create and template render paths diverge (lib.ts:46-51).
+    - Angular exclude is duplicated and the prefix is optional (libs.ts:317-348).
+    - Gherkin expression escaping, and its duplication (gherkin.ts:26-48).
+    - A silent test-target no-op (ng.ts:80-83), and duplicate member names (ng.ts:92-109).
+  - **Backend**
+    - Provider identifier collisions (hex-driven-port:37-45).
+    - Duplicate steps across slices (hex-use-case:113-122).
+    - hex-route silently merges an existing route (203-211), and its default status is duplicated (149-156).
+    - `apps/api/project.json` drops the project name.
+  - **Frontend**
+    - The dashed-context prefix (web-context:35).
 
 ## Next step
 
