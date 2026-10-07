@@ -141,6 +141,11 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - Checks at the end: `bun test schematics` 229 pass, 0 fail; `bun test tools` 67 pass, 0 fail; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects (30 of 31 tasks from the cache); `bunx prettier --check .` clean; `docker compose config -q` ok; `bun tools/dev/dev.ts status` prints the primary identity, an unknown command and an empty `--port-offset=` exit 1 with a clear message.
   - Not verified (no boots): the api container with `--inspect=0.0.0.0` attaching from the host, the whole `dev` flow with the new parser against a real `.env`, and the seed over `127.0.0.1` against the shared Postgres.
 
+- 2026-10-08: T14 done in one commit, 3a8edc8 `fix(schematics): keep driven-port conflict checks on re-runs with unchanged inputs`. Route: one delegated writer.
+  - RED: 3 `hex-driven-port` tests failed (adapter of another port, doc now answers with another adapter, token taken) because an existing port file returned before any check; the 2 `hex-subdomain` re-run tests and the hand-edited-adapter test passed already (the no-op was true at HEAD).
+  - Checks: `bun test schematics` 235 pass, 0 fail; `bunx nx run-many -t lint test typecheck` 31 tasks succeeded; `bunx prettier --check .` clean.
+  - Real engine, throwaway context `scratch`: first `hex-subdomain` wrote 9 files; second run "done — no changes"; after adding a `DropThing` row, feature and route it wrote only DropThing.ts, DropThing.steps.ts and the composition, barrel and controller entries. Reverted fully.
+
 ## Follow-ups
 
 - [x] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval. Done except the Stryker end-to-end run (kept open, see below). Route: delegated direct, one writer.
@@ -227,19 +232,19 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - **Compose** (22bab5f)
     - [x] The inspector stays on `0.0.0.0:9229` inside the container and the reason is documented in the compose file and README. `bun --help` only lists `--inspect=<val>`; a run showed `--inspect=127.0.0.1:P` binds to loopback only and `0.0.0.0:P` to all interfaces. Docker forwards the published port to the container's own address, so a loopback bind would refuse the host. Exposure: host `127.0.0.1` and the containers of `demo-shared-net`.
 
-- [ ] T14: third-round findings from the T12/T13 review.
+- [x] T14: third-round findings from the T12/T13 review. Done (3a8edc8); the re-run claim was already true at HEAD for the no-op case, and the real gap was the opposite one. Route: delegated direct, one writer.
   - The range 9038192..94674df was approved and acknowledged (review-5214c0f5251e518f). Nothing blocked.
   - **Re-run idempotency** (most important: `hex-subdomain` re-runs depend on it):
-    - `hex-route` refuses a re-run of an unchanged route (factory.ts:197-205).
-    - `hex-route` handles a re-run after a doc change badly.
-    - `hex-driven-port` fails on re-run because the adapter file already exists (factory.ts:142-144).
-    - Fix: a re-run with identical inputs is a no-op; only a real conflict refuses.
+    - [x] `hex-route` refuses a re-run of an unchanged route (factory.ts:197-205). Not reproducible: it returns when the decorators match; pinned by a `hex-subdomain` re-run test.
+    - [x] `hex-route` handles a re-run after a doc change badly. Not reproducible: the new route is added and the old one untouched (subdomain re-run test).
+    - [x] `hex-driven-port`: the early return on an existing port file skipped every conflict check. Now existing files are kept and conflicts refuse (adapter of another port, token provided by another adapter, token taken). 3a8edc8.
+    - [x] Fix: a re-run with identical inputs is a no-op; only a real conflict refuses. `hex-use-case` and `hex-slice` keep their no-op re-run; `hex-bounded-context` stays fail-closed on an existing lib on purpose.
   - **Readability**
-    - The documented gate in hex-bounded-context (214-218).
-    - The re-run comment in hex-route.
-    - The duplicated subdomain parse in hex-use-case (68).
-    - The legacy siblings in gherkin.ts (56).
-    - The interpolation check and comment in tools/dev/infra.ts (34-38).
+    - [ ] The documented gate in hex-bounded-context (214-218). Left open.
+    - [x] The re-run comment in hex-route. Already accurate; unchanged.
+    - [ ] The duplicated subdomain parse in hex-use-case (68). Left open: hex-context falls back to the raw cell, so merging changes error behaviour.
+    - [ ] The legacy siblings in gherkin.ts (56). Left open.
+    - [ ] The interpolation check and comment in tools/dev/infra.ts (34-38). Left open.
 
 ## Next step
 
