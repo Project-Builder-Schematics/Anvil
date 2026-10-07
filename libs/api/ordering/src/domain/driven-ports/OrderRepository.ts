@@ -1,4 +1,10 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface OrderRepository {}
+import type { Order } from '../Order';
+import type { OrderId } from '../OrderId';
+
+export interface OrderRepository {
+  nextId(): OrderId;
+  byId(id: OrderId): Promise<Order | null>;
+  save(order: Order): Promise<void>;
+}
 
 export const ORDER_REPOSITORY = Symbol('OrderRepository');
