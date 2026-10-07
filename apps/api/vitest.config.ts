@@ -15,6 +15,8 @@ export default defineConfig({
       thresholds: { lines: 70, branches: 70, functions: 70, statements: 70 },
     },
   },
+  // Workspace libs are imported through the tsconfig path aliases.
+  resolve: { tsconfigPaths: true },
   // esbuild (Vite's default) cannot emit decorator metadata, which Nest DI needs.
   plugins: [
     swc.vite({
