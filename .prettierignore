@@ -5,3 +5,5 @@
 /.nx/workspace-data
 .nx/self-healing
 .angular
+
+libs/web/shared/design-system/themes/*/DESIGN.md

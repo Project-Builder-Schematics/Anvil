@@ -20,7 +20,10 @@
             "input": "apps/web/public"
           }
         ],
-        "styles": ["apps/web/src/styles.css"]
+        "styles": [
+          "libs/web/shared/design-system/src/styles/themes.generated.css",
+          "apps/web/src/styles.css"
+        ]
       },
       "configurations": {
         "production": {

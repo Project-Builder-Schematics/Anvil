@@ -34,7 +34,10 @@
       "@demo/web-ordering-data-access": [
         "./libs/web/ordering/data-access/src/index.ts"
       ],
-      "@demo/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"]
+      "@demo/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"],
+      "@demo/web-shared-design-system": [
+        "./libs/web/shared/design-system/src/index.ts"
+      ]
     },
     "noUncheckedIndexedAccess": true,
     "noPropertyAccessFromIndexSignature": true,

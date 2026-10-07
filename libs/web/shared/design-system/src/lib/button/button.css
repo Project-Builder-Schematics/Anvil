@@ -1,0 +1,24 @@
+button {
+  padding: var(--ds-space-sm) var(--ds-space-lg);
+  border: 0;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-color-primary);
+  color: var(--ds-color-on-primary);
+  font-family: var(--ds-type-body-family);
+  font-size: var(--ds-type-body-size);
+  font-weight: var(--ds-type-body-weight);
+  line-height: var(--ds-type-body-line-height);
+  letter-spacing: var(--ds-type-body-letter-spacing);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--ds-color-primary-hover);
+}
+
+button:disabled {
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-muted);
+  cursor: not-allowed;
+}
