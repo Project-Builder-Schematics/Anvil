@@ -232,6 +232,47 @@ describe('hex-route', () => {
     expect([...tree.keys()]).toEqual([]);
   });
 
+  describe('a body with no fields', () => {
+    const withModel = async (replace: [string, string][]) => ({
+      ...(await prepared()),
+      [`${DOCS}/domain-model.md`]: replace.reduce(
+        (model, [from, to]) => model.replace(from, to),
+        invoicingModel,
+      ),
+    });
+
+    it('defaults to an empty object, since Express leaves a missing body undefined and the pipe validates it as is', async () => {
+      const seed = await withModel([['`{ customerId }`', '`{}`']]);
+      const source = (await go({}, seed)).tree.get(controller) ?? '';
+
+      expect(source).toContain(
+        'const issueInvoiceBody = z.object({}).default({});',
+      );
+    });
+
+    it('counts the path parameters as the use case command, not as body fields', async () => {
+      const seed = await withModel([
+        [
+          '| `DELETE /invoices/:invoiceId` | `VoidInvoice` | 204 |',
+          '| `POST /invoices/:invoiceId/void` | `VoidInvoice` | 200 |',
+        ],
+      ]);
+      const source =
+        (await go({ path: '/:invoiceId/void' }, seed)).tree.get(controller) ??
+        '';
+
+      expect(source).toContain(
+        'const voidInvoiceBody = z.object({}).default({});',
+      );
+    });
+
+    it('keeps the plain empty object when the command has fields the body will carry', async () => {
+      const source = (await go()).tree.get(controller) ?? '';
+
+      expect(source).toContain('const issueInvoiceBody = z.object({});');
+    });
+  });
+
   describe('the error filter', () => {
     const filter = `${slice}/infrastructure/http/InvoicingErrorFilter.ts`;
     const rules = (extra: string) =>

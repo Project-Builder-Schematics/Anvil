@@ -13,6 +13,7 @@ import {
   parseRoute,
   pascal,
   resolveSlice,
+  row,
   table,
   withImports,
   withNamedImports,
@@ -39,13 +40,15 @@ interface Operation {
   /** Path under the resource, "/" for the resource root. */
   path: string;
   status: number;
+  /** Field names of the use case command from its Use cases row; undefined when the model has no row. */
+  fields?: string[] | undefined;
 }
 
 const pathParams = (path: string): string[] =>
   [...path.matchAll(/:(\w+)/g)].map((m) => m[1] ?? '');
 
 /** The Zod schemas and the handler of one operation. */
-const operation = ({ useCase, method, path, status }: Operation) => {
+const operation = ({ useCase, method, path, status, fields }: Operation) => {
   const name = camel(useCase);
   const params = pathParams(path);
   const section = method === 'GET' || method === 'DELETE' ? 'Query' : 'Body';
@@ -65,7 +68,8 @@ const operation = ({ useCase, method, path, status }: Operation) => {
           `const ${name}Params = z.object({ ${params.map((p) => `${p}: z.string()`).join(', ')} });`,
         ]
       : []),
-    `const ${name}${section} = z.object({});`,
+    // Express leaves a body-less request's body undefined, and the pipe validates it as is.
+    `const ${name}${section} = z.object({})${section === 'Body' && fields?.every((f) => params.includes(f)) ? '.default({})' : ''};`,
   ];
   const route = path === '/' ? '' : `'${path.replace(/^\//, '')}'`;
   const decorators = [
@@ -211,7 +215,15 @@ export default async (input: Input, shared?: WriteBuffer) => {
       String(defaultStatus(input.method)),
     ),
   );
-  const op = operation({ useCase, method: input.method, path, status });
+  const command = row(model, 'Use cases', useCase)?.[1];
+  const fields = command?.match(/[A-Za-z_]\w*(?=\s*[,}:?])/g) ?? [];
+  const op = operation({
+    useCase,
+    method: input.method,
+    path,
+    status,
+    fields: command === undefined ? undefined : fields,
+  });
 
   const lib = apiLibDir(context);
   const index = await buffer.readRequired(
