@@ -6,6 +6,8 @@ describe('OrderId', () => {
   });
 
   it.each(['', ' ', '\t\n'])('refuses the blank id %j', (value) => {
-    expect(() => OrderId.of(value)).toThrow(RangeError);
+    expect(() => OrderId.of(value)).toThrow(
+      new RangeError('OrderId must not be blank'),
+    );
   });
 });

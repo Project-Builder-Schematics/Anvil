@@ -12,13 +12,17 @@ describe('Money', () => {
   });
 
   it.each([-1, 1.5, Number.NaN])('refuses the amount %s', (amount) => {
-    expect(() => Money.of(amount, 'USD')).toThrow(RangeError);
+    expect(() => Money.of(amount, 'USD')).toThrow(
+      new RangeError('Money amount must be a non-negative integer'),
+    );
   });
 
   it.each(['', 'US', 'USDX', 'usd', 'U$D', ' USD'])(
     'refuses the currency "%s"',
     (currency) => {
-      expect(() => Money.of(100, currency)).toThrow(RangeError);
+      expect(() => Money.of(100, currency)).toThrow(
+        new RangeError('Money currency must be three uppercase letters'),
+      );
     },
   );
 });

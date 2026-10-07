@@ -6,7 +6,9 @@ describe('ProductId', () => {
   });
 
   it.each(['', ' ', '\t\n'])('refuses the blank id %j', (value) => {
-    expect(() => ProductId.of(value)).toThrow(RangeError);
+    expect(() => ProductId.of(value)).toThrow(
+      new RangeError('ProductId must not be blank'),
+    );
   });
 
   it('equals an id with the same value only', () => {
