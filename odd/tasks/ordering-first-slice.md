@@ -126,6 +126,15 @@ Strict.
 
 - 2026-10-08: the user confirmed rules 9 to 11 and the status mapping. They are now `decided`, and the `@draft` tags are removed from all 11 scenarios. `nx test api-ordering`: 14 files, 100 tests passed. `prettier --check docs/ordering`: clean.
 
+- 2026-10-08: the native review of a675acf..9288965 was approved and acknowledged (review-7347b54c2c8c71ce). It left two advisory findings, open as follow-ups:
+  - [ ] Lost-update race: `AddOrderLine` reads, modifies and writes without a version check (AddOrderLine.ts:29-35). Add optimistic concurrency, an order version checked by the repository, before a real database adapter lands.
+  - [ ] Trimmed id aliasing in the controller (orders.controller.ts:42): `" o1"` and `"o1"` resolve to the same order.
+
 ## Next step
 
-Native review of the slice. The runtime checks are listed in the O5 progress line. After that comes the next slice: inventory reservation, payments and events.
+The schematic improvements surfaced in IMPACT.md:
+- `hex-route` should generate an error-to-status filter and a `.default({})` empty body.
+- `hex-bounded-context` should write the Subdomains table.
+- Pending steps should fail instead of skipping.
+
+After that, the next slice: inventory reservation, payments and events. The runtime checks are listed in the O5 progress line.
