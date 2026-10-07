@@ -1,0 +1,13 @@
+<div role="group" aria-label="Order actions">
+  <ds-button [disabled]="!canPlace() || busy()" (click)="placeOrder.emit()">
+    <ng-container *dsVariant="'checkout-cta'; is: 'control'"
+      >Place order</ng-container
+    >
+    <ng-container *dsVariant="'checkout-cta'; is: 'b'"
+      >Place order securely</ng-container
+    >
+  </ds-button>
+  <ds-button [disabled]="!canCancel() || busy()" (click)="cancelOrder.emit()">
+    Cancel order
+  </ds-button>
+</div>

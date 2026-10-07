@@ -2,6 +2,7 @@ import {
   canCancel,
   canEdit,
   canPlace,
+  isQuantity,
   lineTotal,
   orderTotal,
   withStatus,
@@ -66,4 +67,17 @@ describe('withStatus', () => {
       order('Placed', [mouse]),
     );
   });
+});
+
+describe('isQuantity', () => {
+  it.each([1, 2, 98, 99])('accepts %d (rule 2)', (value) => {
+    expect(isQuantity(value)).toBe(true);
+  });
+
+  it.each([0, 100, -1, 1.5, Number.NaN, null, undefined, '2'])(
+    'refuses %j',
+    (value) => {
+      expect(isQuantity(value)).toBe(false);
+    },
+  );
 });

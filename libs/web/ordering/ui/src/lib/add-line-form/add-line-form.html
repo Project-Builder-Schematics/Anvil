@@ -1,0 +1,38 @@
+<form [formRoot]="form">
+  <div class="field">
+    <label for="add-line-product">Product id</label>
+    <input
+      id="add-line-product"
+      type="text"
+      autocomplete="off"
+      aria-required="true"
+      [formField]="form.productId"
+      [attr.aria-invalid]="productError() ? 'true' : null"
+      [attr.aria-describedby]="productError() ? 'add-line-product-error' : null"
+    />
+    @if (productError(); as message) {
+    <p id="add-line-product-error" class="error">{{ message }}</p>
+    }
+  </div>
+  <div class="field">
+    <label for="add-line-quantity">Quantity</label>
+    <input
+      id="add-line-quantity"
+      type="number"
+      inputmode="numeric"
+      aria-required="true"
+      [formField]="form.quantity"
+      [attr.aria-invalid]="quantityError() ? 'true' : null"
+      [attr.aria-describedby]="
+        quantityError()
+          ? 'add-line-quantity-hint add-line-quantity-error'
+          : 'add-line-quantity-hint'
+      "
+    />
+    <p id="add-line-quantity-hint" class="hint">From 1 to 99.</p>
+    @if (quantityError(); as message) {
+    <p id="add-line-quantity-error" class="error">{{ message }}</p>
+    }
+  </div>
+  <ds-button type="submit" [disabled]="disabled()">Add line</ds-button>
+</form>

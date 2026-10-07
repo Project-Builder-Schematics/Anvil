@@ -1,0 +1,35 @@
+<table>
+  <caption>
+    Lines
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Product</th>
+      <th scope="col">Quantity</th>
+      <th scope="col">Unit price</th>
+      <th scope="col">Line total</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (line of lines(); track line.productId) {
+    <tr>
+      <th scope="row">{{ line.productId }}</th>
+      <td>{{ line.quantity }}</td>
+      <td>{{ format(line.unitPrice) }}</td>
+      <td>{{ format(lineTotal(line)) }}</td>
+    </tr>
+    } @empty {
+    <tr>
+      <td colspan="4">No lines yet.</td>
+    </tr>
+    }
+  </tbody>
+  @if (total(); as sum) {
+  <tfoot>
+    <tr>
+      <th scope="row" colspan="3">Total</th>
+      <td>{{ format(sum) }}</td>
+    </tr>
+  </tfoot>
+  }
+</table>

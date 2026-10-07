@@ -11,7 +11,7 @@ export interface OrderLine {
 export interface Order {
   readonly orderId: string;
   readonly status: OrderStatus;
-  readonly lines: readonly OrderLine[];
+  readonly lines: OrderLine[];
 }
 
 export interface OrderStatusChange {
@@ -27,6 +27,12 @@ export interface AddLine {
 /** Rule 2: the quantity of a line, inclusive. */
 export const QUANTITY_MIN = 1;
 export const QUANTITY_MAX = 99;
+
+export const isQuantity = (value: unknown): boolean =>
+  typeof value === 'number' &&
+  Number.isInteger(value) &&
+  value >= QUANTITY_MIN &&
+  value <= QUANTITY_MAX;
 
 export const lineTotal = ({ unitPrice, quantity }: OrderLine): Money => ({
   amount: unitPrice.amount * quantity,

@@ -135,7 +135,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component
 With domain types (a presentational component that takes a list and emits a payload):
 
 ```sh
-env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/ordering/ui --name=line-list --inputs=lines:OrderLine[] --type_import=@demo/web-ordering-domain
+env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/ordering/ui --name=line-list '--inputs=lines:OrderLine[]' --type_import=@demo/web-ordering-domain
 ```
 
 ### `ng-service`
