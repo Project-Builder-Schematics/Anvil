@@ -54,7 +54,7 @@ A context depends on another only through its public barrel `@demo/api-<ctx>`, a
 
 ### `hex-bounded-context`
 
-`context`, `purpose`, `subdomain_class` (core|supporting|generic), `criticality` (low|medium|high), `volatility` (low|medium|high); _classification_status_ (confirmed|assumed), _tactical_ (full|deferred), _context_map_, _subdomains_ (comma-separated; empty means inline). Fails if the lib exists.
+`context`, `purpose`, `subdomain_class` (core|supporting|generic), `criticality` (low|medium|high), `volatility` (low|medium|high); _classification_status_ (confirmed|assumed), _tactical_ (full|deferred), _context_map_, _subdomains_ (comma-separated; empty means inline). An existing README gets the missing `## Subdomains` and `## Classification` sections appended. Fails if the lib exists.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-bounded-context --context=billing --purpose="Bills customers." --subdomain_class=supporting --criticality=high --volatility=low --subdomains=invoicing,payouts --context_map=ordering:conformist

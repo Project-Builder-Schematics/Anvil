@@ -266,6 +266,14 @@ export default async (input: Input, shared?: WriteBuffer) => {
     ),
   );
 
+  const subdomainsSection = `## Subdomains
+
+One slice of code per row; docs mirror the code, so a context with several subdomains keeps one folder per subdomain.
+
+| Subdomain | Responsibility |
+| --- | --- |
+${modelDirs.map(({ subdomain, link }) => `| [${subdomain}](${link}) | |`).join('\n')}
+`;
   if (readme === undefined) {
     createFile(
       `${docs}/README.md`,
@@ -274,14 +282,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
 ${input.purpose}
 
 ${classification(input, level, assumed, relations)}
-## Subdomains
-
-One slice of code per row; docs mirror the code, so a context with several subdomains keeps one folder per subdomain.
-
-| Subdomain | Responsibility |
-| --- | --- |
-${modelDirs.map(({ subdomain, link }) => `| [${subdomain}](${link}) | |`).join('\n')}
-
+${subdomainsSection}
 ## Ubiquitous language
 
 ${
@@ -291,11 +292,18 @@ ${
 }
 `,
     );
-  } else if (!readme.includes('## Classification')) {
-    replaceContent(
-      `${docs}/README.md`,
-      `${readme.replace(/\n*$/, '\n')}\n${classification(input, level, assumed, relations)}`,
-    );
+  } else {
+    const missing = [
+      readme.includes('## Classification')
+        ? ''
+        : classification(input, level, assumed, relations),
+      /^## Subdomains\s*$/m.test(readme) ? '' : subdomainsSection,
+    ].filter(Boolean);
+    if (missing.length > 0)
+      replaceContent(
+        `${docs}/README.md`,
+        `${readme.replace(/\n*$/, '\n')}\n${missing.join('\n')}`,
+      );
   }
 
   const linked = inline ? [] : subdomains;

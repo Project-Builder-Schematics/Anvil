@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { table } from '../_shared/lib.ts';
 import { run, workspace } from '../_shared/testing.ts';
 import factory from './factory.ts';
 
@@ -220,7 +221,7 @@ describe('hex-bounded-context: the docs', () => {
     });
 
     describe('with a README that already declares its map', () => {
-      const declared = `# Tenancy\n\n## Classification\n\nhere\n\n## Context map\n\n| Depends on | Relationship |\n| --- | --- |\n| ledger | acl |\n`;
+      const declared = `# Tenancy\n\n## Classification\n\nhere\n\n## Subdomains\n\n| Subdomain | Responsibility |\n| --- | --- |\n| [tenancy](domain-model.md) | |\n\n## Context map\n\n| Depends on | Relationship |\n| --- | --- |\n| ledger | acl |\n`;
       const seed = { ...workspace, [README]: declared };
 
       it('declares the lint edge for a relation the README lists, leaving the README alone', async () => {
@@ -370,12 +371,43 @@ describe('hex-bounded-context: the docs', () => {
     expect(tree.has('docs/tenancy/glossary.md')).toBe(false);
   });
 
+  it('adds the Subdomains table hex-context and hex-subdomain parse to a README that has none, classified or not', async () => {
+    for (const existing of [
+      '# Tenancy\n\nThe tenant root.\n',
+      '# Tenancy\n\n## Classification\n\nalready here\n',
+    ]) {
+      const { tree } = await go({}, { ...workspace, [README]: existing });
+
+      const readme = tree.get(README) ?? '';
+      expect(readme.startsWith(existing)).toBe(true);
+      expect(readme.match(/^## Subdomains$/gm)).toHaveLength(1);
+      expect(table(readme, 'Subdomains')).toEqual([
+        ['[tenancy](domain-model.md)', ''],
+      ]);
+    }
+  });
+
+  it('lists every subdomain in the table it adds to an existing README', async () => {
+    const { tree } = await go(
+      { subdomains: 'invoicing,payouts' },
+      { ...workspace, [README]: '# Tenancy\n' },
+    );
+
+    expect(
+      table(tree.get(README) ?? '', 'Subdomains').map(([first]) => first),
+    ).toEqual([
+      '[invoicing](invoicing/domain-model.md)',
+      '[payouts](payouts/domain-model.md)',
+    ]);
+  });
+
   it('leaves an already classified README untouched', async () => {
     const { tree } = await go(
       {},
       {
         ...workspace,
-        [README]: '# Tenancy\n\n## Classification\n\nalready here\n',
+        [README]:
+          '# Tenancy\n\n## Classification\n\nalready here\n\n## Subdomains\n\n| Subdomain | Responsibility |\n| --- | --- |\n| [tenancy](domain-model.md) | the root |\n',
       },
     );
 
