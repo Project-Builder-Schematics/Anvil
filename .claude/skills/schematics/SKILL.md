@@ -47,7 +47,8 @@ A context depends on another only through its public barrel `@demo/api-<ctx>`, a
 
 - Declare it in the docs first: a row `| <provider> | customer-supplier / conformist / acl |`.
 - `hex-driven-port --kind=context --provider=<ctx>` refuses a provider that is not in the table and adds the lint edge. Never hand-edit `contextRelations`.
-- A new context declares its relations at creation with `--context_map=<ctx>:<relationship>,…`.
+- A new context declares its relations at creation with `--context_map=<ctx>:<relationship>,…`, each context once. When its README already declares a map, the README decides: its providers are declared in the lint boundaries and a relation it does not list is refused.
+- `schematics/_shared/context-map.fitness.test.ts` fails when the docs tables and the lint edges disagree, or a row uses an unknown relationship.
 
 ## Schematics
 

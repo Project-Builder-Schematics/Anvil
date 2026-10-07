@@ -290,6 +290,40 @@ describe('addContextRelation', () => {
     );
   });
 
+  it('reads the list whatever its formatting, comments and quotes', () => {
+    const formatted = [
+      'const contextRelations = [ // from, to',
+      '  [ "a" , \'b\' ], /* kept out of the way ] */',
+      "  ['c', 'd']",
+      '];',
+      'const layers = [];',
+      '',
+    ].join('\n');
+
+    const out = addContextRelation(formatted, 'b', 'a');
+
+    expect(out).toBe(
+      "const contextRelations = [\n  ['a', 'b'],\n  ['c', 'd'],\n  ['b', 'a'],\n];\nconst layers = [];\n",
+    );
+    expect(addContextRelation(formatted, 'c', 'd')).toBe(formatted);
+  });
+
+  it('reads a list on one line', () => {
+    expect(
+      addContextRelation("const contextRelations = [['a', 'b']];\n", 'b', 'a'),
+    ).toBe("const contextRelations = [\n  ['a', 'b'],\n  ['b', 'a'],\n];\n");
+  });
+
+  it('refuses an entry that is not a pair of names', () => {
+    expect(() =>
+      addContextRelation(
+        "const contextRelations = [\n  ['a', 'b'],\n  ...more,\n];\n",
+        'b',
+        'a',
+      ),
+    ).toThrow('contextRelations has an entry');
+  });
+
   it('refuses a config without the list', () => {
     expect(() => addContextRelation('export default [];', 'a', 'b')).toThrow(
       'contextRelations',

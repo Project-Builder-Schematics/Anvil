@@ -172,6 +172,9 @@ describe('hex-bounded-context: the docs', () => {
       expect(tree.get(README)).toContain(
         '| Depends on | Relationship |\n| --- | --- |\n| catalog | customer-supplier |\n| ledger | acl |\n',
       );
+      expect(tree.get(README)).toContain(
+        'Relationship is `customer-supplier`, `conformist` or `acl`.',
+      );
       expect(tree.get('eslint.config.mjs')).toContain(
         "const contextRelations = [\n  ['tenancy', 'catalog'],\n  ['tenancy', 'ledger'],\n];",
       );
@@ -194,6 +197,49 @@ describe('hex-bounded-context: the docs', () => {
       expect(
         String((await go({ context_map: 'downstream of catalog' })).error),
       ).toContain('<context>:<relationship>');
+    });
+
+    it('refuses the same context listed twice', async () => {
+      expect(
+        String(
+          (await go({ context_map: 'ledger:acl, ledger:conformist' })).error,
+        ),
+      ).toContain('ledger is listed twice');
+    });
+
+    it('refuses a relation a classified README does not declare, writing nothing', async () => {
+      const { tree, error } = await go(
+        { context_map: 'ledger:acl' },
+        { ...workspace, [README]: '# Tenancy\n\n## Classification\n\nhere\n' },
+      );
+
+      expect(String(error)).toContain(
+        'ledger is not in the Context map of docs/tenancy/README.md',
+      );
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    describe('with a README that already declares its map', () => {
+      const declared = `# Tenancy\n\n## Classification\n\nhere\n\n## Context map\n\n| Depends on | Relationship |\n| --- | --- |\n| ledger | acl |\n`;
+      const seed = { ...workspace, [README]: declared };
+
+      it('declares the lint edge for a relation the README lists, leaving the README alone', async () => {
+        const { tree, error } = await go({ context_map: 'ledger:acl' }, seed);
+
+        expect(error).toBeUndefined();
+        expect(tree.has(README)).toBe(false);
+        expect(tree.get('eslint.config.mjs')).toContain(
+          "['tenancy', 'ledger']",
+        );
+      });
+
+      it('declares the lint edges the README lists even when the flag is omitted', async () => {
+        const { tree } = await go({}, seed);
+
+        expect(tree.get('eslint.config.mjs')).toContain(
+          "['tenancy', 'ledger']",
+        );
+      });
     });
 
     it('refuses a context that depends on itself', async () => {

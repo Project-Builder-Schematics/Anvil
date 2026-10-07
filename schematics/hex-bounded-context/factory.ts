@@ -3,6 +3,7 @@ import { find, replaceContent } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
   ESLINT_CONFIG,
+  RELATIONSHIPS,
   TSCONFIG_BASE,
   addContextRelation,
   addLintContext,
@@ -12,6 +13,7 @@ import {
   assertDashed,
   createFile,
   docsDir,
+  table,
   title,
   writeBuffer,
   type WriteBuffer,
@@ -32,13 +34,12 @@ const LEVEL_TEXT: Record<Level, string> = {
 const ASSUMED_NOTE =
   'The classification is an assumption until the person confirms it; the strict level applies meanwhile.';
 
-const RELATIONSHIPS = ['customer-supplier', 'conformist', 'acl'];
-
 const parseContextMap = (
   text: string,
   context: string,
-): [provider: string, relationship: string][] =>
-  text
+): [provider: string, relationship: string][] => {
+  const seen = new Set<string>();
+  return text
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
@@ -53,16 +54,24 @@ const parseContextMap = (
       assertDashed(provider, 'context_map context');
       if (provider === context)
         throw new Error(`${context} cannot depend on itself`);
+      if (seen.has(provider))
+        throw new Error(`${provider} is listed twice in context_map`);
+      seen.add(provider);
       if (!RELATIONSHIPS.includes(relationship))
         throw new Error(
           `relationship "${relationship}" must be one of ${RELATIONSHIPS.join(', ')}`,
         );
       return [provider, relationship];
     });
+};
 
 const contextMap = (relations: [string, string][]): string => `## Context map
 
-The contexts this one depends on, each through its public barrel only. A dependency not listed here is refused by the schematics and by the lint boundaries. Relationship is \`customer-supplier\`, \`conformist\` or \`acl\`.
+The contexts this one depends on, each through its public barrel only. A dependency not listed here is refused by the schematics and by the lint boundaries. Relationship is ${RELATIONSHIPS.map(
+  (r) => `\`${r}\``,
+)
+  .join(', ')
+  .replace(/, ([^,]*)$/, ' or $1')}.
 
 | Depends on | Relationship |
 | --- | --- |
@@ -198,11 +207,33 @@ export default async (input: Input, shared?: WriteBuffer) => {
     }),
   );
 
+  const [readme, glossary] = await Promise.all([
+    find(`${docs}/README.md`).read(),
+    find(`${docs}/glossary.md`).read(),
+  ]);
+  // A README that already declares its map is the contract: the lint edges follow it.
+  const documented =
+    readme?.includes('## Classification') === true
+      ? table(readme, 'Context map').map((r) => r[0] ?? '')
+      : undefined;
+  for (const [provider] of relations) {
+    if (documented && !documented.includes(provider))
+      throw new Error(
+        `${provider} is not in the Context map of ${docs}/README.md — declare the relation there first`,
+      );
+  }
+  const providers = [
+    ...new Set([
+      ...relations.map(([provider]) => provider),
+      ...(documented ?? []),
+    ]),
+  ];
+
   const tsconfig = await buffer.readRequired(
     TSCONFIG_BASE,
     'the alias is registered in the workspace tsconfig',
   );
-  for (const [provider] of relations) {
+  for (const provider of providers) {
     if (!tsconfig.includes(`"${apiAlias(provider)}":`))
       throw new Error(
         `${provider} is not a registered context — create it first`,
@@ -212,10 +243,6 @@ export default async (input: Input, shared?: WriteBuffer) => {
     ESLINT_CONFIG,
     'the context is registered in the lint boundary list',
   );
-  const [readme, glossary] = await Promise.all([
-    find(`${docs}/README.md`).read(),
-    find(`${docs}/glossary.md`).read(),
-  ]);
 
   // Deliberately fail-closed: a context whose lib exists is never regenerated over.
   for (const [path, template] of Object.entries(
@@ -233,8 +260,8 @@ export default async (input: Input, shared?: WriteBuffer) => {
   );
   await buffer.write(
     ESLINT_CONFIG,
-    relations.reduce(
-      (config, [provider]) => addContextRelation(config, context, provider),
+    providers.reduce(
+      (config, provider) => addContextRelation(config, context, provider),
       addLintContext(lint, context),
     ),
   );

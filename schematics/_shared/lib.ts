@@ -105,6 +105,9 @@ export const title = (dashedCase: string): string => {
   return (words[0] ?? '').toUpperCase() + words.slice(1);
 };
 
+/** How a context relates to the one it depends on; the Context map table of a README uses these words. */
+export const RELATIONSHIPS = ['customer-supplier', 'conformist', 'acl'];
+
 export const SCOPE = '@demo';
 export const TSCONFIG_BASE = 'tsconfig.base.json';
 export const ESLINT_CONFIG = 'eslint.config.mjs';
@@ -334,25 +337,61 @@ export const addLintContext = (config: string, context: string): string => {
   return config.replace(list[0], `const contexts = [\n${items}\n];`);
 };
 
+/** The `[…]` assigned to `const <name> =`: its span in the config, `;` included, and the text between the brackets. */
+const arrayLiteral = (
+  config: string,
+  name: string,
+): { start: number; end: number; inner: string } | undefined => {
+  const head = new RegExp(`const ${name} = \\[`).exec(config);
+  if (!head) return undefined;
+  const open = head.index + head[0].length - 1;
+  const skipTo = (token: string, from: number): number => {
+    const at = config.indexOf(token, from);
+    return at === -1 ? config.length : at + token.length - 1;
+  };
+  let depth = 0;
+  for (let i = open; i < config.length; i += 1) {
+    const c = config[i] ?? '';
+    if (c === "'" || c === '"') i = skipTo(c, i + 1);
+    else if (config.startsWith('//', i)) i = skipTo('\n', i);
+    else if (config.startsWith('/*', i)) i = skipTo('*/', i + 2);
+    else if (c === '[') depth += 1;
+    else if (c === ']' && (depth -= 1) === 0)
+      return {
+        start: head.index,
+        end: config[i + 1] === ';' ? i + 2 : i + 1,
+        inner: config.slice(open + 1, i),
+      };
+  }
+  return undefined;
+};
+
+const NAME_PAIR = /\[\s*(['"])([^'"]+)\1\s*,\s*(['"])([^'"]+)\3\s*,?\s*\]/g;
+
 /** Declares in the root lint config that `from` may depend on `to`'s barrel; the module-boundary constraints are built from this list. */
 export const addContextRelation = (
   config: string,
   from: string,
   to: string,
 ): string => {
-  const list = /const contextRelations = \[([\s\S]*?)\];/.exec(config);
+  const list = arrayLiteral(config, 'contextRelations');
   if (!list)
     throw new Error(
       'eslint.config.mjs has no `const contextRelations = [...]` list to extend',
     );
-  const edges = (list[1] ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const edge = `['${from}', '${to}'],`;
-  if (edges.includes(edge)) return config;
-  const items = [...edges, edge].map((line) => `  ${line}`).join('\n');
-  return config.replace(list[0], `const contextRelations = [\n${items}\n];`);
+  const inner = list.inner.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+  if (inner.replace(NAME_PAIR, '').replace(/[\s,]/g, '') !== '')
+    throw new Error(
+      "contextRelations has an entry that is not a ['from', 'to'] pair of names",
+    );
+  const edges = [...inner.matchAll(NAME_PAIR)].map(
+    (m) => [m[2] ?? '', m[4] ?? ''] as const,
+  );
+  if (edges.some(([a, b]) => a === from && b === to)) return config;
+  const items = [...edges, [from, to]]
+    .map(([a, b]) => `  ['${a}', '${b}'],`)
+    .join('\n');
+  return `${config.slice(0, list.start)}const contextRelations = [\n${items}\n];${config.slice(list.end)}`;
 };
 
 // --- Nest module metadata: `@Module({ imports, controllers, providers, exports })`.
