@@ -128,6 +128,13 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - **Checks, each commit.** Final state: `bun test schematics` 165 pass, 0 fail (`bun run check:schematics` also runs eslint and tsc); `bunx nx run-many -t lint test typecheck` all 18 projects; `bunx prettier --check .` clean (`bunx nx format:check` exits 0 but prints a `git diff main HEAD` warning because the local branch is `master`). Not run, by rule: any build.
   - **Not verified.** The generated stubs were never made green by hand: a freshly generated use case fails the 90% coverage gate and is `not implemented` on purpose. `kind=context` adapters generate and typecheck but fail `@nx/enforce-module-boundaries`, whose constraints allow a context to depend only on itself and `context:shared`; this needs a decision. Cross-context wiring through `useFactory` was only typechecked, never booted. Nothing was started with `nx serve` or `nest start`, so `AppModule` registration was only linted.
 
+- 2026-10-08: T11 partly done (two items; the kernel, ng-component and typecheck-target items stay open).
+  - a2293de `feat(schematics): enforce the context map through module boundaries`. Docs gain a `## Context map` table (`Depends on | Relationship`, relationship `customer-supplier`, `conformist` or `acl`); the existing format was a free-text line with no table, so this is new. `eslint.config.mjs` gains `contextRelations` (directed edges) feeding the per-context depConstraints. `hex-driven-port kind=context` refuses a provider missing from the table and adds the edge once; `hex-bounded-context --context_map=<ctx>:<relationship>` writes both. Applied map: ordering to catalog (customer-supplier), inventory (customer-supplier), payments (acl); shipping to ordering (conformist); notifications to ordering and shipping (conformist).
+  - RED: 9 factory/lib tests failed before the implementation. GREEN: `bun test schematics` 175 pass. Fitness (`schematics/_shared/context-map.fitness.test.ts`, real root lint config over virtual files): shipping importing `@demo/api-ordering` clean; shipping importing `@demo/api-catalog` rejected ("can only depend on libs tagged with "context:shipping", "context:shared", "context:ordering""); ordering importing shipping rejected; relative deep import rejected ("Projects cannot be imported by a relative or absolute path"). An alias deep import (`@demo/api-ordering/src/index`) is not seen by lint; tsc rejects it (TS2882, no such path).
+  - 5b977fa `docs: confirm the bounded-context classification`. "(assumed)" and the assumption note removed; levels recomputed: standard for catalog, shipping, notifications; strict for inventory, ordering, payments. Nothing consumes the level yet; it is only documentation.
+  - 3958395 `docs(schematics): add a project skill for choosing and running schematics`: `.claude/skills/schematics/SKILL.md`, a slimmer AGENTS.md section and `schematics/_shared/catalog.test.ts` (RED seen by removing a row, then a section, from each).
+  - Checks: `bun test schematics` 182 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean.
+
 ## Follow-ups
 
 - [ ] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval.
@@ -155,10 +162,10 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
     - Stryker is not verified end to end.
 
 - [ ] T11: decisions and gaps left by T9. None blocks.
-  - Decide how contexts may depend on each other: `kind=context` adapters import another context's barrel, which `depConstraints` rejects.
+  - [x] Decide how contexts may depend on each other: a barrel import along a relation declared in the docs Context map and `contextRelations` (a2293de).
   - `libs/api/shared-kernel` stays Nx-generated; add a kernel schematic when a second kernel-shaped lib appears.
   - `ng-component` inputs are required-only; add optional inputs with defaults when a second component needs them.
-  - Confirm the assumed classification of the six contexts in `docs/<ctx>/README.md`.
+  - [x] Confirm the assumed classification of the six contexts in `docs/<ctx>/README.md` (5b977fa).
   - API libs have no `typecheck` target, so only `compiles.test.ts` typechecks the generated shape; consider an inferred target.
 - [ ] T12: harden the schematics. These are the advisory findings from the T9 reviews; none blocked approval.
   - **Reviews** (2026-10-08, all approved and acknowledged):
