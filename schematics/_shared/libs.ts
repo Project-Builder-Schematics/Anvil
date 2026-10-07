@@ -246,6 +246,9 @@ export const webLibFiles = ({
   tags,
   layer,
 }: WebLib): Record<string, string> => {
+  if (layer !== 'domain' && !prefix)
+    throw new Error(`${dir} is an Angular lib and needs a selector prefix`);
+  const selector = prefix ?? '';
   const root = `${dir}/src`;
   const header = `  "name": "${name}",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
@@ -320,12 +323,12 @@ export default defineConfig(() => ({
       : {
           'project.json': `{
 ${header}
-  "prefix": "${prefix ?? ''}",
+  "prefix": "${selector}",
   "projectType": "library",
   "tags": ${tagList(tags)}
 }
 `,
-          'eslint.config.mjs': angularEslint(prefix ?? ''),
+          'eslint.config.mjs': angularEslint(selector),
           'tsconfig.json': ANGULAR_TSCONFIG,
           'tsconfig.lib.json': `{
   "extends": "./tsconfig.json",
@@ -338,19 +341,7 @@ ${header}
   },
   "include": ["src/**/*.ts"],
   "exclude": [
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "vite.config.ts",
-    "vite.config.mts",
-    "vitest.config.ts",
-    "vitest.config.mts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.tsx",
-    "src/**/*.test.js",
-    "src/**/*.spec.js",
-    "src/**/*.test.jsx",
-    "src/**/*.spec.jsx",
-    "src/test-setup.ts"
+${EXCLUDE_TESTS(['src/test-setup.ts'])}
   ]
 }
 `,

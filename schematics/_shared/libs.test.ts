@@ -133,6 +133,42 @@ describe('webLibFiles', () => {
     },
   );
 
+  it('excludes from an Angular lib every test file an API lib excludes, and the test setup', () => {
+    const angular = webLibFiles({
+      dir: 'libs/web/catalog/ui',
+      name: 'web-catalog-ui',
+      prefix: 'catalog',
+      tags: ['scope:web', 'context:catalog', 'type:ui'],
+      layer: 'ui',
+    });
+    const api = apiLibFiles('catalog', 'x', false);
+    const exclude = (files: Record<string, string>, path: string) =>
+      parse(files[path] ?? '').exclude;
+
+    const angularExclude = exclude(
+      angular,
+      'libs/web/catalog/ui/tsconfig.lib.json',
+    );
+    const apiExclude = exclude(
+      api,
+      'libs/api/catalog/tsconfig.lib.json',
+    ).filter((pattern) => !pattern.includes('steps'));
+    expect(angularExclude.sort()).toEqual(
+      [...apiExclude, 'src/test-setup.ts'].sort(),
+    );
+  });
+
+  it('refuses an Angular lib without a selector prefix', () => {
+    expect(() =>
+      webLibFiles({
+        dir: 'libs/web/catalog/ui',
+        name: 'web-catalog-ui',
+        tags: ['scope:web', 'context:catalog', 'type:ui'],
+        layer: 'ui',
+      }),
+    ).toThrow('selector prefix');
+  });
+
   it('lays out a plain TypeScript domain lib with its own vitest config', async () => {
     const files = webLibFiles({
       dir: 'libs/web/catalog/domain',

@@ -23,15 +23,21 @@ export const phrases = (feature: string): Phrase[] => {
     if (!m || text === undefined) return;
     if (m[1] === 'Given' || m[1] === 'When' || m[1] === 'Then') keyword = m[1];
     const params: string[] = [];
-    const expression = text
-      .replace(/"[^"]*"/g, () => {
-        params.push(`arg${String(params.length)}: string`);
-        return '{string}';
-      })
-      .replace(/(?<![\w{])-?\d+(?![\w}])/g, () => {
-        params.push(`arg${String(params.length)}: number`);
-        return '{int}';
-      });
+    // One pass, so a digit inside a quoted string is part of the string and an escape never meets a parameter.
+    const expression = text.replace(
+      /"[^"]*"|(?<![\w{])-?\d+(?![\w}])|[\\(){}/]/g,
+      (token) => {
+        if (token.startsWith('"')) {
+          params.push(`arg${String(params.length)}: string`);
+          return '{string}';
+        }
+        if (/^-?\d/.test(token)) {
+          params.push(`arg${String(params.length)}: number`);
+          return '{int}';
+        }
+        return `\\${token}`;
+      },
+    );
     if (lines[i + 1]?.trim().startsWith('|')) params.push('table: DataTable');
     if (!seen.has(expression))
       seen.set(expression, { keyword, text, expression, params });
@@ -39,13 +45,15 @@ export const phrases = (feature: string): Phrase[] => {
   return [...seen.values()];
 };
 
+/** The expression as a single-quoted TypeScript literal. */
+const literal = (p: Phrase): string =>
+  `'${p.expression.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+
 export const binding = (p: Phrase): string =>
-  `${p.keyword}('${p.expression.replace(/'/g, "\\'")}', ${p.params.length ? `(_world, ${p.params.join(', ')}) ` : '() '}=> 'skipped');`;
+  `${p.keyword}(${literal(p)}, ${p.params.length ? `(_world, ${p.params.join(', ')}) ` : '() '}=> 'skipped');`;
 
 const bound = (siblings: string[], p: Phrase): boolean =>
-  siblings.some((source) =>
-    source.includes(`'${p.expression.replace(/'/g, "\\'")}'`),
-  );
+  siblings.some((source) => source.includes(literal(p)));
 
 /** The steps file of one use case: a pending binding per phrase no sibling file binds yet. */
 export const stepsSource = (feature: string, siblings: string[]): string => {

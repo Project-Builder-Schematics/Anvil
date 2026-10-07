@@ -77,10 +77,15 @@ export const withTestTarget = (project: string, dir: string): string => {
     ).test;
     return `${JSON.stringify(parsed, null, 2)}\n`;
   }
-  return project.replace(
+  const withTarget = project.replace(
     /\n\}\n$/,
     `,\n  "targets": {\n${testTarget(dir)}\n  }\n}\n`,
   );
+  if (withTarget === project)
+    throw new Error(
+      `could not add the test target to ${dir}/project.json: expected it to end with a closing brace and a newline`,
+    );
+  return withTarget;
 };
 
 /** Appends `export * from` to the barrel, one line per lib file. */
@@ -97,36 +102,54 @@ export const withBarrelExport = (
     : `${body}${body ? '\n' : ''}${line}\n`;
 };
 
+const noDuplicates = <T extends { name: string }>(
+  items: T[],
+  label: string,
+): T[] => {
+  const seen = new Set<string>();
+  for (const { name } of items) {
+    if (seen.has(name)) throw new Error(`${label} ${name} is listed twice`);
+    seen.add(name);
+  }
+  return items;
+};
+
 /** `label:string,count:number` → [{ name, type }]; only the types the generated specs can fill. */
 export const parseInputs = (
   spec: string,
 ): Array<{ name: string; type: 'string' | 'number' | 'boolean' }> =>
-  spec
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const [name = '', type = ''] = part.split(':').map((s) => s.trim());
-      if (!/^[a-z][A-Za-z0-9]*$/.test(name))
-        throw new Error(`input "${name}" must be camelCase`);
-      if (type !== 'string' && type !== 'number' && type !== 'boolean') {
-        throw new Error(
-          `input ${name} has type "${type}": use string, number or boolean`,
-        );
-      }
-      return { name, type };
-    });
+  noDuplicates(
+    spec
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [name = '', type = ''] = part.split(':').map((s) => s.trim());
+        if (!/^[a-z][A-Za-z0-9]*$/.test(name))
+          throw new Error(`input "${name}" must be camelCase`);
+        if (type !== 'string' && type !== 'number' && type !== 'boolean') {
+          throw new Error(
+            `input ${name} has type "${type}": use string, number or boolean`,
+          );
+        }
+        return { name, type };
+      }),
+    'input',
+  );
 
 export const parseNames = (spec: string, label: string): string[] =>
-  spec
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((name) => {
-      if (!/^[a-z][A-Za-z0-9]*$/.test(name))
-        throw new Error(`${label} "${name}" must be camelCase`);
-      return name;
-    });
+  noDuplicates(
+    spec
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((name) => {
+        if (!/^[a-z][A-Za-z0-9]*$/.test(name))
+          throw new Error(`${label} "${name}" must be camelCase`);
+        return { name };
+      }),
+    label,
+  ).map(({ name }) => name);
 
 /** The class a name gives: order-card → OrderCard. */
 export const className = (name: string): string => pascal(name);

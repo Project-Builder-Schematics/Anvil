@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { create, find, replaceContent } from '@pbuilder/sdk/commons';
+import { find, replaceContent } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
   ESLINT_CONFIG,
@@ -10,6 +10,7 @@ import {
   apiAlias,
   apiLibDir,
   assertDashed,
+  createFile,
   docsDir,
   title,
   writeBuffer,
@@ -220,7 +221,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
   for (const [path, template] of Object.entries(
     apiLibFiles(context, input.purpose, inline),
   )) {
-    create(path, { template, options: {} });
+    createFile(path, template);
   }
   await buffer.write(
     TSCONFIG_BASE,
@@ -239,8 +240,9 @@ export default async (input: Input, shared?: WriteBuffer) => {
   );
 
   if (readme === undefined) {
-    create(`${docs}/README.md`, {
-      template: `# ${title(context)}
+    createFile(
+      `${docs}/README.md`,
+      `# ${title(context)}
 
 ${input.purpose}
 
@@ -261,8 +263,7 @@ ${
     : 'See [glossary.md](glossary.md) for the terms two or more subdomains share and the table of contents; each subdomain owns the rest of its vocabulary next to its own `domain-model.md`. Every name in `domain/` and every export of the context barrel is a term defined in exactly one of them.'
 }
 `,
-      options: {},
-    });
+    );
   } else if (!readme.includes('## Classification')) {
     replaceContent(
       `${docs}/README.md`,
@@ -272,8 +273,9 @@ ${
 
   const linked = inline ? [] : subdomains;
   if (glossary === undefined) {
-    create(`${docs}/glossary.md`, {
-      template: `# ${title(context)} — glossary
+    createFile(
+      `${docs}/glossary.md`,
+      `# ${title(context)} — glossary
 
 Terms of this bounded context. One meaning per term; the same word in another context is a different term.${
         inline
@@ -287,8 +289,7 @@ Terms of this bounded context. One meaning per term; the same word in another co
 ${linked.map(glossaryLink).join('\n')}`
       }
 `,
-      options: {},
-    });
+    );
   } else if (withGlossaryLinks(glossary, linked) !== glossary) {
     replaceContent(`${docs}/glossary.md`, withGlossaryLinks(glossary, linked));
   }
@@ -297,8 +298,7 @@ ${linked.map(glossaryLink).join('\n')}`
     path: string,
     template: string,
   ): Promise<void> => {
-    if ((await find(path).read()) === undefined)
-      create(path, { template, options: {} });
+    if ((await find(path).read()) === undefined) createFile(path, template);
   };
   await Promise.all(
     modelDirs.flatMap(({ subdomain, dir }) => [

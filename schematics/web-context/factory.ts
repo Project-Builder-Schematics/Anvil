@@ -1,5 +1,4 @@
 import type { Input } from './schema.generated.ts';
-import { create } from '@pbuilder/sdk/commons';
 import {
   ESLINT_CONFIG,
   SCOPE,
@@ -7,6 +6,7 @@ import {
   addLintContext,
   addTsPath,
   assertDashed,
+  createFile,
   writeBuffer,
   type WriteBuffer,
 } from '../_shared/lib.ts';
@@ -32,12 +32,12 @@ export default async (input: Input, shared?: WriteBuffer) => {
     const files = webLibFiles({
       dir,
       name: `web-${context}-${layer}`,
-      ...(layer === 'domain' ? {} : { prefix: context }),
+      ...(layer === 'domain' ? {} : { prefix: context.replace(/-/g, '') }),
       tags: ['scope:web', `context:${context}`, `type:${layer}`],
       layer,
     });
     for (const [path, template] of Object.entries(files))
-      create(path, { template, options: {} });
+      createFile(path, template);
     tsconfig = addTsPath(
       tsconfig,
       `${SCOPE}/web-${context}-${layer}`,

@@ -109,7 +109,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-context 
 
 ### `web-context`
 
-`context`. Creates `libs/web/<ctx>/{feature,ui,data-access,domain}`.
+`context`. Creates `libs/web/<ctx>/{feature,ui,data-access,domain}`; the selector prefix is the context name without dashes.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-context --context=ordering

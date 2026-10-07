@@ -17,6 +17,14 @@ export interface WriteBuffer {
   flush(): void;
 }
 
+/** `create` renders its content as a template; the opening delimiter is written as a literal so the file holds what it was given, as `replaceContent` does. */
+export const createFile = (path: string, content: string): void => {
+  create(path, {
+    template: content.replaceAll('{=', '{= "{=" =}'),
+    options: {},
+  });
+};
+
 export const writeBuffer = (): WriteBuffer => {
   // What the path held before the run touched it: decides create vs replaceContent.
   const original = new Map<string, string | undefined>();
@@ -46,8 +54,7 @@ export const writeBuffer = (): WriteBuffer => {
       for (const [path, content] of pending) {
         const before = original.get(path);
         if (content === before) continue;
-        if (before === undefined)
-          create(path, { template: content, options: {} });
+        if (before === undefined) createFile(path, content);
         else replaceContent(path, content);
       }
       pending.clear();
@@ -140,7 +147,7 @@ export const resolveSlice = async (
   if (
     inline &&
     readme !== undefined &&
-    new RegExp(`^\\|\\s*\\[?${slice}\\]?`, 'm').test(readme)
+    new RegExp(`^\\|\\s*(\\[${slice}\\]\\(|${slice}\\s*\\|)`, 'm').test(readme)
   ) {
     return { code: src, docs, segment: '' };
   }
@@ -229,10 +236,10 @@ export const withImports = (source: string, importLines: string[]): string => {
   lines.forEach((line, i) => {
     if (/^import\s/.test(line)) last = i;
   });
-  // A multi-line import ends on the line holding its `from '…'`.
+  // An import ends on the line holding its module string: `from '…'`, or the bare `'…'` of a side-effect import.
   while (
     last >= 0 &&
-    !/from\s+['"][^'"]+['"]/.test(lines[last] ?? '') &&
+    !/['"][^'"]+['"];?\s*$/.test(lines[last] ?? '') &&
     last < lines.length - 1
   )
     last += 1;

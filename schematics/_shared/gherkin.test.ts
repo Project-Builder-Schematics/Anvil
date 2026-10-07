@@ -48,6 +48,33 @@ describe('phrases', () => {
   });
 });
 
+describe('cucumber expressions', () => {
+  it('escapes what a cucumber expression would read as syntax', () => {
+    const [p] = phrases(
+      'Scenario: s\n  Given the (draft) order {x} costs a/b\n',
+    );
+
+    expect(p?.expression).toBe('the \\(draft\\) order \\{x\\} costs a\\/b');
+  });
+
+  it('writes the escapes into a string literal that keeps them', () => {
+    const [p] = phrases('Scenario: s\n  Given a (draft) of "x" it\'s\n');
+
+    expect(binding(p as never)).toBe(
+      "Given('a \\\\(draft\\\\) of {string} it\\'s', (_world, arg0: string) => 'skipped');",
+    );
+  });
+
+  it('does not bind again a phrase whose sibling holds it escaped', () => {
+    const [p] = phrases('Scenario: s\n  Given a (draft)\n');
+    const sibling = binding(p as never);
+
+    expect(stepsSource('Scenario: s\n  Given a (draft)\n', [sibling])).toBe(
+      'export {};\n',
+    );
+  });
+});
+
 describe('binding', () => {
   it('is a pending quickpickle step definition', () => {
     const [first] = phrases(feature);

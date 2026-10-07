@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
-import { find } from '@pbuilder/sdk/commons';
 import {
   addContextRelation,
   addLintContext,
@@ -11,12 +10,17 @@ import {
   camel,
   constant,
   dashed,
+  errorCodes,
   numberedRules,
+  parseRoute,
   pascal,
+  sentence,
+  title,
   resolveSlice,
   row,
   table,
   withImports,
+  withNamedImports,
   withStatement,
   writeBuffer,
 } from './lib.ts';
@@ -27,6 +31,11 @@ describe('naming', () => {
     expect(camel('CreateOrder')).toBe('createOrder');
     expect(dashed('CreateOrder')).toBe('create-order');
     expect(constant('create-order')).toBe('CREATE_ORDER');
+  });
+
+  it('writes names as words', () => {
+    expect(sentence('CreateOrder')).toBe('Create order');
+    expect(title('order-items')).toBe('Order items');
   });
 
   it('rejects names in the wrong case', () => {
@@ -84,11 +93,45 @@ describe('writeBuffer', () => {
     );
   });
 
-  it('is usable without an engine read of a path that was never seeded', async () => {
-    const result = await runFactoryForTest(async () => {
-      expect(await find('nope.txt').read()).toBeUndefined();
-    }, {} as never);
-    expect(result.error).toBeUndefined();
+  it('creates a path the run found missing and replaces one it found', async () => {
+    const factory = async () => {
+      const buffer = writeBuffer();
+      await buffer.write('old.txt', 'changed');
+      await buffer.write('new.txt', 'fresh');
+      buffer.flush();
+    };
+    const result = await runFactoryForTest(factory, {} as never, {
+      seed: { 'old.txt': 'before' },
+    });
+
+    expect(
+      result.emitted
+        .flatMap((batch) => batch.instructions)
+        .map((instruction) =>
+          instruction.op === 'create'
+            ? ['create', instruction.create.pathTemplate]
+            : instruction.op === 'modify'
+              ? ['modify', instruction.modify.path]
+              : [instruction.op],
+        ),
+    ).toEqual([
+      ['modify', 'old.txt'],
+      ['create', 'new.txt'],
+    ]);
+  });
+
+  it('keeps the template delimiter in a new file literal, as in a replaced one', async () => {
+    const factory = async () => {
+      const buffer = writeBuffer();
+      await buffer.write('new.md', 'use {= as is, then {= again');
+      buffer.flush();
+    };
+    const result = await runFactoryForTest(factory, {} as never);
+
+    const [instruction] = result.emitted.flatMap((batch) => batch.instructions);
+    expect(JSON.stringify(instruction)).toContain(
+      '"template":"use {= \\"{=\\" =} as is, then {= \\"{=\\" =} again"',
+    );
   });
 });
 
@@ -129,6 +172,26 @@ describe('resolveSlice', () => {
       docs: 'docs/growth',
       segment: '',
     });
+  });
+
+  it('does not take a longer slice name for the one asked for', async () => {
+    const seed = {
+      'docs/growth/domain-model.md': '# m\n',
+      'docs/growth/README.md':
+        '| Subdomain | R |\n| --- | --- |\n| [marketing-ops](domain-model.md) | x |\n',
+    };
+
+    expect(String((await run(seed)).error)).toContain('no domain model');
+  });
+
+  it('reads an unlinked subdomain name from the README table', async () => {
+    const seed = {
+      'docs/growth/domain-model.md': '# m\n',
+      'docs/growth/README.md':
+        '| Subdomain | R |\n| --- | --- |\n| marketing | x |\n',
+    };
+
+    expect(await resolved(seed)).toMatchObject({ segment: '' });
   });
 
   it('refuses a slice with no domain model, pointing at the docs generator', async () => {
@@ -269,6 +332,35 @@ describe('domain model tables', () => {
   it('reads numbered rules from the table', () => {
     expect(numberedRules(model).get(1)).toContain('BUDGET_REQUIRED');
   });
+
+  it('lists the error codes the rules name, once each, in order', () => {
+    const twice = model.replace(
+      '| decided |',
+      '| decided |\n| 2 | Again `BUDGET_REQUIRED`, or `CAMPAIGN_CLOSED`. | decided |',
+    );
+
+    expect(errorCodes(twice)).toEqual(['BUDGET_REQUIRED', 'CAMPAIGN_CLOSED']);
+  });
+});
+
+describe('parseRoute', () => {
+  it('splits a route into method, resource and path', () => {
+    expect(parseRoute('POST /orders/:id/lines')).toEqual({
+      method: 'POST',
+      resource: 'orders',
+      path: '/:id/lines',
+    });
+    expect(parseRoute('GET /orders')).toEqual({
+      method: 'GET',
+      resource: 'orders',
+      path: '/',
+    });
+  });
+
+  it('rejects what is not a route', () => {
+    expect(parseRoute('FETCH /orders')).toBeUndefined();
+    expect(parseRoute('GET orders')).toBeUndefined();
+  });
 });
 
 describe('source edits', () => {
@@ -280,6 +372,46 @@ describe('source edits', () => {
 
     expect(out).toBe(
       "import a from 'a';\nimport b from 'b';\n\nconst x = 1;\n",
+    );
+  });
+
+  it('adds imports right after a side-effect import', () => {
+    const out = withImports(
+      "import './polyfill';\n\nconst x = 1;\nexport { y } from './y';\n",
+      ["import b from 'b';"],
+    );
+
+    expect(out).toBe(
+      "import './polyfill';\nimport b from 'b';\n\nconst x = 1;\nexport { y } from './y';\n",
+    );
+  });
+
+  it('adds imports after a multi-line import', () => {
+    const out = withImports(
+      "import {\n  a,\n  b,\n} from 'ab';\n\nconst x = 1;\n",
+      ["import c from 'c';"],
+    );
+
+    expect(out).toBe(
+      "import {\n  a,\n  b,\n} from 'ab';\nimport c from 'c';\n\nconst x = 1;\n",
+    );
+  });
+
+  it('merges names into an existing import of the same module, sorted', () => {
+    const out = withNamedImports(
+      "import { Post, Controller } from '@nestjs/common';\nconst x = 1;\n",
+      '@nestjs/common',
+      ['Get', 'Post'],
+    );
+
+    expect(out).toBe(
+      "import { Controller, Get, Post } from '@nestjs/common';\nconst x = 1;\n",
+    );
+  });
+
+  it('creates the import of a module it does not have yet', () => {
+    expect(withNamedImports('const x = 1;\n', 'zod', ['z'])).toBe(
+      "import { z } from 'zod';\n\nconst x = 1;\n",
     );
   });
 

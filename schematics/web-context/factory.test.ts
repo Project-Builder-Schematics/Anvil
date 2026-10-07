@@ -42,6 +42,20 @@ describe('web-context', () => {
     );
   });
 
+  it('drops the dashes of a dashed context from the selector prefix, which must be letters only', async () => {
+    const { tree } = await go({ context: 'order-items' });
+
+    expect(tree.get('libs/web/order-items/ui/project.json')).toContain(
+      '"prefix": "orderitems"',
+    );
+    expect(
+      tree.get('libs/web/order-items/feature/eslint.config.mjs'),
+    ).toContain("prefix: 'orderitems'");
+    expect(tree.get('libs/web/order-items/ui/project.json')).toContain(
+      '"name": "web-order-items-ui"',
+    );
+  });
+
   it('registers one alias per layer in tsconfig.base.json and the context in the lint list', async () => {
     const { tree } = await go();
     const base = tree.get('tsconfig.base.json') ?? '';
