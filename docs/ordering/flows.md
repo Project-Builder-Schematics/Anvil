@@ -41,7 +41,7 @@ sequenceDiagram
     U-->>C: ORDER_NOT_EDITABLE (409) or QUANTITY_OUT_OF_RANGE or CURRENCY_MISMATCH (422)
   end
   U->>R: save(order)
-  U-->>C: { productId, quantity, unitPrice }
+  U-->>C: { orderId, status, lines }
   Note over C: 200
 ```
 

@@ -1,4 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- pending bindings keep their arguments until the scenarios are implemented */
 import { When } from 'quickpickle';
+import type { OrderingWorld } from './world';
 
-When('the order is placed', () => 'skipped');
+When('the order is placed', async (world: OrderingWorld) => {
+  await world.attempt(() => world.placeOrder({ orderId: world.currentId }));
+});

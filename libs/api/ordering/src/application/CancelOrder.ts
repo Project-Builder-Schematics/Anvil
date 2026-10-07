@@ -1,9 +1,15 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+import type { OrderStatus } from '../domain/Order';
 import type { OrderRepository } from '../domain/driven-ports/OrderRepository';
+import { findOrder } from './findOrder';
 
-export interface CancelOrderCommand {}
+export interface CancelOrderCommand {
+  readonly orderId: string;
+}
 
-export interface CancelOrderResult {}
+export interface CancelOrderResult {
+  readonly orderId: string;
+  readonly status: OrderStatus;
+}
 
 export type CancelOrder = (
   command: CancelOrderCommand,
@@ -13,5 +19,8 @@ export const CANCEL_ORDER = Symbol('CancelOrder');
 
 export const makeCancelOrder =
   (orderRepository: OrderRepository): CancelOrder =>
-  () =>
-    Promise.reject(new Error('CancelOrder is not implemented'));
+  async ({ orderId }) => {
+    const cancelled = (await findOrder(orderRepository, orderId)).cancel();
+    await orderRepository.save(cancelled);
+    return { orderId: cancelled.id.value, status: cancelled.status };
+  };

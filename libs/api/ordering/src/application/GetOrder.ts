@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
 import type { OrderRepository } from '../domain/driven-ports/OrderRepository';
+import { findOrder } from './findOrder';
+import { toView, type OrderView } from './OrderView';
 
-export interface GetOrderCommand {}
+export interface GetOrderCommand {
+  readonly orderId: string;
+}
 
-export interface GetOrderResult {}
+export type GetOrderResult = OrderView;
 
 export type GetOrder = (command: GetOrderCommand) => Promise<GetOrderResult>;
 
@@ -11,5 +14,5 @@ export const GET_ORDER = Symbol('GetOrder');
 
 export const makeGetOrder =
   (orderRepository: OrderRepository): GetOrder =>
-  () =>
-    Promise.reject(new Error('GetOrder is not implemented'));
+  async ({ orderId }) =>
+    toView(await findOrder(orderRepository, orderId));

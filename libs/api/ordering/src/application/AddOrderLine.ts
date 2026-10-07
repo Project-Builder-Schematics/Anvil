@@ -1,10 +1,18 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+import { OrderingError } from '../domain/errors';
+import { ProductId } from '../domain/ProductId';
+import { Quantity } from '../domain/Quantity';
 import type { OrderRepository } from '../domain/driven-ports/OrderRepository';
 import type { ProductPrices } from '../domain/driven-ports/ProductPrices';
+import { findOrder } from './findOrder';
+import { toView, type OrderView } from './OrderView';
 
-export interface AddOrderLineCommand {}
+export interface AddOrderLineCommand {
+  readonly orderId: string;
+  readonly productId: string;
+  readonly quantity: number;
+}
 
-export interface AddOrderLineResult {}
+export type AddOrderLineResult = OrderView;
 
 export type AddOrderLine = (
   command: AddOrderLineCommand,
@@ -17,5 +25,13 @@ export const makeAddOrderLine =
     orderRepository: OrderRepository,
     productPrices: ProductPrices,
   ): AddOrderLine =>
-  () =>
-    Promise.reject(new Error('AddOrderLine is not implemented'));
+  async ({ orderId, productId, quantity }) => {
+    const order = await findOrder(orderRepository, orderId);
+    const wanted = Quantity.of(quantity);
+    const product = ProductId.of(productId);
+    const price = await productPrices.priceOf(product);
+    if (!price) throw new OrderingError('PRODUCT_NOT_FOUND');
+    const updated = order.addLine(product, wanted, price);
+    await orderRepository.save(updated);
+    return toView(updated);
+  };

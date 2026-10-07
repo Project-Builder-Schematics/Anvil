@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+import { Order } from '../domain/Order';
 import type { OrderRepository } from '../domain/driven-ports/OrderRepository';
 
-export interface CreateOrderCommand {}
+export type CreateOrderCommand = Record<string, never>;
 
-export interface CreateOrderResult {}
+export interface CreateOrderResult {
+  readonly orderId: string;
+}
 
 export type CreateOrder = (
   command: CreateOrderCommand,
@@ -13,5 +15,8 @@ export const CREATE_ORDER = Symbol('CreateOrder');
 
 export const makeCreateOrder =
   (orderRepository: OrderRepository): CreateOrder =>
-  () =>
-    Promise.reject(new Error('CreateOrder is not implemented'));
+  async () => {
+    const order = Order.create(orderRepository.nextId());
+    await orderRepository.save(order);
+    return { orderId: order.id.value };
+  };

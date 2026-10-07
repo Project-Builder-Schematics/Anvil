@@ -48,13 +48,13 @@ Rules 1 to 8 were approved by the user on 2026-10-08. Rules 9 to 11 fill gaps th
 
 One row per use case; `Feature` links the `.feature` written next to this file before the code is generated.
 
-| Use case       | Command                            | Result                                           | Driven ports                       | Feature                                          |
-| -------------- | ---------------------------------- | ------------------------------------------------ | ---------------------------------- | ------------------------------------------------ |
-| `CreateOrder`  | `{}`                               | `{ orderId }`                                    | `OrderRepository`                  | [create-order.feature](create-order.feature)     |
-| `AddOrderLine` | `{ orderId, productId, quantity }` | `{ productId, quantity, unitPrice }` of the line | `OrderRepository`, `ProductPrices` | [add-order-line.feature](add-order-line.feature) |
-| `PlaceOrder`   | `{ orderId }`                      | `{ orderId, status }`                            | `OrderRepository`                  | [place-order.feature](place-order.feature)       |
-| `CancelOrder`  | `{ orderId }`                      | `{ orderId, status }`                            | `OrderRepository`                  | [cancel-order.feature](cancel-order.feature)     |
-| `GetOrder`     | `{ orderId }`                      | `{ orderId, status, lines }`                     | `OrderRepository`                  | [get-order.feature](get-order.feature)           |
+| Use case       | Command                            | Result                       | Driven ports                       | Feature                                          |
+| -------------- | ---------------------------------- | ---------------------------- | ---------------------------------- | ------------------------------------------------ |
+| `CreateOrder`  | `{}`                               | `{ orderId }`                | `OrderRepository`                  | [create-order.feature](create-order.feature)     |
+| `AddOrderLine` | `{ orderId, productId, quantity }` | `{ orderId, status, lines }` | `OrderRepository`, `ProductPrices` | [add-order-line.feature](add-order-line.feature) |
+| `PlaceOrder`   | `{ orderId }`                      | `{ orderId, status }`        | `OrderRepository`                  | [place-order.feature](place-order.feature)       |
+| `CancelOrder`  | `{ orderId }`                      | `{ orderId, status }`        | `OrderRepository`                  | [cancel-order.feature](cancel-order.feature)     |
+| `GetOrder`     | `{ orderId }`                      | `{ orderId, status, lines }` | `OrderRepository`                  | [get-order.feature](get-order.feature)           |
 
 ## Driven ports
 
