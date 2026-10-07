@@ -305,12 +305,11 @@ export const addTsPath = (
     inline.length <= 80
       ? inline
       : `${indent}"${alias}": [\n${indent}  "${target}"\n${indent}]`;
-  const existing = inner.trim().replace(/,$/, '');
   const body =
-    existing === ''
-      ? entry
+    inner.trim() === ''
+      ? `\n${entry}`
       : `${inner.trimEnd().replace(/,?$/, ',')}\n${entry}`;
-  return `${tsconfig.slice(0, open + 1)}\n${body}\n${closingIndent}${tsconfig.slice(close)}`;
+  return `${tsconfig.slice(0, open + 1)}${body}\n${closingIndent}${tsconfig.slice(close)}`;
 };
 
 /** Registers a bounded context in the root lint config's `contexts` list, which feeds the module-boundary constraints. */

@@ -144,6 +144,12 @@ const paths = (tsconfig: string): unknown =>
 describe('addTsPath', () => {
   const base = `{\n  "compilerOptions": {\n    "paths": {\n      "@demo/a": ["./libs/a/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`;
 
+  it('appends an entry after the last path in prettier layout, changing nothing else', () => {
+    expect(addTsPath(base, '@demo/api-b', './libs/api/b/src/index.ts')).toBe(
+      `{\n  "compilerOptions": {\n    "paths": {\n      "@demo/a": ["./libs/a/src/index.ts"],\n      "@demo/api-b": ["./libs/api/b/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`,
+    );
+  });
+
   it('appends an entry after the last path without disturbing the rest', () => {
     const out = addTsPath(base, '@demo/api-b', './libs/api/b/src/index.ts');
 
