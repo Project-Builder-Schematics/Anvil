@@ -157,6 +157,44 @@ describe('hex-route', () => {
     expect([...second.tree.keys()]).toEqual([]);
   });
 
+  it('refuses a second route for a use case the controller already handles', async () => {
+    const seed = await prepared();
+    const first = await go({}, seed);
+    const model = invoicingModel.replace(
+      '| `DELETE /invoices/:invoiceId` | `VoidInvoice` | 204 | token |',
+      '| `POST /invoices/bulk` | `IssueInvoice` | 201 | token |',
+    );
+    const next = {
+      ...after(seed, first.tree),
+      [`${DOCS}/domain-model.md`]: model,
+    };
+
+    const { tree, error } = await go({ path: '/bulk' }, next);
+
+    expect(String(error)).toContain(
+      'InvoicesController already handles IssueInvoice on another route',
+    );
+    expect([...tree.keys()]).toEqual([]);
+  });
+
+  it('refuses a route another use case of the controller already answers', async () => {
+    const seed = await prepared();
+    const first = await go({}, seed);
+    const model = invoicingModel.replace(
+      '| `POST /invoices` | `IssueInvoice` |',
+      '| `POST /invoices` | `VoidInvoice` |',
+    );
+    const next = {
+      ...after(seed, first.tree),
+      [`${DOCS}/domain-model.md`]: model,
+    };
+
+    const { tree, error } = await go({}, next);
+
+    expect(String(error)).toContain('POST /invoices is already answered by');
+    expect([...tree.keys()]).toEqual([]);
+  });
+
   it('lets flags only agree with the doc', async () => {
     expect(String((await go({ use_case: 'VoidInvoice' })).error)).toContain(
       'use_case is IssueInvoice in domain-model.md, not VoidInvoice — fix the doc or the flag',

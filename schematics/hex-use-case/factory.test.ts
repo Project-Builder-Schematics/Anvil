@@ -131,6 +131,28 @@ describe('hex-use-case', () => {
     expect(steps).toContain('without lines');
   });
 
+  it('skips a phrase bound by a use case of another subdomain, as the lib loads every steps file', async () => {
+    const seed = {
+      ...(await prepared()),
+      'docs/billing/README.md': (
+        (await prepared())['docs/billing/README.md'] ?? ''
+      ).replace(
+        '| [invoicing](invoicing/domain-model.md) | invoices |',
+        '| [invoicing](invoicing/domain-model.md) | invoices |\n| [payouts](payouts/domain-model.md) | payouts |',
+      ),
+      'docs/billing/payouts/domain-model.md':
+        '# Payouts\n\n## Use cases\n\n| Use case | Command | Result | Driven ports | Feature |\n| --- | --- | --- | --- | --- |\n| `PayOut` | `{}` | `{}` | | [pay-out.feature](pay-out.feature) |\n',
+      [`${LIB}/src/payouts/steps/PayOut.steps.ts`]:
+        "Then('the failure is {string}', () => 'skipped');\n",
+    };
+    const steps =
+      (await go({}, seed)).tree.get(`${slice}/steps/IssueInvoice.steps.ts`) ??
+      '';
+
+    expect(steps).not.toContain('the failure is {string}');
+    expect(steps).toContain('without lines');
+  });
+
   it('throws when the use-case row links a feature the docs do not have, writing nothing', async () => {
     const seed = without(await prepared(), `${DOCS}/issue-invoice.feature`);
     const { tree, error } = await go({}, seed);

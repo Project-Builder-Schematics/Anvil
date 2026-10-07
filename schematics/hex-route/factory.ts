@@ -28,6 +28,9 @@ const HTTP: Record<string, string> = {
   DELETE: 'Delete',
 };
 
+const defaultStatus = (method: string): number =>
+  method === 'POST' ? 201 : 200;
+
 interface Operation {
   useCase: string;
   method: string;
@@ -62,11 +65,12 @@ const operation = ({ useCase, method, path, status }: Operation) => {
       : []),
     `const ${name}${section} = z.object({});`,
   ];
-  const defaultStatus = method === 'POST' ? 201 : 200;
   const route = path === '/' ? '' : `'${path.replace(/^\//, '')}'`;
   const decorators = [
     `  @${HTTP[method] ?? ''}(${route})`,
-    ...(status === defaultStatus ? [] : [`  @HttpCode(${String(status)})`]),
+    ...(status === defaultStatus(method)
+      ? []
+      : [`  @HttpCode(${String(status)})`]),
   ];
   const spread =
     inputs.length === 1
@@ -83,9 +87,20 @@ ${inputs.map((i) => `    @${i.decorator}({ schema: ${i.schema} }) ${i.variable}:
     'Inject',
     HTTP[method] ?? '',
     ...inputs.map((i) => i.decorator),
-    ...(status === defaultStatus ? [] : ['HttpCode']),
+    ...(status === defaultStatus(method) ? [] : ['HttpCode']),
   ];
-  return { name, schemas, handler, nest };
+  return { name, schemas, handler, nest, decorators };
+};
+
+/** The decorator lines above the controller's method `name`, or undefined when it has no such method. */
+const decoratorsOf = (controller: string, name: string): string | undefined => {
+  const lines = controller.split('\n');
+  const at = lines.findIndex((line) => line.startsWith(`  ${name}(`));
+  if (at === -1) return undefined;
+  const decorators: string[] = [];
+  for (let i = at - 1; (lines[i] ?? '').startsWith('  @'); i -= 1)
+    decorators.unshift(lines[i] ?? '');
+  return decorators.join('\n');
 };
 
 const injection = (useCase: string): string =>
@@ -151,7 +166,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
       input.status,
       docStatus,
       'status',
-      input.method === 'POST' ? '201' : '200',
+      String(defaultStatus(input.method)),
     ),
   );
   const op = operation({ useCase, method: input.method, path, status });
@@ -179,10 +194,19 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
   const controllerPath = `${code}/infrastructure/http/${resource}.controller.ts`;
   const controller = await buffer.read(controllerPath);
-  // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
-  if (controller?.includes(`  ${op.name}(`)) return;
-
   const className = `${pascal(resource)}Controller`;
+  const handled =
+    controller === undefined ? undefined : decoratorsOf(controller, op.name);
+  // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
+  if (handled === op.decorators.join('\n')) return;
+  if (handled !== undefined)
+    throw new Error(
+      `${className} already handles ${useCase} on another route — one controller method per use case`,
+    );
+  if (controller?.split('\n').includes(op.decorators[0] ?? ''))
+    throw new Error(
+      `${input.method} /${resource}${path === '/' ? '' : path} is already answered by ${className}`,
+    );
   if (controller === undefined) {
     await buffer.write(
       controllerPath,

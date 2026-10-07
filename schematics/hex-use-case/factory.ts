@@ -8,6 +8,7 @@ import {
   camel,
   constant,
   dashed,
+  docsDir,
   resolveSlice,
   row,
   table,
@@ -48,6 +49,43 @@ export const make${name} =
   () =>
     Promise.reject(new Error('${name} is not implemented'));
 `;
+};
+
+/**
+ * The steps files of every other use case of the context. The lib loads them all, so a
+ * phrase bound in one of them, in any subdomain, cannot be bound again.
+ */
+const siblingSteps = async (
+  buffer: WriteBuffer,
+  context: string,
+  segment: string,
+  own: { code: string; docs: string; stepsFile: string },
+): Promise<string[]> => {
+  const readme = (await buffer.read(`${docsDir(context)}/README.md`)) ?? '';
+  const slices =
+    segment === ''
+      ? [own]
+      : table(readme, 'Subdomains').flatMap((cells) => {
+          const sub = /^\[?([a-z][a-z0-9-]*)/.exec(cells[0] ?? '')?.[1];
+          return sub
+            ? [
+                {
+                  code: `${apiLibDir(context)}/src/${sub}`,
+                  docs: `${docsDir(context)}/${sub}`,
+                },
+              ]
+            : [];
+        });
+  const files = await Promise.all(
+    slices.map(async ({ code, docs }) =>
+      table((await buffer.read(`${docs}/${DOMAIN_MODEL}`)) ?? '', 'Use cases')
+        .map((r) => `${code}/steps/${r[0] ?? ''}.steps.ts`)
+        .filter((file) => file !== own.stepsFile),
+    ),
+  );
+  return Promise.all(
+    files.flat().map(async (file) => (await buffer.read(file)) ?? ''),
+  );
 };
 
 export default async (input: Input, shared?: WriteBuffer) => {
@@ -110,16 +148,11 @@ export default async (input: Input, shared?: WriteBuffer) => {
       `hex-use-case: ${docs}/${featureFile} does not exist — the use-case row links a feature the docs do not have`,
     );
   }
-  const siblings = await Promise.all(
-    table(model, 'Use cases')
-      .map((r) => r[0] ?? '')
-      .filter((useCase) => useCase !== name)
-      .map((useCase) =>
-        buffer
-          .read(`${code}/steps/${useCase}.steps.ts`)
-          .then((source) => source ?? ''),
-      ),
-  );
+  const siblings = await siblingSteps(buffer, context, segment, {
+    code,
+    docs,
+    stepsFile: `${code}/steps/${name}.steps.ts`,
+  });
 
   await buffer.write(
     `${code}/application/${name}.ts`,

@@ -7,6 +7,7 @@ import {
   addModuleEntry,
   assertDashed,
   assertPascal,
+  camel,
   constant,
   dashed,
   pascal,
@@ -41,11 +42,11 @@ const contextAdapter = (
   name: string,
   provider: string,
 ): string => `import { Injectable } from '@nestjs/common';
-import type * as ${provider} from '${SCOPE}/api-${provider}';
+import type * as ${camel(pascal(provider))} from '${SCOPE}/api-${provider}';
 import type { ${name} } from '../domain/driven-ports/${name}';
 
 // Translates this port into ${provider}'s language: the only file of the slice that knows its barrel.
-export type ${pascal(provider)}Api = typeof ${provider};
+export type ${pascal(provider)}Api = typeof ${camel(pascal(provider))};
 
 @Injectable()
 export class ${pascal(provider)}${name} implements ${name} {}
@@ -133,12 +134,27 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
   const adapter =
     kind === 'context' ? `${pascal(provider)}${name}` : `Memory${name}`;
+  const token = constant(dashed(name));
+  if (kind === 'context' && name === 'Api')
+    throw new Error(
+      `${adapter} is the type that adapter exports for the provider barrel — rename the port`,
+    );
+  const adapterPath = `${code}/infrastructure/${adapter}.ts`;
+  if ((await buffer.read(adapterPath)) !== undefined)
+    throw new Error(`${adapterPath} already exists for another port`);
+  const taken = new RegExp(
+    `import \\{[^}]*\\b${token}\\b[^}]*\\} from '(?!\\./domain/driven-ports/${name}')`,
+  );
+  if (taken.test(composition))
+    throw new Error(
+      `${token} is already taken by another port of ${code} — rename ${name}`,
+    );
   await buffer.write(
     `${code}/domain/driven-ports/${name}.ts`,
     portSource(name),
   );
   await buffer.write(
-    `${code}/infrastructure/${adapter}.ts`,
+    adapterPath,
     kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
   );
   if (kind === 'context')
@@ -153,7 +169,6 @@ export default async (input: Input, shared?: WriteBuffer) => {
         provider,
       ),
     );
-  const token = constant(dashed(name));
   await buffer.write(
     compositionPath,
     addModuleEntry(

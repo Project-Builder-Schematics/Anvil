@@ -101,6 +101,67 @@ describe('hex-driven-port', () => {
     );
   });
 
+  it('names the provider namespace of a dashed context as an identifier', async () => {
+    const seed = await sliced();
+    for (const path of [
+      'tsconfig.base.json',
+      'docs/billing/README.md',
+      `${DOCS}/domain-model.md`,
+    ])
+      seed[path] = (seed[path] ?? '')
+        .replaceAll('api-ledger', 'api-order-items')
+        .replaceAll('| ledger |', '| order-items |')
+        .replaceAll('@ledger', '@order-items');
+
+    const { tree, error } = await go({ name: 'LedgerGateway' }, seed);
+
+    expect(error).toBeUndefined();
+    const adapter =
+      tree.get(`${slice}/infrastructure/OrderItemsLedgerGateway.ts`) ?? '';
+    expect(adapter).toContain(
+      "import type * as orderItems from '@demo/api-order-items';",
+    );
+    expect(adapter).toContain('export type OrderItemsApi = typeof orderItems;');
+  });
+
+  it('refuses a context port named Api, whose adapter would take the name of the provider type', async () => {
+    const model = invoicingModel.replace(
+      '| `Clock` |',
+      '| `Api` | `call()` | @ledger | calls once |\n| `Clock` |',
+    );
+    const seed = { ...(await sliced()), [`${DOCS}/domain-model.md`]: model };
+
+    expect(String((await go({ name: 'Api' }, seed)).error)).toContain(
+      'LedgerApi is the type that adapter exports',
+    );
+  });
+
+  it('refuses a port whose token another port of the slice already has', async () => {
+    const first = await go({ name: 'OrderId', kind: 'memory' });
+    const seed = after(await sliced(), first.tree);
+
+    const { tree, error } = await go({ name: 'OrderID', kind: 'memory' }, seed);
+
+    expect(String(error)).toContain(
+      'ORDER_ID is already taken by another port',
+    );
+    expect([...tree.keys()]).toEqual([]);
+  });
+
+  it('refuses an adapter file that already exists for another port', async () => {
+    const seed = {
+      ...(await sliced()),
+      [`${slice}/infrastructure/MemoryInvoiceRepository.ts`]: 'export {};\n',
+    };
+
+    const { tree, error } = await go({}, seed);
+
+    expect(String(error)).toContain(
+      'MemoryInvoiceRepository.ts already exists for another port',
+    );
+    expect([...tree.keys()]).toEqual([]);
+  });
+
   it('refuses a provider context that is not registered', async () => {
     const seed = await sliced();
     seed['tsconfig.base.json'] = (seed['tsconfig.base.json'] ?? '').replace(
