@@ -227,7 +227,22 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - **Compose** (22bab5f)
     - [x] The inspector stays on `0.0.0.0:9229` inside the container and the reason is documented in the compose file and README. `bun --help` only lists `--inspect=<val>`; a run showed `--inspect=127.0.0.1:P` binds to loopback only and `0.0.0.0:P` to all interfaces. Docker forwards the published port to the container's own address, so a loopback bind would refuse the host. Exposure: host `127.0.0.1` and the containers of `demo-shared-net`.
 
+- [ ] T14: third-round findings from the T12/T13 review.
+  - The range 9038192..94674df was approved and acknowledged (review-5214c0f5251e518f). Nothing blocked.
+  - **Re-run idempotency** (most important: `hex-subdomain` re-runs depend on it):
+    - `hex-route` refuses a re-run of an unchanged route (factory.ts:197-205).
+    - `hex-route` handles a re-run after a doc change badly.
+    - `hex-driven-port` fails on re-run because the adapter file already exists (factory.ts:142-144).
+    - Fix: a re-run with identical inputs is a no-op; only a real conflict refuses.
+  - **Readability**
+    - The documented gate in hex-bounded-context (214-218).
+    - The re-run comment in hex-route.
+    - The duplicated subdomain parse in hex-use-case (68).
+    - The legacy siblings in gherkin.ts (56).
+    - The interpolation check and comment in tools/dev/infra.ts (34-38).
+
 ## Next step
 
-1. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
-2. Finish T8: run Stryker end to end once domain code exists.
+1. T14 re-run idempotency, before generating `ordering` with `hex-subdomain`.
+2. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
+3. Finish T8: run Stryker end to end once domain code exists.
