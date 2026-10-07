@@ -1,0 +1,32 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Port name in PascalCase, in the slice's own language (e.g. InvoiceRepository, Clock)",
+      "required": true
+    },
+    "kind": {
+      "type": "enum",
+      "label": "What answers the port: memory (an in-memory adapter for now) or context (another bounded context's barrel). Omit to read it from the port's Adapter today cell in domain-model.md, which starts with Memory or @<context>",
+      "choices": ["memory", "context"],
+      "required": false
+    },
+    "provider": {
+      "type": "string",
+      "label": "For kind=context: the bounded context whose barrel the adapter calls, dash-case (e.g. ledger)",
+      "required": false,
+      "default": ""
+    }
+  },
+  "description": "Driven port plus the adapter that implements it, for one slice: domain/driven-ports/<Name>.ts (the interface and its exported Symbol token, no framework) and infrastructure/<Kind><Name>.ts, a Nest @Injectable class, the only place with decorators. kind=memory is an in-memory adapter (Memory<Name>); kind=context imports another context's barrel @demo/api-<provider> and is named <Provider><Name>. Binds the token to the adapter in the slice's composition.ts (useClass). The kind is read from the Adapter today cell of the Driven ports table; a flag may only agree with it. Idempotent: an existing port is left alone."
+}

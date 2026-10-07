@@ -94,8 +94,6 @@ ${SOLUTION_REFERENCES}
     'tsconfig.lib.json': `{
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
-    "declaration": true,
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
@@ -107,7 +105,6 @@ ${EXCLUDE_TESTS(['src/**/steps/*.ts'])}
     'tsconfig.spec.json': `{
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
 ${NODE_SPEC_TYPES}
   },
   "include": [

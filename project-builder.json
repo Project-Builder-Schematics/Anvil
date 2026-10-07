@@ -1,6 +1,30 @@
 {
   "$schema": "./node_modules/@pbuilder/sdk/schemas/project-builder.schema.json",
-  "collections": {},
+  "collections": {
+    "default": {
+      "hex-bounded-context": {
+        "path": "./schematics/hex-bounded-context"
+      },
+      "hex-context": {
+        "path": "./schematics/hex-context"
+      },
+      "hex-driven-port": {
+        "path": "./schematics/hex-driven-port"
+      },
+      "hex-route": {
+        "path": "./schematics/hex-route"
+      },
+      "hex-slice": {
+        "path": "./schematics/hex-slice"
+      },
+      "hex-subdomain": {
+        "path": "./schematics/hex-subdomain"
+      },
+      "hex-use-case": {
+        "path": "./schematics/hex-use-case"
+      }
+    }
+  },
   "dependencies": {},
   "settings": {
     "autoInstall": true,

@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    },
+    "resource": {
+      "type": "string",
+      "label": "REST resource the route hangs from, dash-case; becomes the controller path and file base (e.g. invoices gives invoices.controller.ts under /api/invoices)",
+      "required": true
+    },
+    "method": {
+      "type": "enum",
+      "label": "HTTP method",
+      "choices": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+      "required": true
+    },
+    "use_case": {
+      "type": "string",
+      "label": "Use case the route drives, PascalCase; must already be exported by the context barrel (hex-use-case). Omit to read it from the route's Driving adapters row",
+      "required": false,
+      "default": ""
+    },
+    "path": {
+      "type": "string",
+      "label": "Path under the resource (default: /); needed only when the resource has several rows for the method",
+      "required": false,
+      "default": ""
+    },
+    "status": {
+      "type": "enum",
+      "label": "Success status the handler answers. Omit to read the first 2xx of the row's Answers cell; Nest's default (201 for POST, 200 otherwise) needs no decorator",
+      "choices": ["200", "201", "202", "204"],
+      "required": false
+    }
+  },
+  "description": "Nest controller operation for one use case, read from its row in the Driving adapters table of domain-model.md (route, use case, success status), inside the slice's infrastructure/http/<resource>.controller.ts (infrastructure is the ring where Nest decorators live). Request input is Zod schema-first: @Body({ schema }), @Query({ schema }) and @Param({ schema }) feed the global StandardSchemaValidationPipe; the use case is injected by its Symbol token. Registers the controller in the slice's composition.ts and the context module in apps/api AppModule. Run again with the same resource to add another operation to the same controller. The use case must already be exported by the barrel."
+}
