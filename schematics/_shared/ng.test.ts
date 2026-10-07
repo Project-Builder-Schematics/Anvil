@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
 import {
+  customTypes,
   parseInputs,
-  parseNames,
+  parseOutputs,
   readNgLib,
   withBarrelExport,
   withTestTarget,
@@ -19,8 +20,8 @@ describe('parseInputs', () => {
 
   it('refuses a name or type the generated specs cannot fill', () => {
     expect(() => parseInputs('Label:string')).toThrow('camelCase');
-    expect(() => parseInputs('label:Date')).toThrow(
-      'string, number or boolean',
+    expect(() => parseInputs('label:date')).toThrow(
+      'string, number, boolean or a PascalCase type',
     );
   });
 
@@ -31,19 +32,38 @@ describe('parseInputs', () => {
   });
 });
 
-describe('parseNames', () => {
-  it('reads camelCase names', () => {
-    expect(parseNames('selected, closed', 'output')).toEqual([
-      'selected',
-      'closed',
+describe('parseInputs with custom types', () => {
+  it('reads a PascalCase type and its array', () => {
+    expect(parseInputs('order:Order, lines:OrderLine[]')).toEqual([
+      { name: 'order', type: 'Order' },
+      { name: 'lines', type: 'OrderLine[]' },
+    ]);
+  });
+});
+
+describe('parseOutputs', () => {
+  it('reads camelCase names with an optional payload type', () => {
+    expect(parseOutputs('selected, added:AddLine, picked:number')).toEqual([
+      { name: 'selected' },
+      { name: 'added', type: 'AddLine' },
+      { name: 'picked', type: 'number' },
     ]);
   });
 
-  it('refuses a name in the wrong case and a repeated one', () => {
-    expect(() => parseNames('Selected', 'output')).toThrow('camelCase');
-    expect(() => parseNames('selected,selected', 'output')).toThrow(
+  it('refuses a name in the wrong case, a bad type and a repeated name', () => {
+    expect(() => parseOutputs('Selected')).toThrow('camelCase');
+    expect(() => parseOutputs('added:add-line')).toThrow('PascalCase type');
+    expect(() => parseOutputs('selected,selected')).toThrow(
       'output selected is listed twice',
     );
+  });
+});
+
+describe('customTypes', () => {
+  it('lists the imported types once, sorted, without the array suffix', () => {
+    expect(
+      customTypes(['string', 'OrderLine[]', 'Order', 'OrderLine', 'number[]']),
+    ).toEqual(['Order', 'OrderLine']);
   });
 });
 

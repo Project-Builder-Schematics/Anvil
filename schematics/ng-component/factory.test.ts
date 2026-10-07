@@ -184,6 +184,56 @@ describe('ng-component', () => {
     });
   });
 
+  describe('typed inputs and outputs', () => {
+    const typed = {
+      inputs: 'lines:OrderLine[],order:Order,label:string',
+      outputs: 'added:AddLine,placed',
+      type_import: '@demo/web-catalog-domain',
+    };
+
+    it('declares custom types and imports them from the given module', async () => {
+      const source = (await go(typed)).tree.get(`${dir}/order-card.ts`) ?? '';
+
+      expect(source).toContain(
+        "import { Component, input, output } from '@angular/core';\nimport type { AddLine, Order, OrderLine } from '@demo/web-catalog-domain';\n",
+      );
+      expect(source).toContain(
+        'readonly lines = input.required<OrderLine[]>();',
+      );
+      expect(source).toContain('readonly order = input.required<Order>();');
+      expect(source).toContain('readonly label = input.required<string>();');
+      expect(source).toContain('readonly added = output<AddLine>();');
+      expect(source).toContain('readonly placed = output();');
+    });
+
+    it('samples an array input in the spec and leaves other custom inputs unset', async () => {
+      const spec =
+        (await go(typed)).tree.get(`${dir}/order-card.spec.ts`) ?? '';
+
+      expect(spec).toContain("fixture.componentRef.setInput('lines', []);");
+      expect(spec).toContain(
+        "fixture.componentRef.setInput('label', 'sample');",
+      );
+      expect(spec).not.toContain("setInput('order'");
+    });
+
+    it('imports nothing when every type is a primitive', async () => {
+      const source =
+        (
+          await go({ inputs: 'label:string', outputs: 'picked:number' })
+        ).tree.get(`${dir}/order-card.ts`) ?? '';
+
+      expect(source).not.toContain('import type');
+      expect(source).toContain('readonly picked = output<number>();');
+    });
+
+    it('refuses a custom type without a module to import it from', async () => {
+      expect(String((await go({ ...typed, type_import: '' })).error)).toContain(
+        'type_import',
+      );
+    });
+  });
+
   it('refuses a component that exists, writing nothing', async () => {
     const { tree, error } = await go(
       {},
@@ -201,8 +251,8 @@ describe('ng-component', () => {
     expect(String((await go({ name: 'OrderCard' })).error)).toContain(
       'dash-case',
     );
-    expect(String((await go({ inputs: 'label:Date' })).error)).toContain(
-      'string, number or boolean',
+    expect(String((await go({ inputs: 'label:date' })).error)).toContain(
+      'string, number, boolean or a PascalCase type',
     );
     expect(String((await go({ outputs: 'Selected' })).error)).toContain(
       'camelCase',

@@ -114,10 +114,16 @@ const noDuplicates = <T extends { name: string }>(
   return items;
 };
 
-/** `label:string,count:number` → [{ name, type }]; only the types the generated specs can fill. */
+const PRIMITIVES = new Set(['string', 'number', 'boolean']);
+const TYPE = /^(string|number|boolean|[A-Z][A-Za-z0-9]*)(\[\])?$/;
+
+/** The element type of a `T` or `T[]` annotation. */
+const elementType = (type: string): string => type.replace(/\[\]$/, '');
+
+/** `label:string,lines:OrderLine[]` → [{ name, type }]; a PascalCase type needs the caller's `type_import`. */
 export const parseInputs = (
   spec: string,
-): Array<{ name: string; type: 'string' | 'number' | 'boolean' }> =>
+): Array<{ name: string; type: string }> =>
   noDuplicates(
     spec
       .split(',')
@@ -127,9 +133,9 @@ export const parseInputs = (
         const [name = '', type = ''] = part.split(':').map((s) => s.trim());
         if (!/^[a-z][A-Za-z0-9]*$/.test(name))
           throw new Error(`input "${name}" must be camelCase`);
-        if (type !== 'string' && type !== 'number' && type !== 'boolean') {
+        if (!TYPE.test(type)) {
           throw new Error(
-            `input ${name} has type "${type}": use string, number or boolean`,
+            `input ${name} has type "${type}": use string, number, boolean or a PascalCase type (with type_import)`,
           );
         }
         return { name, type };
@@ -137,19 +143,34 @@ export const parseInputs = (
     'input',
   );
 
-export const parseNames = (spec: string, label: string): string[] =>
+/** `added:AddLine,placed` → [{ name, type? }]; a bare name is an output without payload. */
+export const parseOutputs = (
+  spec: string,
+): Array<{ name: string; type?: string }> =>
   noDuplicates(
     spec
       .split(',')
       .map((part) => part.trim())
       .filter(Boolean)
-      .map((name) => {
+      .map((part) => {
+        const [name = '', type] = part.split(':').map((s) => s.trim());
         if (!/^[a-z][A-Za-z0-9]*$/.test(name))
-          throw new Error(`${label} "${name}" must be camelCase`);
-        return { name };
+          throw new Error(`output "${name}" must be camelCase`);
+        if (type !== undefined && !TYPE.test(type)) {
+          throw new Error(
+            `output ${name} has type "${type}": use string, number, boolean or a PascalCase type (with type_import)`,
+          );
+        }
+        return type === undefined ? { name } : { name, type };
       }),
-    label,
-  ).map(({ name }) => name);
+    'output',
+  );
+
+/** The PascalCase types a component imports, sorted and unique. */
+export const customTypes = (types: string[]): string[] =>
+  [
+    ...new Set(types.map(elementType).filter((type) => !PRIMITIVES.has(type))),
+  ].sort();
 
 /** The class a name gives: order-card → OrderCard. */
 export const className = (name: string): string => pascal(name);

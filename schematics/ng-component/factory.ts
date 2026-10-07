@@ -3,8 +3,9 @@ import { create } from '@pbuilder/sdk/commons';
 import { assertDashed, writeBuffer, type WriteBuffer } from '../_shared/lib.ts';
 import {
   className,
+  customTypes,
   parseInputs,
-  parseNames,
+  parseOutputs,
   readNgLib,
   withBarrelExport,
   withTestTarget,
@@ -14,7 +15,13 @@ const KIND_OF_TYPE: Record<string, 'container' | 'presentational'> = {
   feature: 'container',
   ui: 'presentational',
 };
-const SAMPLE = { string: "'sample'", number: '1', boolean: 'true' };
+const SAMPLE: Record<string, string> = {
+  string: "'sample'",
+  number: '1',
+  boolean: 'true',
+};
+const sampleOf = (type: string): string | undefined =>
+  type.endsWith('[]') ? '[]' : SAMPLE[type];
 
 export default async (input: Input, shared?: WriteBuffer) => {
   const buffer = shared ?? writeBuffer();
@@ -31,12 +38,22 @@ export default async (input: Input, shared?: WriteBuffer) => {
     );
   }
   const inputs = parseInputs(input.inputs ?? '');
-  const outputs = parseNames(input.outputs ?? '', 'output');
-  const both = inputs.find((i) => outputs.includes(i.name));
+  const outputs = parseOutputs(input.outputs ?? '');
+  const both = inputs.find((i) => outputs.some((o) => o.name === i.name));
   if (both) throw new Error(`${both.name} is both an input and an output`);
   if (derived === 'container' && (inputs.length > 0 || outputs.length > 0)) {
     throw new Error(
       'a container takes no inputs or outputs: it gets its data from data-access',
+    );
+  }
+
+  const imported = customTypes([
+    ...inputs.map((i) => i.type),
+    ...outputs.flatMap((o) => (o.type ? [o.type] : [])),
+  ]);
+  if (imported.length > 0 && !input.type_import) {
+    throw new Error(
+      `${imported.join(', ')} must be imported from a module: pass type_import`,
     );
   }
 
@@ -50,13 +67,15 @@ export default async (input: Input, shared?: WriteBuffer) => {
   ];
   const members = [
     ...inputs.map((i) => `  readonly ${i.name} = input.required<${i.type}>();`),
-    ...outputs.map((o) => `  readonly ${o} = output();`),
+    ...outputs.map(
+      (o) => `  readonly ${o.name} = output${o.type ? `<${o.type}>` : ''}();`,
+    ),
   ];
 
   // Deliberately fail-closed: a component that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
     template: `import { ${angular.join(', ')} } from '@angular/core';
-
+${imported.length > 0 ? `import type { ${imported.join(', ')} } from '${input.type_import}';\n` : ''}
 @Component({
   selector: '${lib.prefix}-${name}',
   templateUrl: './${name}.html',
@@ -78,7 +97,14 @@ import { ${cls} } from './${name}';
 describe('${cls}', () => {
   it('renders', async () => {
     const fixture = TestBed.createComponent(${cls});
-${inputs.map((i) => `    fixture.componentRef.setInput('${i.name}', ${SAMPLE[i.type]});\n`).join('')}    await fixture.whenStable();
+${inputs
+  .flatMap((i) => {
+    const sample = sampleOf(i.type);
+    return sample === undefined
+      ? []
+      : [`    fixture.componentRef.setInput('${i.name}', ${sample});\n`];
+  })
+  .join('')}    await fixture.whenStable();
 
     expect(fixture.nativeElement as HTMLElement).toBeInstanceOf(HTMLElement);
   });

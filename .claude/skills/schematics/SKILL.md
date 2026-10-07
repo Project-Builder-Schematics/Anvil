@@ -126,10 +126,16 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-shared-l
 
 ### `ng-component`
 
-`lib` (repo-relative lib dir), `name` (dash-case); _kind_ (container|presentational, read from the lib's type tag), _inputs_ (`name:type`, required signal inputs), _outputs_ (camelCase), _folder_. Containers take no inputs or outputs.
+`lib` (repo-relative lib dir), `name` (dash-case); _kind_ (container|presentational, read from the lib's type tag), _inputs_ (`name:type`, required signal inputs; type is string, number, boolean, a PascalCase type or any of them with `[]`), _outputs_ (camelCase, optionally `name:type` for a payload), _type_import_ (the module the PascalCase types are imported from with `import type`, required when one is used), _folder_. Containers take no inputs or outputs.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/catalog/ui --name=order-card --inputs=label:string,count:number --outputs=selected
+```
+
+With domain types (a presentational component that takes a list and emits a payload):
+
+```sh
+env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/ordering/ui --name=line-list --inputs=lines:OrderLine[] --type_import=@demo/web-ordering-domain
 ```
 
 ### `ng-service`
