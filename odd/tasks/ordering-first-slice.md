@@ -65,8 +65,8 @@ Strict.
 
 - [x] O1: write the docs: domain model, glossary, flows and five `.feature` files. Route: delegated writer.
 - [x] O2: generate with `hex-subdomain`. Record the IMPACT rows (use or miss). Route: delegated writer.
-- [ ] O3: implement the value objects and the `Order` aggregate with TDD. Route: delegated writer.
-- [ ] O4: implement the use cases and steps until every scenario is green. Coverage gate: domain and application at 90%. Route: delegated writer.
+- [x] O3: implement the value objects and the `Order` aggregate with TDD. Route: delegated writer.
+- [x] O4: implement the use cases and steps until every scenario is green. Coverage gate: domain and application at 90%. Route: delegated writer.
 - [ ] O5: run Stryker end to end on api-ordering (this closes T8). Record the mutation score. Route: delegated writer.
 
 ## Acceptance criteria
@@ -96,6 +96,17 @@ Strict.
   - IMPACT rows: 1 use (hex-subdomain), 3 defects (hex-bounded-context README without Subdomains, hex-route exposing the api alias gap, hex-use-case vacuous pending steps).
   - Checks at the commit: `bunx nx run-many -t lint typecheck` succeeded; `bun test schematics` 235 pass; `nx test api-ordering` fails on coverage on purpose (the RED).
 
+- 2026-10-08: O3 done in 73861ab `feat(ordering)`. Domain in `libs/api/ordering/src/domain`: `OrderId`, `ProductId`, `Quantity`, `Money`, `OrderLine`, `Order` (immutable; every command returns a new order) and `OrderingError` in the generated `errors.ts`. Domain imports nothing outside itself.
+  - RED: the five new spec files failed with `Cannot find module './Money'` (and the other four) before any domain file existed. GREEN: 55 domain tests.
+  - Checks: `bunx nx run api-ordering:lint` clean; tsc on the lib and spec projects clean; `nx test api-ordering` still failed the 90% gate until O4 (application had no code).
+- 2026-10-08: O4 done in d9cf0d4 (ports and Memory adapters), ac3779c (use cases and steps) and 364f90c (http). Docs change: `AddOrderLine` now answers the order view `{ orderId, status, lines }` instead of the line, because the line cannot be read back without a non-null assertion and the full view is more useful.
+  - RED: adapter specs 9 failed (`byId is not a function`); then the real steps against the unimplemented use cases failed 33 of 97 tests, all with `is not implemented`; then the in-process HTTP spec failed 6 of 6 (400 on a body-less `POST /orders`, 500 for every refusal).
+  - GREEN: `nx test api-ordering` 97 tests, coverage 97.9% statements, 100% branches and functions (gate 90%); `nx test api` 41 tests. All 33 scenarios pass, including the `@draft` ones. A scenario that forgets to claim a refusal fails in the `After` hook (checked once by removing a `Then it is refused with` line).
+  - Hand edits to generated files: port interfaces, command and result types, use case bodies, `AddOrderLine` body schema, `.default({})` on the three empty bodies (Express 5 leaves `req.body` undefined, so a body-less POST was a 400), `.trim().min(1)` on the id params, and `@UseFilters(OrderingErrorFilter)` after `@Controller` (so a generator re-run still finds its anchor).
+  - Added by hand (no schematic fits): `OrderingErrorFilter` (code to status), `findOrder` and `OrderView` in application, `steps/world.ts`, and `apps/api/src/app/orders.http.spec.ts` (the full `AppModule` in process: lifecycle, 404, 409, 422, 400 and an ignored `customerId`).
+  - IMPACT rows: 1 use (hand edits), 1 miss (error to status), 1 defect (body-less POST).
+  - Checks at the last commit: `bun test schematics` 235 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean.
+
 ## Next step
 
-O3.
+O5.
