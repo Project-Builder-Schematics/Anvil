@@ -5,6 +5,9 @@ pre-commit:
     tools:
       glob: 'tools/**/*.ts'
       run: bun run check:tools
+    schematics:
+      glob: 'schematics/**/*.ts'
+      run: bun run check:schematics
 commit-msg:
   commands:
     commitlint:

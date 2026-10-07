@@ -56,7 +56,12 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 - [x] T3a: convert workspace to TS paths setup (prerequisite of T3; decision below). Route: delegated.
 - [x] T3: `apps/web`, Angular 22, standalone, with routing. Route: delegated.
 - [x] T4: Dockerfiles for api and web, plus `docker-compose.yml` with postgres. Route: delegated.
-- [ ] T9: Project Builder init and DDD schematics (moved before T5; also covers the schematics needed by T5 and T7). Not started.
+- [ ] T9: Project Builder init, DDD and Angular schematics (moved before T5; also covers the schematics needed by T5 and T7). Route: delegated (one writer, five work units).
+  - [ ] T9a: `builder init` in-repo, `@pbuilder/sdk` 0.3.1 and quickpickle 1.11.2 as devDependencies, `schematics/_shared` lib, AGENTS.md "Schematics", IMPACT.md ledger, `schematics:test` and `check:schematics` scripts, CI and lefthook.
+  - [ ] T9b: backend hex schematics (bounded-context, slice, driven-port, use-case, route, subdomain, context).
+  - [ ] T9c: frontend schematics (web-context, web-shared-lib, ng-component, ng-service, ng-directive).
+  - [ ] T9d: T5 regenerated through the schematics.
+  - [ ] T9e: T7 regenerated through the schematics.
 - [x] T5: DDD skeleton. Generated with Nx generators before the order change; per the new rule it must be regenerated with project-builder schematics, not Nx generators.
   - Context libs for api and web, plus shared-kernel.
   - Tags and module boundaries, and ring import rules.

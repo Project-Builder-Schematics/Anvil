@@ -24,3 +24,4 @@ jobs:
       - run: bunx nx format:check
       - run: bunx nx affected -t lint typecheck test
       - run: bun run check:tools
+      - run: bun run check:schematics

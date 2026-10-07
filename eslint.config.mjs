@@ -45,7 +45,12 @@ export default [
     },
   },
   {
-    ignores: ['**/dist', '**/out-tsc', '**/vitest.config.*.timestamp*'],
+    ignores: [
+      '**/dist',
+      '**/out-tsc',
+      '**/vitest.config.*.timestamp*',
+      '**/schema.generated.ts',
+    ],
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],

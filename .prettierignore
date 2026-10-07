@@ -7,3 +7,7 @@
 .angular
 
 libs/web/shared/design-system/themes/*/DESIGN.md
+
+.claude/skills/pbuilder
+schematics/**/schema.generated.ts
+project-builder.json
