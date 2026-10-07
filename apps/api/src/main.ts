@@ -1,16 +1,18 @@
-import { Logger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import { configureApp } from './app/configure';
+import type { Env } from './config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const globalPrefix = 'api';
-  app.setGlobalPrefix(globalPrefix);
-  const port = Number(process.env['PORT'] ?? 3000);
-  await app.listen(port);
-  Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
-  );
+  const app = await NestFactory.create(AppModule, {
+    logger: new ConsoleLogger({ json: true }),
+    routeConflictPolicy: { duplicate: 'error', shadow: 'warn' },
+  });
+  const config = app.get<ConfigService<Env, true>>(ConfigService);
+  configureApp(app, { corsOrigin: config.get('CORS_ORIGIN', { infer: true }) });
+  await app.listen(config.get('PORT', { infer: true }));
 }
 
-bootstrap();
+void bootstrap();

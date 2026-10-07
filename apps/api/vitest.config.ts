@@ -8,5 +8,7 @@ export default defineConfig({
     passWithNoTests: true,
   },
   // esbuild (Vite's default) cannot emit decorator metadata, which Nest DI needs.
-  plugins: [swc.vite({ tsconfigFile: './tsconfig.spec.json', module: { type: 'es6' } })],
+  plugins: [
+    swc.vite({ tsconfigFile: './tsconfig.spec.json', module: { type: 'es6' } }),
+  ],
 });

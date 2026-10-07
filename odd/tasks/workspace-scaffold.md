@@ -69,6 +69,7 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   6. Docs: README "Several worktrees at once" (also says a new worktree's DB is created and seeded automatically and `dev:seed` re-runs the seed); AGENTS.md: never assume localhost:4200/3000, read URLs from `bun run dev:status`, use `dev --detach` plus `dev:stop`, outside the scripts run `docker compose -p <project>`.
   Verification: bun tests for worktree.ts and the seed decision, lint, `dev:status` printing the identity without Docker.
 - [x] T7: design system from awesome-design-md themes with theme- and component-level A/B testing
+- [ ] T8: quality gates and DX. Nest 12: Zod schema-first validation (`@Body({schema})` plus a global `StandardSchemaValidationPipe`), config validated at startup (`ConfigModule.forRoot({ validationSchema })`), JSON `ConsoleLogger`, `enableShutdownHooks`, `routeConflictPolicy`, built-in security headers/CORS/CSRF, `@nestjs/swagger@12`, ports injected by `Symbol` tokens in composition.ts. Lint: typescript-eslint `strictTypeChecked` everywhere, angular-eslint with `--tseslint-preset=strictTypeChecked` for web. Tests: coverage thresholds (domain/application 90%, apps 70%), Stryker 10.x on api domain/application libs. Commits: commitlint + lefthook. CI: `.github/workflows/ci.yml` (nx affected lint typecheck test, no build). DX: Prettier + `nx format:check`, root README sections, `docs/adr/` seeded.
 
 ## Acceptance criteria
 
