@@ -11,6 +11,7 @@ A non-trivial domain is needed to exercise the "when to add a schematic" loop on
 ## Scope
 
 In scope:
+
 - Nx 23 workspace, with Bun as the package manager.
 - `apps/api`: NestJS 12, bundled with Rsbuild (`output.target: 'node'`) instead of webpack, plus a Dockerfile.
 - `apps/web`: Angular 22, plus a Dockerfile.
@@ -18,6 +19,7 @@ In scope:
 - DDD skeleton, described in the constraints below.
 
 Out of scope:
+
 - Domain models, use cases and business rules. Those come with the later domain-modeling step.
 
 ## Constraints
@@ -54,7 +56,8 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 - [x] T3a: convert workspace to TS paths setup (prerequisite of T3; decision below). Route: delegated.
 - [x] T3: `apps/web`, Angular 22, standalone, with routing. Route: delegated.
 - [x] T4: Dockerfiles for api and web, plus `docker-compose.yml` with postgres. Route: delegated.
-- [x] T5: DDD skeleton.
+- [ ] T9: Project Builder init and DDD schematics (moved before T5; also covers the schematics needed by T5 and T7). Not started.
+- [x] T5: DDD skeleton. Generated with Nx generators before the order change; per the new rule it must be regenerated with project-builder schematics, not Nx generators.
   - Context libs for api and web, plus shared-kernel.
   - Tags and module boundaries, and ring import rules.
   - `docs/<ctx>/` stubs.
@@ -67,8 +70,8 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   4. Seed: the existence check result decides; only a just-created DB is seeded, an existing one never is. `tools/dev/seed.ts` (Bun) connects with the worktree DB name, currently verifies the connection and logs "no seed data yet", idempotent. `dev:seed` re-runs it. The "seed only when just created" decision is unit-tested in isolation, RED first, no real DB.
   5. Scripts (root package.json): `dev` (`bun tools/dev/dev.ts`, `--detach`), `dev:stop`, `dev:status`, `dev:logs`, `dev:seed`. Flow: ensure network and shared infra (`-p demo up -d db pgadmin`); wait for db health, ensure DB, seed if new; `-p <project> rm -sf api`; probe ports (on clash name them and suggest `--port-offset`); `-p <project> up -d --force-recreate api`; Angular dev server on WEB_PORT with proxy to API_PORT from env; Ctrl+C runs `compose stop api` for this project only. `--detach`: web server to `.dev/web.log`, `.dev/web.pid` holds pid plus start time (pid reuse guard), wait up to 30 s for the port, `.dev/` in .gitignore. `dev:stop`: SIGTERM to the process group, SIGKILL after 5 s, then `compose stop api`. `dev:status` prints web_url, api_url, debug_port, compose_project, db_name and running state. `dev:logs`: api compose logs plus tail of `.dev/web.log`. Docker failures say "Is Docker running?".
   6. Docs: README "Several worktrees at once" (also says a new worktree's DB is created and seeded automatically and `dev:seed` re-runs the seed); AGENTS.md: never assume localhost:4200/3000, read URLs from `bun run dev:status`, use `dev --detach` plus `dev:stop`, outside the scripts run `docker compose -p <project>`.
-  Verification: bun tests for worktree.ts and the seed decision, lint, `dev:status` printing the identity without Docker.
-- [x] T7: design system from awesome-design-md themes with theme- and component-level A/B testing
+     Verification: bun tests for worktree.ts and the seed decision, lint, `dev:status` printing the identity without Docker.
+- [x] T7: design system from awesome-design-md themes with theme- and component-level A/B testing Generated with Nx generators before the order change; per the new rule it must be regenerated with project-builder schematics, not Nx generators.
 - [ ] T8: quality gates and DX. Nest 12: Zod schema-first validation (`@Body({schema})` plus a global `StandardSchemaValidationPipe`), config validated at startup (`ConfigModule.forRoot({ validationSchema })`), JSON `ConsoleLogger`, `enableShutdownHooks`, `routeConflictPolicy`, built-in security headers/CORS/CSRF, `@nestjs/swagger@12`, ports injected by `Symbol` tokens in composition.ts. Lint: typescript-eslint `strictTypeChecked` everywhere, angular-eslint with `--tseslint-preset=strictTypeChecked` for web. Tests: coverage thresholds (domain/application 90%, apps 70%), Stryker 10.x on api domain/application libs. Commits: commitlint + lefthook. CI: `.github/workflows/ci.yml` (nx affected lint typecheck test, no build). DX: Prettier + `nx format:check`, root README sections, `docs/adr/` seeded.
 
 ## Acceptance criteria
@@ -100,6 +103,9 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 - 2026-10-07: Web libs switched from vitest-analog to the Angular unit-test builder (commit 87e16a1). The Angular lib generator refuses vitest-angular for non-buildable libs, and the builder fails on a lib with zero specs, so empty skeleton libs have no test target; a lib gets one (buildTarget web:build:development, own tsConfig) with its first spec.
 - 2026-10-07: T7 done (commit recorded in the next progress line). Lib `libs/web/shared/design-system` (`@demo/web-shared-design-system`, tags scope:web, context:shared, type:ui; the T5 depConstraints already let every context depend on context:shared). Themes shopify (default/control) and stripe vendored unmodified from voltagent/awesome-design-md (MIT, noted in themes/README.md; DESIGN.md excluded from prettier). Contract in src/tokens/contract.ts (12 colors, 4 type roles x 5 props, 4 radii, 5 spaces; vars `--ds-<group>-<name>`). Mappings use `{ path }` or `{ literal }`; literals only for success (both brands) and shopify danger. Generator tools/design-system/build-themes.ts (Bun, `yaml` package), script `design:themes`, output src/styles/themes.generated.css (committed; default theme also on :root), added to the web build styles. Experiments live in the design-system lib, not a separate lib (why: the directive must be usable from type:ui libs, which cannot depend on data-access/feature). Registry with `theme` (control shopify / b stripe, 50/50) and `checkout-cta`; FNV-1a bucketing; `ExperimentService` (variant() returns a readonly signal; applyThemes() via provideExperiments app initializer); tokens SUBJECT_ID, EXPERIMENT_OVERRIDES (`?exp=`, persisted in sessionStorage), ExposureSink (default console.debug); `*dsVariant="key; is: v"`. Button `ds-button` uses only --ds-* tokens; app shell renders the checkout-cta variants and the web app calls provideExperiments. RED: `bun test tools/design-system` before build-themes.ts existed failed (module missing); GREEN: 7 tests (both themes resolve every contract var, unmapped token and unresolved path throw, :root rendering). Scan test tools/design-system/tokens-usage.test.ts: temporary `--ds-color-bogus` in button.css made it FAIL, restored afterwards. Honest TDD deviation: the experiment/bucket/directive specs were written right after the implementation, not before it, so no observed RED exists for them. Checks: `bun test tools`: 19 pass; `bunx nx test web-shared-design-system`: 5 files, 16 tests passed (determinism, 50/50 distribution within 45-55%, weights incl. zero weight, override parsing, theme application, one exposure per experiment, directive render); `bunx nx run-many -t lint test typecheck`: 18 projects passed; `bun run design:themes` leaves the committed CSS unchanged. Not applied: `strictUnclaimedEventNames` (22.2 option; installed Angular is 22.1.8). Not verified (no serve/build): that the dev server actually applies the theme and the CTA in a browser.
 
+- 2026-10-07: ORDER CHANGE received after T5, T6, T7 and most of T8 were already done and committed with Nx generators (T5 libs, T7 design-system lib). Required order from now: T3a, T3, T4, T9 (Project Builder init and DDD schematics), T5 (via schematics), T6, T7 (via schematics), T8. Nothing further was started after the message. T5 and T7 are generated with Nx generators and need regeneration through schematics once T9 exists; the T5/T7 notes in the task list say so.
+- 2026-10-07: T8 partial (the uncommitted part is committed as WIP below): Nest: Zod validation pipe, config validated at startup, JSON logger, routeConflictPolicy, security headers, CORS allow-list, CSRF, shutdown hooks, OpenAPI JSON (commit 8f7405a); typescript-eslint strictTypeChecked everywhere incl. tools (efa9bb8); coverage thresholds api 70, web 70, design-system 70, api libs 90 (ef2ba00, api verified failing at an impossible threshold, Angular builder needs coverageInclude); Stryker 10.0.0 configured but NOT verified end to end (it aborts with "No tests were executed" because no domain code exists); commitlint rejects "bad" and accepts "feat(api): add thing" (observed); lefthook.yml validated but hooks are not installed here; CI workflow, ADRs 0001-0007, root README, prettier (format:check clean). Not done: ports as Symbol tokens (no ports exist yet, documented in README), angular-eslint `--tseslint-preset` (typed strict rules come from the root config instead), `strictUnclaimedEventNames` (Angular 22.2).
+
 ## Next step
 
-T8 quality gates and DX (from the coordinator). Also pending: remaining frontend contexts (inventory, payments, shipping, notifications), Angular 22.2 / strictUnclaimedEventNames, `.angular` and nx tooling cleanup.
+Decision needed: regenerate T5 and T7 with schematics after T9, and finish T8 (Stryker end-to-end once domain code exists).

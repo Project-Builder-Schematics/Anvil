@@ -1,0 +1,11 @@
+pre-commit:
+  commands:
+    affected:
+      run: bunx nx affected -t lint typecheck --base=HEAD
+    tools:
+      glob: 'tools/**/*.ts'
+      run: bun run check:tools
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}

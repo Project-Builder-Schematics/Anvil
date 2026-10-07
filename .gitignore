@@ -56,3 +56,5 @@ vitest.config.*.timestamp*
 __screenshots__/
 
 .dev/
+.stryker-tmp
+reports

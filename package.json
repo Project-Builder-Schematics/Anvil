@@ -9,7 +9,8 @@
     "dev:logs": "bun tools/dev/dev.ts logs",
     "dev:seed": "bun tools/dev/seed.ts",
     "design:themes": "bun tools/design-system/build-themes.ts",
-    "check:tools": "eslint tools && tsc -p tools/tsconfig.json && bun test tools"
+    "check:tools": "eslint tools && tsc -p tools/tsconfig.json && bun test tools",
+    "mutation": "stryker run"
   },
   "private": true,
   "dependencies": {
@@ -36,6 +37,8 @@
     "@angular/cli": "~22.1.0",
     "@angular/compiler-cli": "~22.1.0",
     "@angular/language-service": "~22.1.0",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^9.8.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^12.1.2",
@@ -52,6 +55,8 @@
     "@oxc-project/runtime": "^0.115.0",
     "@rsbuild/core": "2.2.12",
     "@schematics/angular": "~22.1.0",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@swc-node/register": "1.11.1",
     "@swc/core": "1.15.8",
     "@swc/helpers": "0.5.18",
@@ -64,6 +69,7 @@
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "jsdom": "^27.1.0",
+    "lefthook": "^2.1.17",
     "nx": "23.2.1",
     "prettier": "^3.8.1",
     "tslib": "^2.3.0",
