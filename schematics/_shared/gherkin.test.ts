@@ -61,7 +61,7 @@ describe('cucumber expressions', () => {
     const [p] = phrases('Scenario: s\n  Given a (draft) of "x" it\'s\n');
 
     expect(binding(p as never)).toBe(
-      "Given('a \\\\(draft\\\\) of {string} it\\'s', (_world, arg0: string) => 'skipped');",
+      "Given('a \\\\(draft\\\\) of {string} it\\'s', (_world, arg0: string) => {\n  throw new Error('step not implemented: a (draft) of \"x\" it\\'s');\n});",
     );
   });
 
@@ -76,11 +76,11 @@ describe('cucumber expressions', () => {
 });
 
 describe('binding', () => {
-  it('is a pending quickpickle step definition', () => {
+  it('is a quickpickle step definition that fails until it is implemented', () => {
     const [first] = phrases(feature);
 
     expect(binding(first as never)).toBe(
-      "Given('customer {string} without lines', (_world, arg0: string) => 'skipped');",
+      "Given('customer {string} without lines', (_world, arg0: string) => {\n  throw new Error('step not implemented: customer \"acme\" without lines');\n});",
     );
   });
 
@@ -92,7 +92,9 @@ describe('binding', () => {
         expression: "it's done",
         params: [],
       }),
-    ).toBe("Then('it\\'s done', () => 'skipped');");
+    ).toBe(
+      "Then('it\\'s done', () => {\n  throw new Error('step not implemented: it\\'s done');\n});",
+    );
   });
 });
 

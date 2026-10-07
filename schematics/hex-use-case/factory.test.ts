@@ -110,10 +110,10 @@ describe('hex-use-case', () => {
 
     expect(steps).toContain("import { Given, Then, When } from 'quickpickle';");
     expect(steps).toContain(
-      "Given('customer {string} without lines', (_world, arg0: string) => 'skipped');",
+      "Given('customer {string} without lines', (_world, arg0: string) => {\n  throw new Error('step not implemented: customer \"acme\" without lines');\n});",
     );
     expect(steps).toContain(
-      "Then('the failure is {string}', (_world, arg0: string) => 'skipped');",
+      "Then('the failure is {string}', (_world, arg0: string) => {\n  throw new Error('step not implemented: the failure is \"LINES_REQUIRED\"');\n});",
     );
   });
 

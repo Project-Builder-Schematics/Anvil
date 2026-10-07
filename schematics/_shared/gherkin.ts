@@ -45,12 +45,15 @@ export const phrases = (feature: string): Phrase[] => {
   return [...seen.values()];
 };
 
-/** The expression as a single-quoted TypeScript literal. */
-const literal = (p: Phrase): string =>
-  `'${p.expression.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+const quoted = (text: string): string =>
+  `'${text.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
+/** The expression as a single-quoted TypeScript literal. */
+const literal = (p: Phrase): string => quoted(p.expression);
+
+/** quickpickle passes a step that returns "skipped" and fails one that throws, so a pending step throws. */
 export const binding = (p: Phrase): string =>
-  `${p.keyword}(${literal(p)}, ${p.params.length ? `(_world, ${p.params.join(', ')}) ` : '() '}=> 'skipped');`;
+  `${p.keyword}(${literal(p)}, ${p.params.length ? `(_world, ${p.params.join(', ')}) ` : '() '}=> {\n  throw new Error(${quoted(`step not implemented: ${p.text}`)});\n});`;
 
 const bound = (siblings: string[], p: Phrase): boolean =>
   siblings.some((source) => source.includes(literal(p)));

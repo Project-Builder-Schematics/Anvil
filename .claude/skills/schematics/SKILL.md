@@ -39,7 +39,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:<schematic> 
 1. `hex-bounded-context` writes `docs/<ctx>/` (README, glossary, a `domain-model.md` and `flows.md` per subdomain) and the lib. It is the only schematic that writes docs.
 2. A human fills `domain-model.md` (tables `Business rules`, `Use cases`, `Driven ports`, `Driving adapters`) and writes each use case's `.feature` next to it. A missing `.feature` is an error: write the contract by hand.
 3. `hex-subdomain` (one subdomain) or `hex-context` (all of them) generates slice, ports, use cases and routes from those tables. It is idempotent: after a doc change, run it again and only new rows appear. Use the leaves (`hex-slice`, `hex-driven-port`, `hex-use-case`, `hex-route`) to add a single piece.
-4. Implement the generated step definitions and the use case bodies.
+4. Implement the generated step definitions and the use case bodies; the scenarios fail until you do.
 
 ## Context map
 
@@ -78,7 +78,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-driven-p
 
 ### `hex-use-case`
 
-`context`, `slice`, `name` (PascalCase); _driven_ports_ (comma-separated, must exist). Reads the `Use cases` row and the `.feature`.
+`context`, `slice`, `name` (PascalCase); _driven_ports_ (comma-separated, must exist). Reads the `Use cases` row and the `.feature`. Its steps file binds every phrase to a step that throws `step not implemented: <phrase>`, so the scenarios fail until you implement them.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-use-case --context=billing --slice=invoicing --name=IssueInvoice
