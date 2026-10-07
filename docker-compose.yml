@@ -1,44 +1,65 @@
+# Shared infra (db, pgadmin) runs in project "demo"; each worktree runs only `api` in its own project.
+# `bun run dev` creates the external network and starts everything in the right order.
 services:
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+  db:
+    image: postgres:17
     ports:
-      - "${API_PORT:-3000}:3000"
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: ${DB_USER:-demo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-demo}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      shared:
+        aliases: [db]
+
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - '${PGADMIN_PORT:-5050}:80'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@demo.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-demo}
+    networks: [shared]
+
+  api:
+    image: oven/bun:1
+    working_dir: /repo
+    command: bun --watch --tsconfig-override=apps/api/tsconfig.app.json apps/api/src/main.ts
+    volumes:
+      - .:/repo
+    ports:
+      - '${API_PORT:-3000}:3000'
+      - '${DEBUG_PORT:-9229}:9229'
     environment:
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-demo}
       DB_USER: ${DB_USER:-demo}
       DB_PASSWORD: ${DB_PASSWORD:-demo}
-    depends_on:
-      db:
-        condition: service_healthy
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4200}
+    networks: [shared]
 
   web:
+    profiles: [prod]
     build:
       context: .
       dockerfile: apps/web/Dockerfile
     ports:
-      - "${WEB_PORT:-4200}:80"
-    depends_on:
-      - api
-
-  db:
-    image: postgres:17
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    environment:
-      POSTGRES_DB: ${DB_NAME:-demo}
-      POSTGRES_USER: ${DB_USER:-demo}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-demo}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - '${WEB_PORT:-4200}:80'
+    networks: [shared]
 
 volumes:
   db-data:
+
+networks:
+  shared:
+    name: demo-shared-net
+    external: true

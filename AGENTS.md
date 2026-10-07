@@ -43,3 +43,9 @@
 - Create a sibling worktree `../demo-<branch>` on its own branch from a fresh base, never under `/tmp`. The main checkout stays on `main` and clean.
 - Each worktree runs its own `bun install`; never symlink `node_modules`.
 - The dev scripts (`bun run dev`, see the README) isolate ports, compose project and database per worktree, so several worktrees run side by side.
+
+### Dev stack
+
+- Never assume `localhost:4200` or `localhost:3000`; read the URLs from `bun run dev:status`.
+- Start with `bun run dev --detach` and end with `bun run dev:stop`.
+- Outside the scripts, run `docker compose -p <compose_project>` with the project name from `dev:status`.
