@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  after,
   billingSeed,
   DOCS,
   invoicingModel,
   LIB,
   run,
+  voidFeature,
 } from '../_shared/testing.ts';
 import factory from './factory.ts';
 
@@ -104,5 +106,53 @@ describe('hex-subdomain', () => {
           .error,
       ),
     ).toContain('expected METHOD /<resource>');
+  });
+
+  describe('re-runs', () => {
+    const grown = (seed: Record<string, string>) => ({
+      ...seed,
+      [`${DOCS}/domain-model.md`]: invoicingModel
+        .replace(
+          '\n## Driven ports',
+          '| `ArchiveInvoice` | `{ invoiceId }` | `{ archived }` | `InvoiceRepository` | [archive-invoice.feature](archive-invoice.feature) |\n\n## Driven ports',
+        )
+        .replace(
+          '| `DELETE /invoices/:invoiceId` | `VoidInvoice` | 204 | token |',
+          '| `DELETE /invoices/:invoiceId` | `VoidInvoice` | 204 | token |\n| `POST /invoices/:invoiceId/archive` | `ArchiveInvoice` | 200 | token |',
+        ),
+      [`${DOCS}/archive-invoice.feature`]: voidFeature.replace(
+        'Void',
+        'Archive',
+      ),
+    });
+
+    it('writes nothing when the docs are unchanged', async () => {
+      const seed = billingSeed();
+      const first = await go({}, seed);
+      const second = await go({}, after(seed, first.tree));
+
+      expect(second.error).toBeUndefined();
+      expect([...second.tree.keys()]).toEqual([]);
+    });
+
+    it('generates only the new pieces after a doc change', async () => {
+      const seed = billingSeed();
+      const first = await go({}, seed);
+      const next = grown(after(seed, first.tree));
+      const second = await go({}, next);
+
+      expect(second.error).toBeUndefined();
+      expect([...second.tree.keys()].sort()).toEqual(
+        [
+          `${LIB}/src/index.ts`,
+          `${slice}/application/ArchiveInvoice.ts`,
+          `${slice}/composition.ts`,
+          `${slice}/infrastructure/http/invoices.controller.ts`,
+          `${slice}/steps/ArchiveInvoice.steps.ts`,
+        ].sort(),
+      );
+      const again = await go({}, after(next, second.tree));
+      expect([...again.tree.keys()]).toEqual([]);
+    });
   });
 });

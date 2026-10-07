@@ -70,7 +70,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-slice --
 
 ### `hex-driven-port`
 
-`context`, `slice`, `name` (PascalCase); _kind_ (memory|context), _provider_. Kind comes from the `Adapter today` cell (`Memory` or `@<context>`) when omitted; a flag may only agree with the doc.
+`context`, `slice`, `name` (PascalCase); _kind_ (memory|context), _provider_. Kind comes from the `Adapter today` cell (`Memory` or `@<context>`) when omitted; a flag may only agree with the doc. A re-run keeps existing files and refuses a real conflict: an adapter that implements another port, or a token another adapter already provides.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-driven-port --context=ordering --slice=ordering --name=StockReservation

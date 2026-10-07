@@ -243,6 +243,76 @@ describe('hex-driven-port', () => {
     expect([...second.tree.keys()]).toEqual([]);
   });
 
+  describe('re-runs over a generated port', () => {
+    const adapterPath = `${slice}/infrastructure/MemoryInvoiceRepository.ts`;
+    const generated = async (name = 'InvoiceRepository') => {
+      const first = await go({ name });
+      return after(await sliced(), first.tree);
+    };
+
+    it('leaves an adapter alone when it was implemented by hand for the same port', async () => {
+      const seed = await generated();
+      const edited = {
+        ...seed,
+        [adapterPath]: `${seed[adapterPath] ?? ''}// implemented\n`,
+      };
+
+      const { tree, error } = await go({}, edited);
+
+      expect(error).toBeUndefined();
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    it('refuses an adapter file that implements another port', async () => {
+      const seed = await generated();
+      const foreign = {
+        ...seed,
+        [adapterPath]: (seed[adapterPath] ?? '').replaceAll(
+          'InvoiceRepository',
+          'Other',
+        ),
+      };
+
+      const { tree, error } = await go({}, foreign);
+
+      expect(String(error)).toContain('already exists for another port');
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    it('refuses a doc that now answers the port with another adapter', async () => {
+      const seed = await generated();
+      const changed = {
+        ...seed,
+        [`${DOCS}/domain-model.md`]: invoicingModel.replace(
+          '| `InvoiceRepository` | `byId(id) → Invoice \\| null` | Memory |',
+          '| `InvoiceRepository` | `byId(id) → Invoice \\| null` | @ledger |',
+        ),
+      };
+
+      const { tree, error } = await go({}, changed);
+
+      expect(String(error)).toContain('is already provided by');
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    it('refuses a token another port of the slice has already taken', async () => {
+      const seed = await generated();
+      const composition = `${slice}/composition.ts`;
+      const taken = {
+        ...seed,
+        [composition]: (seed[composition] ?? '').replace(
+          "'./domain/driven-ports/InvoiceRepository'",
+          "'./domain/driven-ports/Other'",
+        ),
+      };
+
+      const { tree, error } = await go({}, taken);
+
+      expect(String(error)).toContain('is already taken by another port');
+      expect([...tree.keys()]).toEqual([]);
+    });
+  });
+
   it('refuses a slice whose composition does not exist, writing nothing', async () => {
     const { tree, error } = await go({}, billingSeed());
 

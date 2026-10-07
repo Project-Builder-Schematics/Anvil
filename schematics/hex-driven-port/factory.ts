@@ -78,12 +78,6 @@ export default async (input: Input, shared?: WriteBuffer) => {
     compositionPath,
     `create the slice first: hex-slice --context=${context} --slice=${input.slice}`,
   );
-  // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
-  if (
-    (await buffer.read(`${code}/domain/driven-ports/${name}.ts`)) !== undefined
-  )
-    return;
-
   const model = await buffer.readRequired(
     `${docs}/domain-model.md`,
     'the port is generated from its domain model',
@@ -140,7 +134,13 @@ export default async (input: Input, shared?: WriteBuffer) => {
       `${adapter} is the type that adapter exports for the provider barrel — rename the port`,
     );
   const adapterPath = `${code}/infrastructure/${adapter}.ts`;
-  if ((await buffer.read(adapterPath)) !== undefined)
+  const portPath = `${code}/domain/driven-ports/${name}.ts`;
+  // A re-run (hex-subdomain after a doc change) keeps existing files, hand-edited or not; an adapter is this port's only if it implements it.
+  const existingAdapter = await buffer.read(adapterPath);
+  if (
+    existingAdapter !== undefined &&
+    !new RegExp(`\\bimplements ${name}\\b`).test(existingAdapter)
+  )
     throw new Error(`${adapterPath} already exists for another port`);
   const taken = new RegExp(
     `import \\{[^}]*\\b${token}\\b[^}]*\\} from '(?!\\./domain/driven-ports/${name}')`,
@@ -149,14 +149,20 @@ export default async (input: Input, shared?: WriteBuffer) => {
     throw new Error(
       `${token} is already taken by another port of ${code} — rename ${name}`,
     );
-  await buffer.write(
-    `${code}/domain/driven-ports/${name}.ts`,
-    portSource(name),
-  );
-  await buffer.write(
-    adapterPath,
-    kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
-  );
+  const provided = new RegExp(`provide: ${token},\\s*useClass: (\\w+)`).exec(
+    composition,
+  )?.[1];
+  if (provided && provided !== adapter)
+    throw new Error(
+      `${token} is already provided by ${provided} in ${compositionPath} — fix the doc or remove it first`,
+    );
+  if ((await buffer.read(portPath)) === undefined)
+    await buffer.write(portPath, portSource(name));
+  if (existingAdapter === undefined)
+    await buffer.write(
+      adapterPath,
+      kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
+    );
   if (kind === 'context')
     await buffer.write(
       ESLINT_CONFIG,
