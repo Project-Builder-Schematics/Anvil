@@ -133,6 +133,7 @@ Strict.
 ## Next step
 
 The schematic improvements surfaced in IMPACT.md:
+
 - `hex-route` should generate an error-to-status filter and a `.default({})` empty body.
 - `hex-bounded-context` should write the Subdomains table.
 - Pending steps should fail instead of skipping.
