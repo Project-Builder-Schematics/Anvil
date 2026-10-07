@@ -66,28 +66,30 @@ or pass `--manifest "$PWD"` and `--sdk-root "$PWD/node_modules/@pbuilder/sdk"` b
 
 ### Which schematic
 
-| Situation                                                                    | Schematic             | Status |
-| ---------------------------------------------------------------------------- | --------------------- | ------ |
-| New API bounded context (lib, alias, tags, lint registration, docs skeleton) | `hex-bounded-context` | built  |
-| Add a subdomain slice to an existing context                                 | `hex-slice`           | built  |
-| New driven port and its in-memory or cross-context adapter                   | `hex-driven-port`     | built  |
-| New use case from its `domain-model.md` row and `.feature`                   | `hex-use-case`        | built  |
-| New Nest controller operation for a use case                                 | `hex-route`           | built  |
-| Generate a whole subdomain from its domain model                             | `hex-subdomain`       | built  |
-| Generate every subdomain of a context                                        | `hex-context`         | built  |
-| New web context (`feature`, `ui`, `data-access`, `domain` libs)              | `web-context`         | built  |
-| New shared web lib (`libs/web/shared/<name>`)                                | `web-shared-lib`      | built  |
-| New Angular component (container in `feature`, presentational in `ui`)       | `ng-component`        | built  |
-| New Angular service with signal state                                        | `ng-service`          | built  |
-| New Angular attribute directive                                              | `ng-directive`        | built  |
+Inputs, examples and the docs-first workflow are in the `schematics` skill (`.claude/skills/schematics/SKILL.md`); load it before running one.
+
+| Situation                                                                    | Schematic             |
+| ---------------------------------------------------------------------------- | --------------------- |
+| New API bounded context (lib, alias, tags, lint registration, docs skeleton) | `hex-bounded-context` |
+| Add a subdomain slice to an existing context                                 | `hex-slice`           |
+| New driven port and its in-memory or cross-context adapter                   | `hex-driven-port`     |
+| New use case from its `domain-model.md` row and `.feature`                   | `hex-use-case`        |
+| New Nest controller operation for a use case                                 | `hex-route`           |
+| Generate a whole subdomain from its domain model                             | `hex-subdomain`       |
+| Generate every subdomain of a context                                        | `hex-context`         |
+| New web context (`feature`, `ui`, `data-access`, `domain` libs)              | `web-context`         |
+| New shared web lib (`libs/web/shared/<name>`)                                | `web-shared-lib`      |
+| New Angular component (container in `feature`, presentational in `ui`)       | `ng-component`        |
+| New Angular service with signal state                                        | `ng-service`          |
+| New Angular attribute directive                                              | `ng-directive`        |
 
 ### Working rules
 
-- Docs first: the backend generators read `docs/<ctx>/[<sub>/]domain-model.md` (tables `Business rules`, `Use cases`, `Driven ports`, `Driving adapters`) and the use case's `.feature`. They never write docs, except `hex-bounded-context`, and a missing `.feature` is an error: write the contract by hand.
-- There is no working dry-run. `builder execute` writes for real, one `execute` per shell call, never chained. Read the files it lists before moving on.
-- After an `execute`, run `bunx prettier --write` on the listed files.
-- Schematic tests: `bun run schematics:test`. Tests are written first, with an observed RED.
+- Docs first: the backend generators read `docs/<ctx>/[<sub>/]domain-model.md` and the use case's `.feature`, and never write docs, except `hex-bounded-context`.
+- Contexts depend on each other only through a barrel and a declared Context map relation (see the skill).
+- Tests are written first, with an observed RED: `bun run schematics:test`.
 - Ledger: every use of a schematic, and every time one was skipped or did not fit, gets a row in `schematics/IMPACT.md` in the same session.
+- Adding or changing a schematic updates this table, the skill and `schematics/IMPACT.md` in the same commit; `schematics/_shared/catalog.test.ts` enforces the first two.
 
 <!-- pbuilder:skill:begin -->
 
