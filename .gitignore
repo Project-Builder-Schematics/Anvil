@@ -58,3 +58,5 @@ __screenshots__/
 .dev/
 .stryker-tmp
 reports
+
+.env
