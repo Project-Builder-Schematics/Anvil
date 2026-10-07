@@ -11,7 +11,20 @@
       "options": {
         "tsConfig": "libs/web/shared/design-system/tsconfig.spec.json",
         "buildTarget": "web:build:development",
-        "watch": false
+        "watch": false,
+        "coverage": true,
+        "coverageExclude": [
+          "**/*.spec.ts",
+          "**/index.ts",
+          "**/tokens/contract.ts"
+        ],
+        "coverageThresholds": {
+          "lines": 70,
+          "branches": 70,
+          "functions": 70,
+          "statements": 70
+        },
+        "coverageInclude": ["libs/web/shared/design-system/src/**/*.ts"]
       }
     }
   }
