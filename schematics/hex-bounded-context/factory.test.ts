@@ -29,8 +29,11 @@ describe('hex-bounded-context: the lib', () => {
         'COD100.md',
         'eslint.config.mjs',
         'project.json',
+        'src/application/.gitkeep',
         'src/composition.ts',
+        'src/domain/driven-ports/.gitkeep',
         'src/index.ts',
+        'src/infrastructure/.gitkeep',
         'src/steps/index.ts',
         'tsconfig.json',
         'tsconfig.lib.json',
@@ -47,6 +50,14 @@ describe('hex-bounded-context: the lib', () => {
     expect(tree.get('libs/api/tenancy/src/composition.ts')).toContain(
       'export class TenancyModule {}',
     );
+  });
+
+  it('keeps no ring folders at the root of a context with several subdomains: each slice has its own', async () => {
+    const { tree } = await go({ subdomains: 'invoicing,payouts' });
+
+    expect(
+      [...tree.keys()].filter((path) => path.endsWith('.gitkeep')),
+    ).toEqual([]);
   });
 
   it('registers the @demo/api-<context> alias in tsconfig.base.json and nowhere else', async () => {

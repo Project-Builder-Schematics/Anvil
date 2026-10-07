@@ -3,7 +3,5 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/api/ordering/src",
   "projectType": "library",
-  "tags": ["scope:api", "context:ordering", "type:domain"],
-  "// targets": "to see all targets run: nx show project api-ordering --web",
-  "targets": {}
+  "tags": ["scope:api", "context:ordering", "type:domain"]
 }

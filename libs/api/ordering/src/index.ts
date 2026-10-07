@@ -1,1 +1,1 @@
-export {};
+export { OrderingModule } from './composition';

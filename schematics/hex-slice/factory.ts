@@ -1,4 +1,5 @@
 import type { Input } from './schema.generated.ts';
+import { RINGS } from '../_shared/libs.ts';
 import {
   addModuleEntry,
   apiLibDir,
@@ -46,6 +47,8 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
   if (segment !== '') {
     const module = `${pascal(slice)}Module`;
+    for (const ring of RINGS)
+      await buffer.write(`${code}/${ring}/.gitkeep`, '');
     await buffer.write(
       `${code}/composition.ts`,
       `import { Module } from '@nestjs/common';\n\n@Module({})\nexport class ${module} {}\n`,

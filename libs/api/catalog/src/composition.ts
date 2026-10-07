@@ -1,2 +1,4 @@
-// The only place where use cases are wired to their adapters.
-export {};
+import { Module } from '@nestjs/common';
+
+@Module({})
+export class CatalogModule {}

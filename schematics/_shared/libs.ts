@@ -64,10 +64,16 @@ const NODE_SPEC_TYPES = `    "types": [
       "vitest"
     ]`;
 
-/** The lib for one bounded context of the API: `libs/api/<context>`, alias `@demo/api-<context>`. */
+export const RINGS = ['domain/driven-ports', 'application', 'infrastructure'];
+
+/**
+ * The lib for one bounded context of the API: `libs/api/<context>`, alias `@demo/api-<context>`.
+ * A single-subdomain context keeps its three rings at the lib root, with a placeholder while empty.
+ */
 export const apiLibFiles = (
   context: string,
   purpose: string,
+  inline: boolean,
 ): Record<string, string> => {
   const dir = apiLibDir(context);
   const files: Record<string, string> = {
@@ -152,6 +158,9 @@ export default defineConfig(() => ({
 export class ${pascal(context)}Module {}
 `,
     'src/index.ts': `export { ${pascal(context)}Module } from './composition';\n`,
+    ...(inline
+      ? Object.fromEntries(RINGS.map((ring) => [`src/${ring}/.gitkeep`, '']))
+      : {}),
     'src/steps/index.ts': `// quickpickle reads step definitions from setupFiles; this loads every *.steps.ts of the lib.
 import.meta.glob(['./*.steps.ts', '../*/steps/*.steps.ts'], { eager: true });
 `,

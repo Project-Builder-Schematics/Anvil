@@ -1,1 +1,1 @@
-export {};
+export { CatalogModule } from './composition';

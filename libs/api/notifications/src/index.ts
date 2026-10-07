@@ -1,1 +1,1 @@
-export {};
+export { NotificationsModule } from './composition';

@@ -109,7 +109,7 @@ export const billingSeed = (
   over: Record<string, string> = {},
 ): Record<string, string> => ({
   ...workspace,
-  ...apiLibFiles('billing', 'Bills customers.'),
+  ...apiLibFiles('billing', 'Bills customers.', false),
   ...invoicingDocs,
   ...over,
 });

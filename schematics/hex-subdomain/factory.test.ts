@@ -26,13 +26,16 @@ describe('hex-subdomain', () => {
       [...tree.keys()].filter((path) => path.startsWith(`${slice}/`)).sort(),
     ).toEqual(
       [
+        'application/.gitkeep',
         'application/IssueInvoice.ts',
         'application/VoidInvoice.ts',
         'composition.ts',
+        'domain/driven-ports/.gitkeep',
         'domain/driven-ports/Clock.ts',
         'domain/driven-ports/InvoiceRepository.ts',
         'domain/driven-ports/LedgerGateway.ts',
         'domain/errors.ts',
+        'infrastructure/.gitkeep',
         'infrastructure/LedgerLedgerGateway.ts',
         'infrastructure/MemoryClock.ts',
         'infrastructure/MemoryInvoiceRepository.ts',

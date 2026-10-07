@@ -1,1 +1,1 @@
-export {};
+export { InventoryModule } from './composition';

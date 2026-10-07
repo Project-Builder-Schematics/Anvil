@@ -23,6 +23,18 @@ describe('hex-slice', () => {
     );
   });
 
+  it('keeps the slice rings, which an empty slice would lose, with a placeholder each', async () => {
+    const { tree } = await go();
+
+    for (const ring of [
+      'domain/driven-ports',
+      'application',
+      'infrastructure',
+    ]) {
+      expect(tree.get(`${LIB}/src/invoicing/${ring}/.gitkeep`)).toBe('');
+    }
+  });
+
   it('imports the slice module into the context module and re-exports it', async () => {
     const composition =
       (await go()).tree.get(`${LIB}/src/composition.ts`) ?? '';

@@ -174,7 +174,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
   // Deliberately fail-closed: a context whose lib exists is never regenerated over.
   for (const [path, template] of Object.entries(
-    apiLibFiles(context, input.purpose),
+    apiLibFiles(context, input.purpose, inline),
   )) {
     create(path, { template, options: {} });
   }

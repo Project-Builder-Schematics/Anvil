@@ -1,12 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
-    "declaration": true,
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": [
+    "src/**/steps/*.ts",
     "vite.config.ts",
     "vite.config.mts",
     "vitest.config.ts",

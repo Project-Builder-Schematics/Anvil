@@ -5,7 +5,7 @@ import { apiLibFiles, webLibFiles } from './libs.ts';
 const formatted = async (files: Record<string, string>) => {
   const off: string[] = [];
   for (const [path, content] of Object.entries(files)) {
-    if (path.endsWith('.md')) continue;
+    if (path.endsWith('.md') || path.endsWith('.gitkeep')) continue;
     if (
       (await format(content, { filepath: path, singleQuote: true })) !== content
     )
@@ -18,7 +18,7 @@ const parse = (text: string) =>
   JSON.parse(text) as { exclude: string[]; include: string[] };
 
 describe('apiLibFiles', () => {
-  const files = apiLibFiles('catalog', 'Owns the product catalog.');
+  const files = apiLibFiles('catalog', 'Owns the product catalog.', true);
   const at = (path: string) => files[`libs/api/catalog/${path}`] ?? '';
 
   it('lays out one Nx lib per context with the context tags', () => {
@@ -27,8 +27,11 @@ describe('apiLibFiles', () => {
         'COD100.md',
         'eslint.config.mjs',
         'project.json',
+        'src/application/.gitkeep',
         'src/composition.ts',
+        'src/domain/driven-ports/.gitkeep',
         'src/index.ts',
+        'src/infrastructure/.gitkeep',
         'src/steps/index.ts',
         'tsconfig.json',
         'tsconfig.lib.json',
@@ -42,6 +45,14 @@ describe('apiLibFiles', () => {
       tags: ['scope:api', 'context:catalog', 'type:domain'],
     });
     expect(at('COD100.md')).toBe('Owns the product catalog.\n');
+  });
+
+  it('keeps the ring folders of an empty single-subdomain context, and none for a nested one', () => {
+    const nested = Object.keys(
+      apiLibFiles('catalog', 'Owns the product catalog.', false),
+    );
+
+    expect(nested.filter((path) => path.endsWith('.gitkeep'))).toEqual([]);
   });
 
   it('runs the context features through quickpickle, with no jest mapper anywhere', () => {

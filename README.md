@@ -24,6 +24,7 @@ bunx nx run-many -t lint test typecheck   # everything
 bunx nx affected -t lint typecheck test   # what changed
 bunx nx format:check                      # Prettier (format:write fixes)
 bun run check:tools                       # lint, typecheck and test tools/
+bun run check:schematics                  # lint, typecheck and test schematics/
 bun run design:themes                     # regenerate theme CSS from themes/
 bun run mutation                          # Stryker on libs/api/*/src/{domain,application}
 bun run dev                               # local stack, see the worktree section below
@@ -51,11 +52,13 @@ Backend rules: use cases are plain TypeScript factories wired only in `compositi
 
 ## Add a context
 
-1. Generate the libs with `@nx/js:library` (api, tags `scope:api,context:<ctx>,type:domain`, bundler none, vitest) and, for the web, `@nx/angular:library` for `feature`, `ui`, `data-access` plus `@nx/js:library` for `domain`.
-2. Copy the skeleton from an existing context: `COD100.md`, `src/index.ts`, `src/composition.ts`, `domain/driven-ports`, `application`, `infrastructure`.
-3. Add `<ctx>` to the `contexts` list in `eslint.config.mjs`.
-4. Add `docs/<ctx>/README.md` and `glossary.md` (`**Term.** definition`).
-5. When the lib gets its first spec, give it a `test` target (API libs get one from the generator; Angular libs copy the one in `libs/web/shared/design-system/project.json`).
+Libs, components, services, directives, controllers and providers come from Project Builder schematics, not from Nx, Angular or Nest generators; see "Schematics" in `AGENTS.md` for the schematic per situation and the `BUILDER_*` environment gotcha.
+
+1. `hex-bounded-context` creates the API lib (`libs/api/<ctx>`, alias, tags, lint registration, Nest module) and the docs skeleton (`docs/<ctx>/`).
+2. Fill in `docs/<ctx>/domain-model.md` and write a `.feature` per use case; the generators read them and never invent contracts.
+3. `hex-subdomain` (or `hex-context`) generates the slice, driven ports, use cases and Nest controllers from those tables.
+4. `web-context` creates `libs/web/<ctx>/{feature,ui,data-access,domain}`; `ng-component`, `ng-service` and `ng-directive` fill them.
+5. Run `bunx prettier --write` on the files an `execute` lists, and log the use in `schematics/IMPACT.md`.
 
 ## Several worktrees at once
 

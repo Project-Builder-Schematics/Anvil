@@ -1,1 +1,1 @@
-export {};
+export { PaymentsModule } from './composition';
