@@ -136,6 +136,11 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - Checks: `bun test schematics` 182 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean.
 - 2026-10-08: T10 done except Stryker. TDD: RED observed first for `bun test tools/dev` (4 files failing on missing modules `cli`, `retry`, `net`, `infra`, plus the `[9999]` shared-port case in `worktree.test.ts`) and for `nx test api` (8 failing: 5 CORS origin shapes, `NODE_ENV` default, OpenAPI gate, one startup-validation case; the CSRF and missing-env tests were characterization tests, proven by the mutation checks above). Commits: 77d3a4f `fix(docker)`, 85e0773 `fix(dev)`, 2d3efad `fix(api)`, 3a19b1a `ci`. Checks: `bun test tools` 45 pass; `bun test schematics` 182 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean; `docker compose config -q` ok.
 
+- 2026-10-08: T12 and T13 done in seven commits: 8311be5, b86096e, dcec806, 99c0dfd (schematics), dc743c8 (api), dbca982, 22bab5f (dev). Route: one delegated writer.
+  - RED observed before each fix: shared inputs 3 (lib.test) + 6 (ng, gherkin, libs) + 1 (web-context); backend 7 (4 driven-port, 1 use-case, 2 route); context map 3 (lib.test) + 3 (bounded-context); ng-component 1; `nx test api` 5 (4 config.spec, 1 app.module.spec); `bun test tools/dev` 9 behaviour failures after stubbing the new exports (the first run failed on missing exports).
+  - Checks at the end: `bun test schematics` 229 pass, 0 fail; `bun test tools` 67 pass, 0 fail; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects (30 of 31 tasks from the cache); `bunx prettier --check .` clean; `docker compose config -q` ok; `bun tools/dev/dev.ts status` prints the primary identity, an unknown command and an empty `--port-offset=` exit 1 with a clear message.
+  - Not verified (no boots): the api container with `--inspect=0.0.0.0` attaching from the host, the whole `dev` flow with the new parser against a real `.env`, and the seed over `127.0.0.1` against the shared Postgres.
+
 ## Follow-ups
 
 - [x] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval. Done except the Stryker end-to-end run (kept open, see below). Route: delegated direct, one writer.
@@ -176,56 +181,53 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - `ng-component` inputs are required-only; add optional inputs with defaults when a second component needs them.
   - [x] Confirm the assumed classification of the six contexts in `docs/<ctx>/README.md` (5b977fa).
   - API libs have no `typecheck` target, so only `compiles.test.ts` typechecks the generated shape; consider an inferred target.
-- [ ] T12: harden the schematics. These are the advisory findings from the T9 reviews; none blocked approval.
+- [x] T12: harden the schematics. These are the advisory findings from the T9 reviews; none blocked approval. Done; one item not reproducible. Route: delegated direct, one writer.
   - **Reviews** (2026-10-08, all approved and acknowledged):
     - T9a (2c18703..164cc8e): review-25a0f245d5571d16.
     - T9b (164cc8e..79aa448): review-881e0c913cb9705d.
     - T9c (79aa448..2019fdc): review-de9682142b66b741.
     - T9d and T9e were not reviewed, by the user's choice. They are regenerations, verified by diff.
-  - **`_shared`**
-    - Inline-slice prefix match (lib.ts:143).
-    - The side-effect import scan (lib.ts:233-238).
-    - Untested exports (lib.ts:254-275).
-    - A vacuous writeBuffer test (lib.test.ts:86-91).
-    - The create and template render paths diverge (lib.ts:46-51).
-    - Angular exclude is duplicated and the prefix is optional (libs.ts:317-348).
-    - Gherkin expression escaping, and its duplication (gherkin.ts:26-48).
-    - A silent test-target no-op (ng.ts:80-83), and duplicate member names (ng.ts:92-109).
-  - **Backend**
-    - Provider identifier collisions (hex-driven-port:37-45).
-    - Duplicate steps across slices (hex-use-case:113-122).
-    - hex-route silently merges an existing route (203-211), and its default status is duplicated (149-156).
-    - `apps/api/project.json` drops the project name.
+  - **`_shared`** (8311be5)
+    - [x] Inline-slice prefix match: `resolveSlice` matches the slice name exactly (`marketing-ops` no longer satisfies `marketing`).
+    - [x] The side-effect import scan: `withImports` ends an import on its module string, so new imports land after `import './x'` instead of after the next `from` line.
+    - [x] Untested exports: direct tests for `withNamedImports`, `parseRoute`, `errorCodes`, `sentence`, `title`, `parseInputs`, `parseNames`, `withBarrelExport`, `withTestTarget` and `readNgLib` (new `ng.test.ts`).
+    - [x] The vacuous writeBuffer test is replaced by one that checks create vs modify per path and one for the template delimiter. Mutation: swapping the create/replace branch fails three writeBuffer tests, removing the delimiter escape fails the delimiter test.
+    - [x] The create and template render paths: `create` renders its content as a Go template (`{= =}`), `replaceContent` does not; `createFile` writes `{=` as the literal `{= "{=" =}` (checked with Go `text/template`, the engine's renderer) and is used by `writeBuffer`, `hex-bounded-context` and `web-context`. The test harness does not render, so the proof is the emitted template.
+    - [x] Angular exclude list shared with the API one (`EXCLUDE_TESTS`), and an Angular lib without a selector prefix is refused. The exclude test is a refactor guard and had no RED.
+    - [x] Gherkin: cucumber syntax (`(`, `)`, `{`, `}`, `/`, `\`) is escaped in the expression and in the TS literal; one `literal` helper replaces the two copies.
+    - [x] `withTestTarget` throws when it cannot add the target instead of returning the file unchanged; `parseInputs` and `parseNames` refuse repeated names; `ng-component` refuses a member that is both input and output (99c0dfd).
+  - **Backend** (b86096e)
+    - [x] Provider identifier collisions in `hex-driven-port`: the provider namespace is a camelCase identifier (a dashed context produced `import type * as order-items`), and the schematic refuses a context port named `Api`, a port whose token another port already imports, and an adapter file that already exists.
+    - [x] Duplicate steps across slices: `hex-use-case` reads the steps files of every subdomain listed in the README, as the lib loads them all.
+    - [x] `hex-route` refuses a second route for a use case and a route another use case already answers; the default status lives in one `defaultStatus`.
+    - [x] `apps/api/project.json` drops the project name: not reproducible. `bunx nx show project api --json` gives `name: @demo/api`, the `package.json` name, both before 79aa448 and now; `nx build api` resolves it.
   - **Frontend**
-    - The dashed-context prefix (web-context:35).
-  - **Context map**
+    - [x] The dashed-context prefix: `web-context` drops the dashes of the context for the selector prefix (8311be5); noted in the skill.
+  - **Context map** (dcec806)
     - Reviewed d4bd5ab..5ede05c: approved and acknowledged (review-63a93a9466d0a7d1).
-    - The docs and the lint edges can drift apart in hex-bounded-context (233-239).
-    - `addContextRelation` depends on the exact formatting of `eslint.config.mjs` (lib.ts:336-348).
-    - The relationship list is duplicated, and duplicate providers are accepted in `context_map` (hex-bounded-context:34-68).
-- [ ] T13: second-round findings on the T10 hardening. These are advisory and none blocked approval. The T10 range 21f7ebb..6ae4bdc was approved and acknowledged (review-c22ca6ccede2fdb1).
-  - **API config** (apps/api/src/config.ts:12)
-    - OpenAPI gating fails open, because `NODE_ENV` is a free string: a typo such as `prod` exposes OpenAPI.
-    - Make `NODE_ENV` an enum, or gate OpenAPI with an explicit flag that is off by default.
-  - **Environment parsing** (tools/dev/infra.ts)
-    - The `.env.example` parser does not handle quotes, and diverges from compose (6-18).
-    - The precedence comment is unclear (23-32).
-    - The infra load is unguarded (dev.ts:30-31).
-  - **Seed** (tools/dev/seed.ts)
-    - It connects to `localhost`, which can resolve to IPv6 while the db is IPv4-only (seed.ts:17-19).
-    - The drop after a failed seed can mask the original error (dev.ts:135-141).
-    - It passes empty shared ports (seed.ts:9).
-  - **Tests and CLI**
-    - The `dev.ts` orchestration is untested (156-168).
-    - The IPv6 test skips silently (net.test.ts:27-31).
-    - The drift test has duplicates (infra.test.ts:29-34).
-    - `--port-offset` matches by prefix (cli.ts:4-6).
-  - **Compose**
-    - The inspector is reachable from the shared network (docker-compose.yml:40).
+    - [x] Docs and lint edges drift: `hex-bounded-context` refuses a relation a classified README does not declare and declares the edges the README lists; `context-map.fitness.test.ts` now compares every README Context map with the constraints the real lint config resolves, and checks each relationship word. Mutation: dropping `['shipping','ordering']` from the config, and an unknown relationship or a different provider in the shipping README, each fail the new tests.
+    - [x] `addContextRelation` no longer depends on formatting: it reads the list structurally (quotes, spacing, comments, one line) and refuses an entry that is not a pair. The data stays in `eslint.config.mjs` on purpose: a separate module or JSON would not be part of the Nx lint cache inputs.
+    - [x] The relationship list lives in `RELATIONSHIPS` (`lib.ts`) and renders the README text; duplicate providers in `context_map` are refused.
+- [x] T13: second-round findings on the T10 hardening. These are advisory and none blocked approval. The T10 range 21f7ebb..6ae4bdc was approved and acknowledged (review-c22ca6ccede2fdb1). Route: delegated direct, one writer.
+  - **API config** (dc743c8)
+    - [x] `NODE_ENV` is `z.enum(['development', 'test', 'production'])`; `prod` fails `envSchema` and fails `AppModule` startup (tests for both). OpenAPI stays off in production.
+  - **Environment parsing** (dbca982)
+    - [x] `parseEnvFile` follows the compose env-file rules from the Docker docs (via ctx7): `=` or `:`, spaces trimmed, single quotes literal, double quotes with escapes and multi-line, inline comments only after a space, CRLF. Interpolation is refused. No vetted parser was reused: `util.parseEnv` and `dotenv` cut a value at any `#`, compose only at ` #`.
+    - [x] Precedence is shell, `.env`, `.env.example`, and an empty value falls through like `${VAR:-default}`; the comment says so.
+    - [x] The infra load in `dev.ts` is inside the try that reports and exits; a bad file is named in the error.
+  - **Seed** (dbca982)
+    - [x] Connects to `127.0.0.1` (`databaseUrl`, credentials URL-escaped).
+    - [x] A failed drop is logged and the seed failure is the error thrown; the message says when the database could not be dropped.
+    - [x] The seed passes the real shared ports (`sharedPorts`, shared with `dev.ts`).
+  - **Tests and CLI** (dbca982)
+    - [x] Pure `dev.ts` decisions moved to `cli.ts` and tested: `parseArgs`, `composeEnv`, `statusLines`, `seedFailureMessage`, `portClash`.
+    - [x] The IPv6 test uses `it.skipIf`, so a host without IPv6 reports a skip.
+    - [x] The drift test checks every `${VAR:-default}` occurrence against `.env.example`, so a repeated variable with a different default is caught.
+    - [x] `--port-offset` matches the exact flag.
+  - **Compose** (22bab5f)
+    - [x] The inspector stays on `0.0.0.0:9229` inside the container and the reason is documented in the compose file and README. `bun --help` only lists `--inspect=<val>`; a run showed `--inspect=127.0.0.1:P` binds to loopback only and `0.0.0.0:P` to all interfaces. Docker forwards the published port to the container's own address, so a loopback bind would refuse the host. Exposure: host `127.0.0.1` and the containers of `demo-shared-net`.
 
 ## Next step
 
-1. T12: harden the schematics.
-2. T13: the T10 second-round findings.
-3. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
-4. Finish T8: run Stryker end to end once domain code exists.
+1. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
+2. Finish T8: run Stryker end to end once domain code exists.
