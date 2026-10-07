@@ -67,7 +67,7 @@ Strict.
 - [x] O2: generate with `hex-subdomain`. Record the IMPACT rows (use or miss). Route: delegated writer.
 - [x] O3: implement the value objects and the `Order` aggregate with TDD. Route: delegated writer.
 - [x] O4: implement the use cases and steps until every scenario is green. Coverage gate: domain and application at 90%. Route: delegated writer.
-- [ ] O5: run Stryker end to end on api-ordering (this closes T8). Record the mutation score. Route: delegated writer.
+- [x] O5: run Stryker end to end on api-ordering (this closes T8). Record the mutation score. Route: delegated writer.
 
 ## Acceptance criteria
 
@@ -107,6 +107,23 @@ Strict.
   - IMPACT rows: 1 use (hand edits), 1 miss (error to status), 1 defect (body-less POST).
   - Checks at the last commit: `bun test schematics` 235 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean.
 
+- 2026-10-08: O5 done in af21d04 `test(ordering)` and 0d8dd63 `test`. `bunx stryker run` (Stryker 10.0.0, vitest runner, `perTest` coverage) over `libs/api/*/src/{domain,application}`: 16 files, 123 mutants.
+  - First run: 79.67% (98 killed, 4 survived, 21 no coverage) and exit 1 under the old `break: 80`. Cause of the 21 no-coverage mutants: the default `vitest.related: true` runs only tests that import the mutated files, and the quickpickle features reach the code through `setupFiles`, so none of the 33 scenarios ran (75 tests in the dry run). Fixed with `"vitest": { "related": false }` (139 tests in the dry run).
+  - Second run: 95.12% (117 killed, 6 survived). Survivors and what they showed:
+    - `PlaceOrder` and `CancelOrder` returning `{}` survived: no scenario or test asserted the result of those two use cases. Added `OrderTransitions.spec.ts` (result and stored state), a real gap.
+    - Four `RangeError` message literals (`Money` x2, `OrderId`, `ProductId`) survived: the messages were unasserted. The specs now assert them.
+  - Final run: 100% (120 killed, 3 timeouts counted as detected, 0 survived, 0 no coverage), about 1 minute; re-run after setting the break: 100%, 110 killed and 13 timeouts (timeouts vary with load).
+  - `thresholds.break` is now 90 (was 80, `high` 90, `low` 80 unchanged). Why 90: the suite scores 100, so 90 leaves room for about one unasserted detail in ten without failing, but fails on a real regression. It matches the 90% coverage gate of the same rings and suits a core context of high criticality. 80 let 21 mutants go uncovered unnoticed in the first run.
+  - T8's Stryker item is ticked in `odd/tasks/workspace-scaffold.md` (the T10 sub-item) with this evidence.
+  - Checks at the last commit: `bun test schematics` 235 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean; Stryker summary above.
+  - **Not verified (no builds or boots), for the user to run:**
+    - `bun run dev`, then `POST /api/orders` with no body returns 201 and an id, `POST /api/orders/<id>/lines` with `{"productId":"keyboard","quantity":2}` returns the order view, and the place, cancel and get routes answer as the Driving adapters table says. Each refusal answers its status and a body `{ statusCode, code }`.
+    - CSRF and CORS: the in-process tests send `Origin: http://localhost:4200`; a browser request from the web app must too.
+    - OpenAPI at `/api/docs-json`: the new routes and the `AddOrderLine` body schema are present, and the `.default({})` bodies do not break the document (never generated here: `openApi` was off in the HTTP spec).
+    - `nx build api` (rsbuild with legacy decorators): the filter's `@Inject(HttpAdapterHost)` and `@UseFilters` bundle and start.
+    - State is a process-local map: restarting the api loses every order.
+    - A whitespace-only or very long id in the URL, and a non-JSON body, were not exercised.
+
 ## Next step
 
-O5.
+The user confirms the assumed rules 9 to 11 (Business rules table) and reviews the slice; runtime checks are listed in the O5 progress line. Then the next slice (inventory reservation, payments and events).

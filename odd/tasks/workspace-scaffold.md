@@ -148,7 +148,7 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 
 ## Follow-ups
 
-- [x] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval. Done except the Stryker end-to-end run (kept open, see below). Route: delegated direct, one writer.
+- [x] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval. Done, including the Stryker end-to-end run (closed with the ordering slice). Route: delegated direct, one writer.
   - **tools/dev/dev.ts** (85e0773)
     - [x] An empty `--port-offset` is rejected (`parsePortOffset`, `cli.test.ts`; also a bare flag, non-integers and negatives).
     - [x] The dev command exits with the web child's code (`exitCodeFor`, signals map to 128+n) and stops the worktree's api and web group on every exit path (`finally` in `up`).
@@ -170,7 +170,7 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
     - [x] The OpenAPI JSON is served only when `NODE_ENV !== 'production'` (new `NODE_ENV` in the env schema, default `development`; the api image sets production). Tested both ways (2d3efad).
     - [x] CI actions pinned to full commit SHAs with the version in a trailing comment, resolved with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`; all four tags are lightweight (commit objects), so no dereferencing was needed (3a19b1a).
     - [x] The coverage scope of `libs/api/*/vitest.config.mts` was already fixed by T9d (`include: src/**/{domain,application}/**/*.ts` in all six libs); no change here.
-    - [ ] Stryker is not verified end to end. Left open on purpose: there is no domain code to mutate yet. Do it with T8 once a context has code.
+    - [x] Stryker is verified end to end (2026-10-08, with the ordering slice, see `odd/tasks/ordering-first-slice.md` O5). `bunx stryker run` mutated 16 files (123 mutants) in about a minute: 100% mutation score, 0 survivors, 0 no-coverage, with `vitest.related: false` and `thresholds.break: 90`. The first run scored 79.67% and exited 1 under the old break of 80, which proves the gate fires.
   - **Verify manually at runtime** (no builds or boots were run):
     - `bun run dev`: the api container installs its `node_modules` volume, starts, and `bun run dev:logs` prints a `debug.bun.sh` URL that attaches on the debug port.
     - Ctrl+C in `bun run dev` returns 130 and the api container is stopped; a web crash returns the web code and stops the api.
@@ -251,6 +251,6 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 
 ## Next step
 
-1. T14 re-run idempotency, before generating `ordering` with `hex-subdomain`.
-2. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
-3. Finish T8: run Stryker end to end once domain code exists.
+1. T14 re-run idempotency: done (3a8edc8).
+2. The domain-modeling step for `ordering`: done, see `odd/tasks/ordering-first-slice.md`.
+3. T8 Stryker item: done with the ordering slice (100% mutation score). The rest of T8 stays as recorded in its progress notes.
