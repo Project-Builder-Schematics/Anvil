@@ -33,6 +33,9 @@ services:
   api:
     image: oven/bun:1.3.14
     working_dir: /repo
+    # The inspector must listen on a non-loopback address: Docker forwards the published port to the container's own
+    # address, so a 127.0.0.1 bind would refuse the host. It has no authentication; it is reachable from the host only
+    # through 127.0.0.1 and from the containers on demo-shared-net (db, pgadmin, the other worktrees' api).
     # node_modules lives in a volume so the container installs its own Linux binaries and the host's stay intact.
     command:
       - sh

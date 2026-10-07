@@ -72,7 +72,7 @@ Each git worktree gets its own ports, compose project and database, so any numbe
 
 One shared Postgres and pgadmin (project `demo`, network `demo-shared-net`) serve every worktree; each worktree runs only its own `api` container. Angular runs on the host and proxies `/api` to that worktree's API port.
 
-Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect` on the debug port; open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
+Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect=0.0.0.0:9229` (a loopback bind would refuse the host through Docker's published port; the unauthenticated inspector is reachable only from `127.0.0.1` on the host and from the containers on `demo-shared-net`); open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
 
 ```sh
 bun run dev                 # shared infra, DB, api container, then the web dev server (Ctrl+C stops this worktree's api)
