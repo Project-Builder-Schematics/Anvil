@@ -37,6 +37,9 @@
       "@demo/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"],
       "@demo/web-shared-design-system": [
         "./libs/web/shared/design-system/src/index.ts"
+      ],
+      "@demo/web-shared-design-system/testing": [
+        "./libs/web/shared/design-system/src/testing/axe.ts"
       ]
     },
     "noUncheckedIndexedAccess": true,

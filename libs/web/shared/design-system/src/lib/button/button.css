@@ -16,6 +16,11 @@ button:hover:not(:disabled) {
   background: var(--ds-color-primary-hover);
 }
 
+button:focus-visible {
+  outline: 2px solid var(--ds-color-ink);
+  outline-offset: 2px;
+}
+
 button:disabled {
   border: 1px solid var(--ds-color-border);
   background: var(--ds-color-surface);
