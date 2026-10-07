@@ -3,11 +3,7 @@
     "angular-cli": {
       "type": "stdio",
       "command": "bunx",
-      "args": [
-        "ng",
-        "mcp",
-        "--read-only"
-      ],
+      "args": ["ng", "mcp", "--read-only"],
       "env": {}
     }
   }
