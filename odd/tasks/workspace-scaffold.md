@@ -106,6 +106,39 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 - 2026-10-07: ORDER CHANGE received after T5, T6, T7 and most of T8 were already done and committed with Nx generators (T5 libs, T7 design-system lib). Required order from now: T3a, T3, T4, T9 (Project Builder init and DDD schematics), T5 (via schematics), T6, T7 (via schematics), T8. Nothing further was started after the message. T5 and T7 are generated with Nx generators and need regeneration through schematics once T9 exists; the T5/T7 notes in the task list say so.
 - 2026-10-07: T8 partial (the uncommitted part is committed as WIP below): Nest: Zod validation pipe, config validated at startup, JSON logger, routeConflictPolicy, security headers, CORS allow-list, CSRF, shutdown hooks, OpenAPI JSON (commit 8f7405a); typescript-eslint strictTypeChecked everywhere incl. tools (efa9bb8); coverage thresholds api 70, web 70, design-system 70, api libs 90 (ef2ba00, api verified failing at an impossible threshold, Angular builder needs coverageInclude); Stryker 10.0.0 configured but NOT verified end to end (it aborts with "No tests were executed" because no domain code exists); commitlint rejects "bad" and accepts "feat(api): add thing" (observed); lefthook.yml validated but hooks are not installed here; CI workflow, ADRs 0001-0007, root README, prettier (format:check clean). Not done: ports as Symbol tokens (no ports exist yet, documented in README), angular-eslint `--tseslint-preset` (typed strict rules come from the root config instead), `strictUnclaimedEventNames` (Angular 22.2).
 
+- 2026-10-08: Native review.
+  - The whole branch (base 77a7599, 243 files, 13,926 lines) was refused with `lens_context_budget_exceeded`.
+  - The user chose to review only T6 and T8, because T5 and T7 will be regenerated.
+  - T8 range (27acff0..3243af5): 4-lens review approved, then acknowledged (lineage review-1bd593ab0ebb124d).
+  - T6 commit (4f8d4ef..338dc1d, reviewed in a temporary detached worktree, since removed): 4-lens review approved, then acknowledged (lineage review-bcf7234fe5a68d81).
+  - All findings are advisory. They are tracked as T10.
+
+## Follow-ups
+
+- [ ] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval.
+  - **tools/dev/dev.ts**
+    - An empty `--port-offset` is coerced to 0 (lines 23-29).
+    - The foreground exit code is not propagated (166-175), and a web exit leaks the api container.
+    - A `--detach` re-run or timeout can orphan the web process (131-163).
+    - The readiness probe is IPv4-only (61-67).
+    - `docker network create` races when two worktrees start at once (96-98).
+    - The seed is not retried and not retry-safe (114-128).
+  - **docker-compose.yml**
+    - pgadmin and db are exposed with default credentials.
+    - Image tags are unpinned.
+    - The debug port has no inspector behind it.
+    - Host `node_modules` is mounted into a Linux container.
+  - **tools/dev**
+    - The shared-infra ports are hardcoded in worktree.ts.
+    - The DB credential defaults are duplicated in seed.ts.
+  - **API and CI**
+    - CORS_ORIGIN shape: config.ts:5.
+    - CSRF rejection and startup env validation are not proven by tests.
+    - The OpenAPI JSON is served without auth.
+    - CI actions are not pinned to SHAs.
+    - The coverage scope of `libs/api/*/vitest.config.mts` does not match.
+    - Stryker is not verified end to end.
+
 ## Next step
 
-Decision needed: regenerate T5 and T7 with schematics after T9, and finish T8 (Stryker end-to-end once domain code exists).
+T9: init Project Builder in-repo and port the hex-* schematics. Then regenerate T5 and T7 through schematics, and finish T8 (Stryker end to end once domain code exists).
