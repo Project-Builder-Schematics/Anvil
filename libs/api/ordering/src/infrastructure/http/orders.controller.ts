@@ -13,6 +13,7 @@ import {
   Param,
   Post,
   Query,
+  UseFilters,
 } from '@nestjs/common';
 import {
   ADD_ORDER_LINE,
@@ -34,22 +35,27 @@ import {
   type GetOrder,
   type GetOrderResult,
 } from '../../application/GetOrder';
+import { OrderingErrorFilter } from './OrderingErrorFilter';
 
-const createOrderBody = z.object({});
+const createOrderBody = z.object({}).default({});
 
-const addOrderLineParams = z.object({ orderId: z.string() });
-const addOrderLineBody = z.object({});
+const addOrderLineParams = z.object({ orderId: z.string().trim().min(1) });
+const addOrderLineBody = z.object({
+  productId: z.string().trim().min(1),
+  quantity: z.number(),
+});
 
-const placeOrderParams = z.object({ orderId: z.string() });
-const placeOrderBody = z.object({});
+const placeOrderParams = z.object({ orderId: z.string().trim().min(1) });
+const placeOrderBody = z.object({}).default({});
 
-const cancelOrderParams = z.object({ orderId: z.string() });
-const cancelOrderBody = z.object({});
+const cancelOrderParams = z.object({ orderId: z.string().trim().min(1) });
+const cancelOrderBody = z.object({}).default({});
 
-const getOrderParams = z.object({ orderId: z.string() });
+const getOrderParams = z.object({ orderId: z.string().trim().min(1) });
 const getOrderQuery = z.object({});
 
 @Controller('orders')
+@UseFilters(OrderingErrorFilter)
 export class OrdersController {
   constructor(
     @Inject(CREATE_ORDER) private readonly createOrderUseCase: CreateOrder,
