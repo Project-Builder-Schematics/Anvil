@@ -11,7 +11,10 @@ async function bootstrap() {
     routeConflictPolicy: { duplicate: 'error', shadow: 'warn' },
   });
   const config = app.get<ConfigService<Env, true>>(ConfigService);
-  configureApp(app, { corsOrigin: config.get('CORS_ORIGIN', { infer: true }) });
+  configureApp(app, {
+    corsOrigin: config.get('CORS_ORIGIN', { infer: true }),
+    openApi: config.get('NODE_ENV', { infer: true }) !== 'production',
+  });
   await app.listen(config.get('PORT', { infer: true }));
 }
 

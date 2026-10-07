@@ -23,18 +23,22 @@ class EchoController {
 @Module({ controllers: [HealthController, EchoController] })
 class TestModule {}
 
+async function start(openApi: boolean) {
+  const moduleRef = await Test.createTestingModule({
+    imports: [TestModule],
+  }).compile();
+  const app = moduleRef.createNestApplication();
+  configureApp(app, { corsOrigin: 'http://localhost:4200', openApi });
+  await app.listen(0);
+  return { app, base: (await app.getUrl()).replace('[::1]', 'localhost') };
+}
+
 describe('configureApp', () => {
   let app: INestApplication;
   let base: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [TestModule],
-    }).compile();
-    app = moduleRef.createNestApplication();
-    configureApp(app, { corsOrigin: 'http://localhost:4200' });
-    await app.listen(0);
-    base = (await app.getUrl()).replace('[::1]', 'localhost');
+    ({ app, base } = await start(true));
   });
 
   afterAll(() => app.close());
@@ -76,10 +80,33 @@ describe('configureApp', () => {
     expect(await ok.json()).toEqual({ name: 'a' });
   });
 
+  it('rejects an unsafe request from another origin', async () => {
+    const post = (headers: Record<string, string>) =>
+      fetch(`${base}/api/echo`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify({ name: 'a' }),
+      });
+    expect((await post({ origin: 'http://evil.example' })).status).toBe(403);
+    expect((await post({ origin: 'http://localhost:4200' })).status).toBe(201);
+  });
+
   it('publishes the schema in the OpenAPI document', async () => {
     const document = (await (await fetch(`${base}/api/docs-json`)).json()) as {
       paths: Record<string, unknown>;
     };
     expect(JSON.stringify(document.paths['/api/echo'])).toContain('"name"');
+  });
+});
+
+describe('configureApp without OpenAPI', () => {
+  it('does not serve the OpenAPI document', async () => {
+    const { app, base } = await start(false);
+    try {
+      expect((await fetch(`${base}/api/docs-json`)).status).toBe(404);
+      expect((await fetch(`${base}/api/health`)).status).toBe(200);
+    } finally {
+      await app.close();
+    }
   });
 });

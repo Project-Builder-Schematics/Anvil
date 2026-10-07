@@ -21,9 +21,33 @@ describe('envSchema', () => {
     expect(() => envSchema.parse(rest)).toThrow(key);
   });
 
-  it('rejects a CORS origin that is not a URL', () => {
-    expect(() => envSchema.parse({ ...valid, CORS_ORIGIN: 'nope' })).toThrow(
+  it.each([
+    'nope',
+    'ftp://localhost:4200',
+    'http://localhost:4200/',
+    'http://localhost:4200/app',
+    'http://localhost:4200?x=1',
+    'http://user@localhost:4200',
+  ])('rejects %p as a CORS origin', (origin) => {
+    expect(() => envSchema.parse({ ...valid, CORS_ORIGIN: origin })).toThrow(
       'CORS_ORIGIN',
+    );
+  });
+
+  it.each([
+    'http://localhost:4200',
+    'https://app.example.com',
+    'http://127.0.0.1:3000',
+  ])('accepts %p as a CORS origin', (origin) => {
+    expect(envSchema.parse({ ...valid, CORS_ORIGIN: origin }).CORS_ORIGIN).toBe(
+      origin,
+    );
+  });
+
+  it('defaults NODE_ENV to development', () => {
+    expect(envSchema.parse(valid).NODE_ENV).toBe('development');
+    expect(envSchema.parse({ ...valid, NODE_ENV: 'production' }).NODE_ENV).toBe(
+      'production',
     );
   });
 });

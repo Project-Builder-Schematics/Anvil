@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 export function configureApp(
   app: INestApplication,
-  options: { corsOrigin: string },
+  options: { corsOrigin: string; openApi: boolean },
 ): void {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new StandardSchemaValidationPipe());
@@ -16,6 +16,7 @@ export function configureApp(
   app.enableCsrfProtection({ trustedOrigins: [options.corsOrigin] });
   app.enableShutdownHooks();
 
+  if (!options.openApi) return;
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder().setTitle('Demo API').build(),
