@@ -94,6 +94,14 @@ describe('ng-component', () => {
     expect(spec).toContain("describe('OrderCard'");
   });
 
+  it('refuses a member that is both an input and an output', async () => {
+    expect(
+      String(
+        (await go({ inputs: 'selected:string', outputs: 'selected' })).error,
+      ),
+    ).toContain('selected is both an input and an output');
+  });
+
   it('writes a component without members when it has no inputs or outputs', async () => {
     const source = (await go()).tree.get(`${dir}/order-card.ts`) ?? '';
 

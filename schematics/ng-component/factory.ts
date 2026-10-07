@@ -32,6 +32,8 @@ export default async (input: Input, shared?: WriteBuffer) => {
   }
   const inputs = parseInputs(input.inputs ?? '');
   const outputs = parseNames(input.outputs ?? '', 'output');
+  const both = inputs.find((i) => outputs.includes(i.name));
+  if (both) throw new Error(`${both.name} is both an input and an output`);
   if (derived === 'container' && (inputs.length > 0 || outputs.length > 0)) {
     throw new Error(
       'a container takes no inputs or outputs: it gets its data from data-access',
