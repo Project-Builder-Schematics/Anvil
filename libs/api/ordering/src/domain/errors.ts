@@ -7,3 +7,12 @@ export const ORDERING_ERROR = {
   ORDER_NOT_CANCELLABLE: 'ordering.order_not_cancellable',
   ORDER_NOT_FOUND: 'ordering.order_not_found',
 } as const;
+
+export type OrderingErrorCode = keyof typeof ORDERING_ERROR;
+
+export class OrderingError extends Error {
+  constructor(readonly code: OrderingErrorCode) {
+    super(ORDERING_ERROR[code]);
+    this.name = 'OrderingError';
+  }
+}
