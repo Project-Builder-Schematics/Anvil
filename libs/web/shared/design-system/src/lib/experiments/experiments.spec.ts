@@ -31,7 +31,9 @@ function setup(
 }
 
 describe('ExperimentService', () => {
-  afterEach(() => document.documentElement.removeAttribute('data-theme'));
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-theme');
+  });
 
   it('assigns the same variant to the same subject', () => {
     const { service } = setup();

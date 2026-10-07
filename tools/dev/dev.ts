@@ -53,16 +53,27 @@ const compose = (project: string, ...rest: string[]) =>
 function isFree(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = createServer();
-    server.once('error', () => resolve(false));
-    server.listen(port, () => server.close(() => resolve(true)));
+    server.once('error', () => {
+      resolve(false);
+    });
+    server.listen(port, () => {
+      server.close(() => {
+        resolve(true);
+      });
+    });
   });
 }
 
 function isListening(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = connect(port, '127.0.0.1');
-    socket.once('connect', () => (socket.destroy(), resolve(true)));
-    socket.once('error', () => resolve(false));
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => {
+      resolve(false);
+    });
   });
 }
 
@@ -160,7 +171,8 @@ async function up() {
         `web did not listen on ${id.webPort} within 30s; see ${LOG_FILE}`,
       );
     }
-    return status();
+    status();
+    return;
   }
 
   const web = Bun.spawn(serve, {

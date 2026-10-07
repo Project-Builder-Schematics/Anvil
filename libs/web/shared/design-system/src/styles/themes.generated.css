@@ -1,5 +1,5 @@
 :root,
-[data-theme="shopify"] {
+[data-theme='shopify'] {
   --ds-color-primary: #000000;
   --ds-color-primary-hover: #3f3f46;
   --ds-color-on-primary: #ffffff;
@@ -12,7 +12,8 @@
   --ds-color-border: #e4e4e7;
   --ds-color-danger: #d72c0d;
   --ds-color-success: #008060;
-  --ds-type-display-family: NeueHaasGrotesk Display, Helvetica, Arial, sans-serif;
+  --ds-type-display-family:
+    NeueHaasGrotesk Display, Helvetica, Arial, sans-serif;
   --ds-type-display-size: 48px;
   --ds-type-display-weight: 330;
   --ds-type-display-line-height: 1.14;
@@ -43,7 +44,7 @@
   --ds-space-xl: 32px;
 }
 
-[data-theme="stripe"] {
+[data-theme='stripe'] {
   --ds-color-primary: #533afd;
   --ds-color-primary-hover: #4434d4;
   --ds-color-on-primary: #ffffff;
@@ -56,22 +57,26 @@
   --ds-color-border: #e3e8ee;
   --ds-color-danger: #ea2261;
   --ds-color-success: #108c3d;
-  --ds-type-display-family: sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --ds-type-display-family:
+    sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
   --ds-type-display-size: 26px;
   --ds-type-display-weight: 300;
   --ds-type-display-line-height: 1.12;
   --ds-type-display-letter-spacing: -0.26px;
-  --ds-type-title-family: sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --ds-type-title-family:
+    sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
   --ds-type-title-size: 20px;
   --ds-type-title-weight: 300;
   --ds-type-title-line-height: 1.4;
   --ds-type-title-letter-spacing: -0.2px;
-  --ds-type-body-family: sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --ds-type-body-family:
+    sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
   --ds-type-body-size: 15px;
   --ds-type-body-weight: 300;
   --ds-type-body-line-height: 1.4;
   --ds-type-body-letter-spacing: 0;
-  --ds-type-caption-family: sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --ds-type-caption-family:
+    sohne-var, 'SF Pro Display', system-ui, -apple-system, sans-serif;
   --ds-type-caption-size: 13px;
   --ds-type-caption-weight: 400;
   --ds-type-caption-line-height: 1.4;

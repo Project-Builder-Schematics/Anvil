@@ -1,11 +1,4 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["vitest/globals", "node"],
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "module": "esnext",
-    "moduleResolution": "bundler"
-  },
+  "extends": "./tsconfig.json",
   "include": ["vitest.config.ts", "src/**/*.spec.ts", "src/**/*.d.ts"]
 }

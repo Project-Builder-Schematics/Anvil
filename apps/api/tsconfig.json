@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "files": [],
-  "include": []
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2021"
+  },
+  "include": ["src/**/*.ts", "vitest.config.ts", "rsbuild.config.ts"]
 }

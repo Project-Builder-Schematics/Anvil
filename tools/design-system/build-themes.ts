@@ -98,7 +98,7 @@ export function loadThemes(): Theme[] {
         join(THEMES_DIR, name, 'DESIGN.md'),
         'utf8',
       );
-      const frontmatter = parse(
+      const frontmatter: unknown = parse(
         /^---\n([\s\S]*?)\n---/.exec(markdown)?.[1] ?? '',
       );
       const mapping = parse(

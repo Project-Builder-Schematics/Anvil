@@ -15,7 +15,7 @@ describe('pickVariant', () => {
 
   it('spreads a 50/50 split roughly evenly', () => {
     const inB = Array.from({ length: 10_000 }, (_, index) =>
-      pickVariant('theme', `subject-${index}`, split),
+      pickVariant('theme', `subject-${String(index)}`, split),
     ).filter((variant) => variant.name === 'b').length;
     expect(inB).toBeGreaterThan(4_500);
     expect(inB).toBeLessThan(5_500);
@@ -29,7 +29,7 @@ describe('pickVariant', () => {
     ];
     const picks = Array.from(
       { length: 10_000 },
-      (_, index) => pickVariant('x', `s-${index}`, skewed).name,
+      (_, index) => pickVariant('x', `s-${String(index)}`, skewed).name,
     );
     expect(picks).not.toContain('never');
     const inB = picks.filter((name) => name === 'b').length;
@@ -39,7 +39,7 @@ describe('pickVariant', () => {
 
   it('decorrelates experiments for the same subject', () => {
     const differing = Array.from({ length: 1_000 }, (_, index) => {
-      const subject = `s-${index}`;
+      const subject = `s-${String(index)}`;
       return (
         pickVariant('one', subject, split).name !==
         pickVariant('two', subject, split).name

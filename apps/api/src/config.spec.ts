@@ -15,7 +15,9 @@ describe('envSchema', () => {
   });
 
   it.each(Object.keys(valid))('rejects a missing %s', (key) => {
-    const { [key]: _removed, ...rest } = valid as Record<string, string>;
+    const rest = Object.fromEntries(
+      Object.entries(valid).filter(([name]) => name !== key),
+    );
     expect(() => envSchema.parse(rest)).toThrow(key);
   });
 

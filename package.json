@@ -8,7 +8,8 @@
     "dev:status": "bun tools/dev/dev.ts status",
     "dev:logs": "bun tools/dev/dev.ts logs",
     "dev:seed": "bun tools/dev/seed.ts",
-    "design:themes": "bun tools/design-system/build-themes.ts"
+    "design:themes": "bun tools/design-system/build-themes.ts",
+    "check:tools": "eslint tools && tsc -p tools/tsconfig.json && bun test tools"
   },
   "private": true,
   "dependencies": {

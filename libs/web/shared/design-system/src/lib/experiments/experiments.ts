@@ -61,7 +61,9 @@ export const EXPERIMENT_OVERRIDES = new InjectionToken<Record<string, string>>(
 export const ExposureSink = new InjectionToken<(exposure: Exposure) => void>(
   'ExposureSink',
   {
-    factory: () => (exposure) => console.debug('exposure', exposure),
+    factory: () => (exposure) => {
+      console.debug('exposure', exposure);
+    },
   },
 );
 
@@ -116,5 +118,7 @@ export class ExperimentService {
 }
 
 export function provideExperiments(): EnvironmentProviders {
-  return provideAppInitializer(() => inject(ExperimentService).applyThemes());
+  return provideAppInitializer(() => {
+    inject(ExperimentService).applyThemes();
+  });
 }
