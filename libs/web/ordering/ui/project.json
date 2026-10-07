@@ -1,0 +1,8 @@
+{
+  "name": "web-ordering-ui",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/ordering/ui/src",
+  "prefix": "ordering",
+  "projectType": "library",
+  "tags": ["scope:web", "context:ordering", "type:ui"]
+}

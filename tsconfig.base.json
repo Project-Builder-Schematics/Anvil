@@ -2,9 +2,7 @@
   "compilerOptions": {
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": [
-      "es2022"
-    ],
+    "lib": ["es2022"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -15,6 +13,31 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "paths": {}
+    "paths": {
+      "@demo/api-catalog": ["./libs/api/catalog/src/index.ts"],
+      "@demo/api-inventory": ["./libs/api/inventory/src/index.ts"],
+      "@demo/api-ordering": ["./libs/api/ordering/src/index.ts"],
+      "@demo/api-payments": ["./libs/api/payments/src/index.ts"],
+      "@demo/api-shipping": ["./libs/api/shipping/src/index.ts"],
+      "@demo/api-notifications": ["./libs/api/notifications/src/index.ts"],
+      "@demo/api-shared-kernel": ["./libs/api/shared-kernel/src/index.ts"],
+      "@demo/web-catalog-ui": ["./libs/web/catalog/ui/src/index.ts"],
+      "@demo/web-catalog-feature": ["./libs/web/catalog/feature/src/index.ts"],
+      "@demo/web-catalog-data-access": [
+        "./libs/web/catalog/data-access/src/index.ts"
+      ],
+      "@demo/web-catalog-domain": ["./libs/web/catalog/domain/src/index.ts"],
+      "@demo/web-ordering-ui": ["./libs/web/ordering/ui/src/index.ts"],
+      "@demo/web-ordering-feature": [
+        "./libs/web/ordering/feature/src/index.ts"
+      ],
+      "@demo/web-ordering-data-access": [
+        "./libs/web/ordering/data-access/src/index.ts"
+      ],
+      "@demo/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"]
+    },
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true
   }
 }

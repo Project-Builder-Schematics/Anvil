@@ -21,3 +21,25 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+## How to work
+
+- **Problem first.** State the problem and the scope before changing code. If either is unclear, ask one focused question.
+- **Push back** when a request contradicts itself, is unsound, creates debt, or skips a quality step without a reason.
+- **Less code.** Name the behaviour a function adds before writing it. No pass-through wrappers or aliases.
+- **Match what exists.** Follow the patterns already in the repo; never build a parallel one.
+- **Solve today's problem.** No options or extension points nobody asked for. Generalise on the second concrete case.
+- **Pure where it fits.** Logic is pure; IO and framework hooks stay at the edges. In the API, Nest appears only in `infrastructure/` and `composition.ts` wires everything.
+- **Clean your touch zone, nothing more.**
+- **Verify before claiming.** Check the docs or the code for every version-specific API; run the check before saying it passes.
+- **External ground truth.** A claim about a system we don't own is proven by its docs or a real call, not by a fixture we wrote.
+- **Bugs.** Reproduce and find the root cause before fixing.
+- **No theatre.** No padding or invented caveats. An empty section says "None".
+- **Know when to stop.** After 2 or 3 failed attempts at the same fix, stop and report.
+- **Re-read the diff** before each commit and before opening a PR. Remove indirection, duplication and derivable state.
+
+### One worktree per change
+
+- Create a sibling worktree `../demo-<branch>` on its own branch from a fresh base, never under `/tmp`. The main checkout stays on `main` and clean.
+- Each worktree runs its own `bun install`; never symlink `node_modules`.
+- The dev scripts (`bun run dev`, see the README) isolate ports, compose project and database per worktree, so several worktrees run side by side.

@@ -1,0 +1,8 @@
+{
+  "name": "web-catalog-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/catalog/feature/src",
+  "prefix": "catalog",
+  "projectType": "library",
+  "tags": ["scope:web", "context:catalog", "type:feature"]
+}

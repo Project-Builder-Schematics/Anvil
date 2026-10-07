@@ -1,0 +1,9 @@
+{
+  "name": "web-ordering-domain",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/ordering/domain/src",
+  "projectType": "library",
+  "tags": ["scope:web", "context:ordering", "type:domain"],
+  "// targets": "to see all targets run: nx show project web-ordering-domain --web",
+  "targets": {}
+}

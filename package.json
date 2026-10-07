@@ -18,6 +18,8 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
+    "@analogjs/vite-plugin-angular": "~2.6.0",
+    "@analogjs/vitest-angular": "~2.6.0",
     "@angular-devkit/core": "~22.1.0",
     "@angular-devkit/schematics": "~22.1.0",
     "@angular/build": "~22.1.0",
@@ -34,8 +36,10 @@
     "@nx/nest": "23.2.1",
     "@nx/node": "23.2.1",
     "@nx/rsbuild": "23.2.1",
+    "@nx/vite": "23.2.1",
     "@nx/vitest": "23.2.1",
     "@nx/web": "23.2.1",
+    "@oxc-project/runtime": "^0.115.0",
     "@rsbuild/core": "2.2.12",
     "@schematics/angular": "~22.1.0",
     "@swc-node/register": "1.11.1",
@@ -43,6 +47,8 @@
     "@swc/helpers": "0.5.18",
     "@types/node": "^24.0.0",
     "@typescript-eslint/utils": "^8.58.0",
+    "@vitest/coverage-v8": "~4.1.0",
+    "@vitest/ui": "~4.1.0",
     "angular-eslint": "^22.1.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
