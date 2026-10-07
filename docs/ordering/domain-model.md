@@ -4,43 +4,77 @@ The single subdomain of [Ordering](README.md). Terms are in the [glossary](gloss
 
 ## Aggregates
 
-| Aggregate | Root entity | Invariants it protects | Changed by |
-| --------- | ----------- | ---------------------- | ---------- |
+| Aggregate | Root entity | Invariants it protects                                                                                                                                                                    | Changed by                                                 |
+| --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `Order`   | `Order`     | A new order is an empty draft (1). One line per product (3). Only a draft changes its lines (4) or is placed (10). Placing needs a line (6). One currency per order (7). Cancel rule (8). | `CreateOrder`, `AddOrderLine`, `PlaceOrder`, `CancelOrder` |
 
 ## Entities
 
-| Entity | Identity | Attributes | Inside aggregate | Lifecycle |
-| ------ | -------- | ---------- | ---------------- | --------- |
+| Entity      | Identity                      | Attributes                                               | Inside aggregate | Lifecycle                                                                                  |
+| ----------- | ----------------------------- | -------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| `Order`     | `OrderId`                     | `status`, `lines`                                        | `Order`          | `Draft` → `Placed` → `Cancelled`, or `Draft` → `Cancelled`. `Paid` and later come later.   |
+| `OrderLine` | `ProductId`, unique per order | `productId`, `quantity`, `unitPrice` (frozen when added) | `Order`          | Created when a product is first added. Its quantity grows when the product is added again. |
 
 ## Value objects
 
-| Value object | Attributes | Validation | Used by |
-| ------------ | ---------- | ---------- | ------- |
+| Value object | Attributes                                  | Validation                                                                                                    | Used by                      |
+| ------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `OrderId`    | `value` (text)                              | Not blank. Built by `OrderRepository.nextId`, never by the caller.                                            | `Order`, `OrderRepository`   |
+| `ProductId`  | `value` (text)                              | Not blank.                                                                                                    | `OrderLine`, `ProductPrices` |
+| `Quantity`   | `value` (integer)                           | From 1 to 99 inclusive, else `QUANTITY_OUT_OF_RANGE` (rule 2). The sum of two quantities is a `Quantity` too. | `OrderLine`                  |
+| `Money`      | `amount` (integer, minor units), `currency` | Amount is not negative; currency is three uppercase letters. A violation is a bug of the adapter, not a rule. | `OrderLine`, `ProductPrices` |
 
 ## Business rules
 
 Numbered; every validation cites one; state precedence when several can hold; `<` vs `<=` spelled. `Source` is `decided[ — <reason>]` or `assumed`, and an `assumed` rule may only back a `@draft` feature. Error codes are CAPS tokens in backticks.
 
-| #   | Rule | Source |
-| --- | ---- | ------ |
+Rules 1 to 8 were approved by the user on 2026-10-08. Rules 9 to 11 fill gaps those rules leave and are `assumed` until the user confirms them.
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                            | Source  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | An order starts as `Draft` with no lines.                                                                                                                                                                                                                                                                                                                                       | decided |
+| 2   | Quantity is an integer from 1 to 99 inclusive (`1 <= quantity <= 99`); any other value is refused with `QUANTITY_OUT_OF_RANGE`.                                                                                                                                                                                                                                                 | decided |
+| 3   | Adding a product already in the order adds to that line, and the sum must still satisfy rule 2 (`sum <= 99`); otherwise `QUANTITY_OUT_OF_RANGE`.                                                                                                                                                                                                                                | decided |
+| 4   | Only a `Draft` order may change its lines; any other order refuses with `ORDER_NOT_EDITABLE`.                                                                                                                                                                                                                                                                                   | decided |
+| 5   | The unit price is frozen when the line is added; a later change of the catalog price never touches it. An unknown product is refused with `PRODUCT_NOT_FOUND`.                                                                                                                                                                                                                  | decided |
+| 6   | Placing requires at least one line; otherwise `ORDER_EMPTY`.                                                                                                                                                                                                                                                                                                                    | decided |
+| 7   | Every line of an order uses the same currency; a line in another currency is refused with `CURRENCY_MISMATCH`.                                                                                                                                                                                                                                                                  | decided |
+| 8   | An order may be cancelled from `Draft` or `Placed`. `Paid` and later states are not cancellable, and neither is a `Cancelled` order; both are refused with `ORDER_NOT_CANCELLABLE`. This slice has no `Paid` state, so only a `Cancelled` order reaches the refusal.                                                                                                            | decided |
+| 9   | A command that names an order that does not exist is refused with `ORDER_NOT_FOUND`.                                                                                                                                                                                                                                                                                            | assumed |
+| 10  | Only a `Draft` order may be placed; placing any other order is refused with `ORDER_NOT_EDITABLE`, the code of rule 4.                                                                                                                                                                                                                                                           | assumed |
+| 11  | When several refusals hold, the first of this list wins. `AddOrderLine`: `ORDER_NOT_FOUND`, `QUANTITY_OUT_OF_RANGE` of the given quantity, `PRODUCT_NOT_FOUND`, `ORDER_NOT_EDITABLE`, `QUANTITY_OUT_OF_RANGE` of the sum, `CURRENCY_MISMATCH`. `PlaceOrder`: `ORDER_NOT_FOUND`, `ORDER_NOT_EDITABLE`, `ORDER_EMPTY`. `CancelOrder`: `ORDER_NOT_FOUND`, `ORDER_NOT_CANCELLABLE`. | assumed |
 
 ## Use cases
 
 One row per use case; `Feature` links the `.feature` written next to this file before the code is generated.
 
-| Use case | Command | Result | Driven ports | Feature |
-| -------- | ------- | ------ | ------------ | ------- |
+| Use case       | Command                            | Result                                           | Driven ports                       | Feature                                          |
+| -------------- | ---------------------------------- | ------------------------------------------------ | ---------------------------------- | ------------------------------------------------ |
+| `CreateOrder`  | `{}`                               | `{ orderId }`                                    | `OrderRepository`                  | [create-order.feature](create-order.feature)     |
+| `AddOrderLine` | `{ orderId, productId, quantity }` | `{ productId, quantity, unitPrice }` of the line | `OrderRepository`, `ProductPrices` | [add-order-line.feature](add-order-line.feature) |
+| `PlaceOrder`   | `{ orderId }`                      | `{ orderId, status }`                            | `OrderRepository`                  | [place-order.feature](place-order.feature)       |
+| `CancelOrder`  | `{ orderId }`                      | `{ orderId, status }`                            | `OrderRepository`                  | [cancel-order.feature](cancel-order.feature)     |
+| `GetOrder`     | `{ orderId }`                      | `{ orderId, status, lines }`                     | `OrderRepository`                  | [get-order.feature](get-order.feature)           |
 
 ## Driven ports
 
 `Adapter today` starts with `Memory` or `@<context>` (another context's barrel). `Contract` is the invariant every implementation keeps, in-memory or real.
 
-| Port | Answers | Adapter today | Contract |
-| ---- | ------- | ------------- | -------- |
+| Port              | Answers                                                         | Adapter today                                                                         | Contract                                                                                                                                         |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OrderRepository` | `nextId() → OrderId`, `byId(id) → Order \| null`, `save(order)` | Memory: a process-local map, lost on restart.                                         | `byId` returns what `save` last stored under that id and `null` for an id never saved. `nextId` never returns the same id twice.                 |
+| `ProductPrices`   | `priceOf(productId) → Money \| null`                            | Memory: three demo products and `set`; moves to `@catalog` once catalog has a domain. | `null` means the product is unknown. A known product answers its current price; the answer is a value, so changing it later never alters a line. |
 
 ## Driving adapters
 
 `Route` is `METHOD /<resource>[/path]` under the API's global prefix. `Answers` lists the statuses; the first 2xx is the success status. `Caller` is who may call and where the identity comes from; request bodies never carry `userId`, `accountId` or `actorId`.
 
-| Route | Use case | Answers | Caller |
-| ----- | -------- | ------- | ------ |
+400 is the Zod body check (text where text is due, a number for the quantity). Everything else is a rule: 404 for rule 9, 409 for the state refusals (rules 4, 8, 10), 422 for the value refusals (rules 2, 3, 5, 6, 7).
+
+| Route                          | Use case       | Answers                                                    | Caller               |
+| ------------------------------ | -------------- | ---------------------------------------------------------- | -------------------- |
+| `POST /orders`                 | `CreateOrder`  | 201                                                        | public — no auth yet |
+| `POST /orders/:orderId/lines`  | `AddOrderLine` | 200 · 400 · 404 rule 9 · 409 rule 4 · 422 rules 2, 3, 5, 7 | public — no auth yet |
+| `POST /orders/:orderId/place`  | `PlaceOrder`   | 200 · 404 rule 9 · 409 rule 10 · 422 rule 6                | public — no auth yet |
+| `POST /orders/:orderId/cancel` | `CancelOrder`  | 200 · 404 rule 9 · 409 rule 8                              | public — no auth yet |
+| `GET /orders/:orderId`         | `GetOrder`     | 200 · 404 rule 9                                           | public — no auth yet |
