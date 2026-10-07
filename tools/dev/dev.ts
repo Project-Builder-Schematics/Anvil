@@ -7,9 +7,17 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { exitCodeFor, parsePortOffset } from './cli';
+import {
+  type Command,
+  composeEnv,
+  exitCodeFor,
+  parseArgs,
+  portClash,
+  seedFailureMessage,
+  statusLines,
+} from './cli';
 import { planDatabase } from './database';
-import { infraValue, loadInfraEnv } from './infra';
+import { infraValue, loadInfraEnv, sharedPorts } from './infra';
 import { isFree, isListening } from './net';
 import { deriveIdentity, readGitPaths, type Identity } from './worktree';
 
@@ -18,35 +26,25 @@ const NETWORK = 'demo-shared-net';
 const PID_FILE = '.dev/web.pid';
 const LOG_FILE = '.dev/web.log';
 
-const args = process.argv.slice(2);
-const command = args.find((arg) => !arg.startsWith('--')) ?? 'up';
-const detach = args.includes('--detach');
-
 function fail(error: unknown): never {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 }
 
-const infra = loadInfraEnv();
-const dbUser = infraValue(infra, 'DB_USER');
+let options: ReturnType<typeof parseArgs>;
+let infra: Record<string, string>;
+let dbUser: string;
 let id: Identity;
 try {
-  id = deriveIdentity(readGitPaths(), parsePortOffset(args), [
-    Number(infraValue(infra, 'DB_PORT')),
-    Number(infraValue(infra, 'PGADMIN_PORT')),
-  ]);
+  options = parseArgs(process.argv.slice(2));
+  infra = loadInfraEnv();
+  dbUser = infraValue(infra, 'DB_USER');
+  id = deriveIdentity(readGitPaths(), options.portOffset, sharedPorts(infra));
 } catch (error) {
   fail(error);
 }
-const env = {
-  ...process.env,
-  ...infra,
-  WEB_PORT: String(id.webPort),
-  API_PORT: String(id.apiPort),
-  DEBUG_PORT: String(id.debugPort),
-  DB_NAME: id.dbName,
-  CORS_ORIGIN: `http://localhost:${id.webPort}`,
-};
+const { command, detach } = options;
+const env = composeEnv(id, infra, process.env);
 
 function docker(...dockerArgs: string[]): string {
   const result = Bun.spawnSync(['docker', ...dockerArgs], { env });
@@ -133,11 +131,14 @@ async function up(): Promise<number> {
       stdio: ['inherit', 'inherit', 'inherit'],
     });
     if (result.exitCode !== 0) {
-      // The database is only seeded when it is created, so a half-seeded one would never be retried.
-      infraState.dropDatabase();
-      throw new Error(
-        'seed failed; the new database was dropped so the next run seeds it again',
-      );
+      let dropFailed = false;
+      try {
+        infraState.dropDatabase();
+      } catch (error) {
+        dropFailed = true;
+        console.error(error instanceof Error ? error.message : error);
+      }
+      throw new Error(seedFailureMessage(id.dbName, dropFailed));
     }
   }
 
@@ -146,11 +147,8 @@ async function up(): Promise<number> {
   for (const port of [id.webPort, id.apiPort, id.debugPort]) {
     if (!(await isFree(port))) taken.push(port);
   }
-  if (taken.length > 0) {
-    throw new Error(
-      `Ports in use: ${taken.join(', ')}. Retry with --port-offset=<N>.`,
-    );
-  }
+  const clash = portClash(taken);
+  if (clash) throw new Error(clash);
   compose(id.composeProject, 'up', '-d', '--force-recreate', 'api');
 
   let keepRunning = false;
@@ -239,17 +237,7 @@ function status() {
   } catch {
     api = 'unknown (is Docker running?)';
   }
-  console.log(
-    [
-      `web_url=http://localhost:${id.webPort}`,
-      `api_url=http://localhost:${id.apiPort}/api`,
-      `debug_port=${id.debugPort}`,
-      `compose_project=${id.composeProject}`,
-      `db_name=${id.dbName}`,
-      `web=${readWebPid() === undefined ? 'stopped' : 'running'}`,
-      `api=${api}`,
-    ].join('\n'),
-  );
+  console.log(statusLines(id, { web: readWebPid() !== undefined, api }));
 }
 
 function logs() {
@@ -276,16 +264,9 @@ function logs() {
   );
 }
 
-const commands: Record<string, () => unknown> = { up, stop, status, logs };
-const run = commands[command];
-if (!run) {
-  console.error(
-    `Unknown command "${command}". Use: ${Object.keys(commands).join(' | ')} [--detach] [--port-offset=N]`,
-  );
-  process.exit(1);
-}
+const commands: Record<Command, () => unknown> = { up, stop, status, logs };
 try {
-  const code = await run();
+  const code = await commands[command]();
   if (typeof code === 'number') process.exit(code);
 } catch (error) {
   fail(error);

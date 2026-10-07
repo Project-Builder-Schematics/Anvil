@@ -19,16 +19,24 @@ afterEach(() => {
   for (const server of servers.splice(0)) server.close();
 });
 
+// A host without IPv6 loopback cannot run the IPv6 case; it is reported as skipped, never as passed.
+const hasIpv6 = await listen('::1').then(
+  () => true,
+  () => false,
+);
+for (const server of servers.splice(0)) server.close();
+
 describe('isListening', () => {
   it('sees an IPv4 listener', async () => {
     expect(await isListening(await listen('127.0.0.1'))).toBe(true);
   });
 
-  it('sees an IPv6-only listener, which is where localhost can resolve', async () => {
-    const port = await listen('::1').catch(() => undefined);
-    if (port === undefined) return;
-    expect(await isListening(port)).toBe(true);
-  });
+  it.skipIf(!hasIpv6)(
+    'sees an IPv6-only listener, which is where localhost can resolve',
+    async () => {
+      expect(await isListening(await listen('::1'))).toBe(true);
+    },
+  );
 
   it('is false for a port nobody listens on', async () => {
     const port = await listen('127.0.0.1');
