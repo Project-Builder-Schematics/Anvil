@@ -2,13 +2,6 @@
   "name": "@demo/api",
   "version": "0.0.1",
   "private": true,
-  "nx": {
-    "name": "api",
-    "tags": [
-      "scope:api",
-      "type:app"
-    ]
-  },
   "dependencies": {
     "@nestjs/common": "^12.1.2",
     "@nestjs/config": "12.0.1",
