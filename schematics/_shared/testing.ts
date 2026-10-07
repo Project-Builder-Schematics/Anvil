@@ -1,7 +1,7 @@
 // Fixtures shared by the schematic tests: a miniature workspace and a hand-written domain model.
 
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
-import { apiLibFiles } from './libs.ts';
+import { apiLibFiles, webLibFiles } from './libs.ts';
 
 export const tsconfigBase = `{
   "compilerOptions": {
@@ -152,3 +152,17 @@ export const throwIfFailed = (result: { error?: unknown }): void => {
       ? result.error
       : new Error('the run failed');
 };
+
+/** Web libs as web-context leaves them, for the ng-* schematics. */
+export const webLib = (
+  dir: string,
+  layer: 'ui' | 'feature' | 'data-access' | 'domain',
+  context = 'catalog',
+): Record<string, string> =>
+  webLibFiles({
+    dir,
+    name: dir.replace(/^libs\//, '').replace(/\//g, '-'),
+    ...(layer === 'domain' ? {} : { prefix: context }),
+    tags: ['scope:web', `context:${context}`, `type:${layer}`],
+    layer,
+  });

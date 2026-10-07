@@ -22,6 +22,21 @@
       },
       "hex-use-case": {
         "path": "./schematics/hex-use-case"
+      },
+      "ng-component": {
+        "path": "./schematics/ng-component"
+      },
+      "ng-directive": {
+        "path": "./schematics/ng-directive"
+      },
+      "ng-service": {
+        "path": "./schematics/ng-service"
+      },
+      "web-context": {
+        "path": "./schematics/web-context"
+      },
+      "web-shared-lib": {
+        "path": "./schematics/web-shared-lib"
       }
     }
   },

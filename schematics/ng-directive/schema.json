@@ -1,0 +1,15 @@
+{
+  "properties": {
+    "lib": {
+      "type": "string",
+      "label": "Repo-relative directory of the ui lib that gets the directive (e.g. libs/web/catalog/ui)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Directive name, dash-case (e.g. highlight); the selector is [<prefix>Highlight] and the class <Prefix>Highlight",
+      "required": true
+    }
+  },
+  "description": "New standalone Angular attribute directive in a ui lib: <lib>/src/lib/<name>/<name>.ts and .spec.ts (no class suffix), exported from the lib barrel. The selector is [<prefix><Name>] in camelCase with the lib's prefix and the class is <Prefix><Name>, as the lint rules require. The spec applies it to a host element. Gives the lib a unit-test target when it has none. Replaces nx g @nx/angular:directive."
+}

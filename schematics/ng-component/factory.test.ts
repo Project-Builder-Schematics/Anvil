@@ -1,0 +1,187 @@
+import { describe, expect, it } from 'bun:test';
+import { run, webLib } from '../_shared/testing.ts';
+import factory from './factory.ts';
+
+const UI = 'libs/web/catalog/ui';
+const seed = (extra: Record<string, string> = {}) => ({
+  ...webLib(UI, 'ui'),
+  ...webLib('libs/web/catalog/feature', 'feature'),
+  ...webLib('libs/web/catalog/domain', 'domain'),
+  ...extra,
+});
+const go = (
+  over: Record<string, unknown> = {},
+  files: Record<string, string> = seed(),
+) =>
+  run(factory, 'ng-component', { lib: UI, name: 'order-card', ...over }, files);
+
+const dir = `${UI}/src/lib/order-card`;
+
+describe('ng-component', () => {
+  it('writes the four files with no suffix, and exports the component from the barrel', async () => {
+    const { tree, error } = await go();
+
+    expect(error).toBeUndefined();
+    expect(
+      [...tree.keys()].filter((path) => path.startsWith(`${dir}/`)).sort(),
+    ).toEqual(
+      [
+        'order-card.css',
+        'order-card.html',
+        'order-card.spec.ts',
+        'order-card.ts',
+      ].map((file) => `${dir}/${file}`),
+    );
+    expect(tree.get(`${UI}/src/index.ts`)).toBe(
+      "export * from './lib/order-card/order-card';\n",
+    );
+  });
+
+  it('follows the Angular 22 component rules', async () => {
+    const source =
+      (
+        await go({ inputs: 'label:string,count:number', outputs: 'selected' })
+      ).tree.get(`${dir}/order-card.ts`) ?? '';
+
+    expect(source).toContain(
+      "import { Component, input, output } from '@angular/core';",
+    );
+    expect(source).toContain("selector: 'catalog-order-card'");
+    expect(source).toContain("templateUrl: './order-card.html'");
+    expect(source).toContain("styleUrl: './order-card.css'");
+    expect(source).toContain('export class OrderCard {');
+    expect(source).toContain('readonly label = input.required<string>();');
+    expect(source).toContain('readonly count = input.required<number>();');
+    expect(source).toContain('readonly selected = output();');
+    for (const forbidden of [
+      'changeDetection',
+      'standalone',
+      '@Input',
+      '@Output',
+      'HostBinding',
+      'HostListener',
+      'NgModule',
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
+  });
+
+  it('sets the required inputs in the spec so the component renders', async () => {
+    const spec =
+      (await go({ inputs: 'label:string,count:number,on:boolean' })).tree.get(
+        `${dir}/order-card.spec.ts`,
+      ) ?? '';
+
+    expect(spec).toContain("fixture.componentRef.setInput('label', 'sample');");
+    expect(spec).toContain("fixture.componentRef.setInput('count', 1);");
+    expect(spec).toContain("fixture.componentRef.setInput('on', true);");
+    expect(spec).toContain("describe('OrderCard'");
+  });
+
+  it('writes a component without members when it has no inputs or outputs', async () => {
+    const source = (await go()).tree.get(`${dir}/order-card.ts`) ?? '';
+
+    expect(source).toContain("import { Component } from '@angular/core';");
+    expect(source).toContain('export class OrderCard {}');
+  });
+
+  it('adds a unit-test target to a lib that has none, and leaves an existing one alone', async () => {
+    const project = JSON.parse(
+      (await go()).tree.get(`${UI}/project.json`) ?? '',
+    ) as {
+      targets: { test: { executor: string; options: Record<string, unknown> } };
+    };
+
+    expect(project.targets.test.executor).toBe('@angular/build:unit-test');
+    expect(project.targets.test.options['tsConfig']).toBe(
+      `${UI}/tsconfig.spec.json`,
+    );
+    expect(project.targets.test.options['coverageInclude']).toEqual([
+      `${UI}/src/**/*.ts`,
+    ]);
+    const withTarget = {
+      ...seed(),
+      [`${UI}/project.json`]:
+        '{\n  "name": "x",\n  "prefix": "catalog",\n  "tags": ["type:ui"],\n  "targets": { "test": {} }\n}\n',
+    };
+    expect((await go({}, withTarget)).tree.has(`${UI}/project.json`)).toBe(
+      false,
+    );
+  });
+
+  it('appends to a barrel that already exports something', async () => {
+    const { tree } = await go(
+      {},
+      seed({ [`${UI}/src/index.ts`]: "export * from './lib/other/other';\n" }),
+    );
+
+    expect(tree.get(`${UI}/src/index.ts`)).toBe(
+      "export * from './lib/other/other';\n\nexport * from './lib/order-card/order-card';\n",
+    );
+  });
+
+  describe('container and presentational', () => {
+    const FEATURE = 'libs/web/catalog/feature';
+
+    it('reads the kind from the lib type: feature is a container', async () => {
+      const { tree, error } = await go({ lib: FEATURE, kind: 'container' });
+
+      expect(error).toBeUndefined();
+      expect(tree.has(`${FEATURE}/src/lib/order-card/order-card.ts`)).toBe(
+        true,
+      );
+      expect((await go({ lib: FEATURE })).error).toBeUndefined();
+    });
+
+    it('lets the flag only agree with the lib type', async () => {
+      expect(String((await go({ kind: 'container' })).error)).toContain(
+        'web-catalog-ui is a ui lib, so its components are presentational, not container — fix the flag or pick another lib',
+      );
+      expect(
+        String((await go({ lib: FEATURE, kind: 'presentational' })).error),
+      ).toContain(
+        'web-catalog-feature is a feature lib, so its components are container, not presentational',
+      );
+    });
+
+    it('gives a container no inputs or outputs', async () => {
+      expect(
+        String((await go({ lib: FEATURE, inputs: 'label:string' })).error),
+      ).toContain('a container takes no inputs or outputs');
+      expect(
+        String((await go({ lib: FEATURE, outputs: 'selected' })).error),
+      ).toContain('a container takes no inputs or outputs');
+    });
+
+    it('refuses libs that are neither ui nor feature', async () => {
+      expect(
+        String((await go({ lib: 'libs/web/catalog/domain' })).error),
+      ).toContain('not an Angular lib');
+    });
+  });
+
+  it('refuses a component that exists, writing nothing', async () => {
+    const { tree, error } = await go(
+      {},
+      seed({ [`${dir}/order-card.ts`]: 'export {};\n' }),
+    );
+
+    expect(String(error)).toContain('order-card.ts');
+    expect([...tree.keys()]).toEqual([]);
+  });
+
+  it('refuses a missing lib, bad names and unsupported input types', async () => {
+    expect(String((await go({ lib: 'libs/web/nope/ui' })).error)).toContain(
+      'libs/web/nope/ui/project.json not found',
+    );
+    expect(String((await go({ name: 'OrderCard' })).error)).toContain(
+      'dash-case',
+    );
+    expect(String((await go({ inputs: 'label:Date' })).error)).toContain(
+      'string, number or boolean',
+    );
+    expect(String((await go({ outputs: 'Selected' })).error)).toContain(
+      'camelCase',
+    );
+  });
+});

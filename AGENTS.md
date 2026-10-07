@@ -66,20 +66,20 @@ or pass `--manifest "$PWD"` and `--sdk-root "$PWD/node_modules/@pbuilder/sdk"` b
 
 ### Which schematic
 
-| Situation                                                                    | Schematic             | Status  |
-| ---------------------------------------------------------------------------- | --------------------- | ------- |
-| New API bounded context (lib, alias, tags, lint registration, docs skeleton) | `hex-bounded-context` | built   |
-| Add a subdomain slice to an existing context                                 | `hex-slice`           | built   |
-| New driven port and its in-memory or cross-context adapter                   | `hex-driven-port`     | built   |
-| New use case from its `domain-model.md` row and `.feature`                   | `hex-use-case`        | built   |
-| New Nest controller operation for a use case                                 | `hex-route`           | built   |
-| Generate a whole subdomain from its domain model                             | `hex-subdomain`       | built   |
-| Generate every subdomain of a context                                        | `hex-context`         | built   |
-| New web context (`feature`, `ui`, `data-access`, `domain` libs)              | `web-context`         | planned |
-| New shared web lib (`libs/web/shared/<name>`)                                | `web-shared-lib`      | planned |
-| New Angular component (container in `feature`, presentational in `ui`)       | `ng-component`        | planned |
-| New Angular service with signal state                                        | `ng-service`          | planned |
-| New Angular attribute directive                                              | `ng-directive`        | planned |
+| Situation                                                                    | Schematic             | Status |
+| ---------------------------------------------------------------------------- | --------------------- | ------ |
+| New API bounded context (lib, alias, tags, lint registration, docs skeleton) | `hex-bounded-context` | built  |
+| Add a subdomain slice to an existing context                                 | `hex-slice`           | built  |
+| New driven port and its in-memory or cross-context adapter                   | `hex-driven-port`     | built  |
+| New use case from its `domain-model.md` row and `.feature`                   | `hex-use-case`        | built  |
+| New Nest controller operation for a use case                                 | `hex-route`           | built  |
+| Generate a whole subdomain from its domain model                             | `hex-subdomain`       | built  |
+| Generate every subdomain of a context                                        | `hex-context`         | built  |
+| New web context (`feature`, `ui`, `data-access`, `domain` libs)              | `web-context`         | built  |
+| New shared web lib (`libs/web/shared/<name>`)                                | `web-shared-lib`      | built  |
+| New Angular component (container in `feature`, presentational in `ui`)       | `ng-component`        | built  |
+| New Angular service with signal state                                        | `ng-service`          | built  |
+| New Angular attribute directive                                              | `ng-directive`        | built  |
 
 ### Working rules
 
