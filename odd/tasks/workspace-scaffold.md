@@ -189,6 +189,11 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
     - `apps/api/project.json` drops the project name.
   - **Frontend**
     - The dashed-context prefix (web-context:35).
+  - **Context map**
+    - Reviewed d4bd5ab..5ede05c: approved and acknowledged (review-63a93a9466d0a7d1).
+    - The docs and the lint edges can drift apart in hex-bounded-context (233-239).
+    - `addContextRelation` depends on the exact formatting of `eslint.config.mjs` (lib.ts:336-348).
+    - The relationship list is duplicated, and duplicate providers are accepted in `context_map` (hex-bounded-context:34-68).
 
 ## Next step
 
