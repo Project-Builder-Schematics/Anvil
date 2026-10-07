@@ -1,13 +1,16 @@
 import type { Input } from './schema.generated.ts';
 import {
   SCOPE,
+  ESLINT_CONFIG,
   TSCONFIG_BASE,
+  addContextRelation,
   addModuleEntry,
   assertDashed,
   assertPascal,
   constant,
   dashed,
   pascal,
+  docsDir,
   resolveSlice,
   row,
   withImports,
@@ -108,6 +111,15 @@ export default async (input: Input, shared?: WriteBuffer) => {
       throw new Error(
         `${alias} is not registered in ${TSCONFIG_BASE} — create the context first`,
       );
+    const readmePath = `${docsDir(context)}/README.md`;
+    const readme = await buffer.readRequired(
+      readmePath,
+      'the context map declares which contexts this one may depend on',
+    );
+    if (!row(readme, 'Context map', provider))
+      throw new Error(
+        `${provider} is not in the Context map of ${readmePath} — declare the relation there first`,
+      );
   }
   if (input.kind && documented) {
     const given = input.kind === 'context' ? `@${provider}` : 'Memory';
@@ -129,6 +141,18 @@ export default async (input: Input, shared?: WriteBuffer) => {
     `${code}/infrastructure/${adapter}.ts`,
     kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
   );
+  if (kind === 'context')
+    await buffer.write(
+      ESLINT_CONFIG,
+      addContextRelation(
+        await buffer.readRequired(
+          ESLINT_CONFIG,
+          'the relation is declared in the lint boundaries',
+        ),
+        context,
+        provider,
+      ),
+    );
   const token = constant(dashed(name));
   await buffer.write(
     compositionPath,

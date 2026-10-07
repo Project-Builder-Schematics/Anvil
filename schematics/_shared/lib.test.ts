@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
 import { find } from '@pbuilder/sdk/commons';
 import {
+  addContextRelation,
   addLintContext,
   addModuleEntry,
   addTsPath,
@@ -207,6 +208,29 @@ describe('addLintContext', () => {
 
   it('refuses a config without the list', () => {
     expect(() => addLintContext('export default [];', 'x')).toThrow('contexts');
+  });
+});
+
+describe('addContextRelation', () => {
+  const config = `const contexts = ['a', 'b'];\nconst contextRelations = [\n  ['a', 'b'],\n];\n`;
+
+  it('appends the edge once', () => {
+    const out = addContextRelation(config, 'b', 'a');
+
+    expect(out).toContain(`  ['a', 'b'],\n  ['b', 'a'],\n];`);
+    expect(addContextRelation(out, 'b', 'a')).toBe(out);
+  });
+
+  it('fills an empty list', () => {
+    expect(addContextRelation('const contextRelations = [];\n', 'a', 'b')).toBe(
+      `const contextRelations = [\n  ['a', 'b'],\n];\n`,
+    );
+  });
+
+  it('refuses a config without the list', () => {
+    expect(() => addContextRelation('export default [];', 'a', 'b')).toThrow(
+      'contextRelations',
+    );
   });
 });
 

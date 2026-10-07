@@ -130,7 +130,13 @@ describe('hex-bounded-context: the docs', () => {
     expect(readme).toContain('| Subdomain class | supporting |');
     expect(readme).toContain('| Criticality | high |');
     expect(readme).toContain('| Volatility | low |');
-    expect(readme).toContain('Context map: not mapped yet.');
+    expect(readme).toContain(
+      '## Context map\n\nThe contexts this one depends on',
+    );
+    expect(readme).toContain(
+      '| Depends on | Relationship |\n| --- | --- |\n\n',
+    );
+    expect(readme).not.toContain('| catalog |');
   });
 
   it.each([
@@ -149,15 +155,52 @@ describe('hex-bounded-context: the docs', () => {
     },
   );
 
-  it('records the context map when given', async () => {
-    const readme =
-      (
-        await go({ context_map: 'downstream of billing (conformist)' })
-      ).tree.get(README) ?? '';
+  describe('context_map', () => {
+    it('writes each relation to the docs and to the lint boundaries', async () => {
+      const { tree, error } = await go(
+        { context_map: 'catalog:customer-supplier, ledger:acl' },
+        {
+          ...workspace,
+          'tsconfig.base.json': (workspace['tsconfig.base.json'] ?? '').replace(
+            '"paths": {',
+            '"paths": {\n      "@demo/api-catalog": ["./libs/api/catalog/src/index.ts"],',
+          ),
+        },
+      );
 
-    expect(readme).toContain(
-      'Context map: downstream of billing (conformist).',
-    );
+      expect(error).toBeUndefined();
+      expect(tree.get(README)).toContain(
+        '| Depends on | Relationship |\n| --- | --- |\n| catalog | customer-supplier |\n| ledger | acl |\n',
+      );
+      expect(tree.get('eslint.config.mjs')).toContain(
+        "const contextRelations = [\n  ['tenancy', 'catalog'],\n  ['tenancy', 'ledger'],\n];",
+      );
+    });
+
+    it('refuses a context that is not registered, writing nothing', async () => {
+      const { tree, error } = await go({ context_map: 'billing:conformist' });
+
+      expect(String(error)).toContain('billing is not a registered context');
+      expect([...tree.keys()]).toEqual([]);
+    });
+
+    it('refuses a relationship that is not a known type', async () => {
+      expect(
+        String((await go({ context_map: 'catalog:friends' })).error),
+      ).toContain('customer-supplier, conformist, acl');
+    });
+
+    it('refuses an entry that is not <context>:<relationship>', async () => {
+      expect(
+        String((await go({ context_map: 'downstream of catalog' })).error),
+      ).toContain('<context>:<relationship>');
+    });
+
+    it('refuses a context that depends on itself', async () => {
+      expect(
+        String((await go({ context_map: 'tenancy:conformist' })).error),
+      ).toContain('cannot depend on itself');
+    });
   });
 
   it('starts a glossary and, for a single subdomain, keeps the domain model inline', async () => {

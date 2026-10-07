@@ -327,6 +327,27 @@ export const addLintContext = (config: string, context: string): string => {
   return config.replace(list[0], `const contexts = [\n${items}\n];`);
 };
 
+/** Declares in the root lint config that `from` may depend on `to`'s barrel; the module-boundary constraints are built from this list. */
+export const addContextRelation = (
+  config: string,
+  from: string,
+  to: string,
+): string => {
+  const list = /const contextRelations = \[([\s\S]*?)\];/.exec(config);
+  if (!list)
+    throw new Error(
+      'eslint.config.mjs has no `const contextRelations = [...]` list to extend',
+    );
+  const edges = (list[1] ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const edge = `['${from}', '${to}'],`;
+  if (edges.includes(edge)) return config;
+  const items = [...edges, edge].map((line) => `  ${line}`).join('\n');
+  return config.replace(list[0], `const contextRelations = [\n${items}\n];`);
+};
+
 // --- Nest module metadata: `@Module({ imports, controllers, providers, exports })`.
 
 const MODULE_KEYS = ['imports', 'controllers', 'providers', 'exports'] as const;

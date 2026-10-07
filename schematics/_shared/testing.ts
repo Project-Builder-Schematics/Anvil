@@ -18,6 +18,7 @@ export const eslintConfig = `const contexts = [
   'ledger',
   'catalog',
 ];
+const contextRelations = [];
 const layers = [];
 `;
 
@@ -97,7 +98,7 @@ export const voidFeature = `Feature: Void invoice
 
 export const invoicingDocs: Record<string, string> = {
   'docs/billing/README.md':
-    '# Billing\n\n## Subdomains\n\n| Subdomain | Responsibility |\n| --- | --- |\n| [invoicing](invoicing/domain-model.md) | invoices |\n',
+    '# Billing\n\n## Subdomains\n\n| Subdomain | Responsibility |\n| --- | --- |\n| [invoicing](invoicing/domain-model.md) | invoices |\n\n## Context map\n\n| Depends on | Relationship |\n| --- | --- |\n| ledger | conformist |\n',
   'docs/billing/glossary.md': '# Billing — glossary\n\n**Invoice.** A bill.\n',
   [`${DOCS}/domain-model.md`]: invoicingModel,
   [`${DOCS}/issue-invoice.feature`]: issueFeature,

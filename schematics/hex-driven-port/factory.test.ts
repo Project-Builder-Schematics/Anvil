@@ -113,6 +113,42 @@ describe('hex-driven-port', () => {
     expect([...tree.keys()]).toEqual([]);
   });
 
+  it('declares the relation in the lint boundaries, only for a context adapter', async () => {
+    const first = await go({ name: 'LedgerGateway' });
+
+    expect(first.tree.get('eslint.config.mjs')).toContain(
+      "const contextRelations = [\n  ['billing', 'ledger'],\n];",
+    );
+    expect((await go()).tree.has('eslint.config.mjs')).toBe(false);
+  });
+
+  it('leaves the lint boundaries alone when the edge is already there', async () => {
+    const seed = await sliced();
+    seed['eslint.config.mjs'] = (seed['eslint.config.mjs'] ?? '').replace(
+      'contextRelations = []',
+      "contextRelations = [\n  ['billing', 'ledger'],\n]",
+    );
+
+    const { tree, error } = await go({ name: 'LedgerGateway' }, seed);
+
+    expect(error).toBeUndefined();
+    expect(tree.has('eslint.config.mjs')).toBe(false);
+  });
+
+  it('refuses a provider the context map of the docs does not declare, writing nothing', async () => {
+    const seed = await sliced();
+    seed['docs/billing/README.md'] = (
+      seed['docs/billing/README.md'] ?? ''
+    ).replace('| ledger | conformist |\n', '');
+
+    const { tree, error } = await go({ name: 'LedgerGateway' }, seed);
+
+    expect(String(error)).toContain(
+      'ledger is not in the Context map of docs/billing/README.md — declare the relation there first',
+    );
+    expect([...tree.keys()]).toEqual([]);
+  });
+
   it('refuses a context adapter for the context itself', async () => {
     const model = invoicingModel.replace('| @ledger |', '| @billing |');
     const seed = { ...(await sliced()), [`${DOCS}/domain-model.md`]: model };

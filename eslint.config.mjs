@@ -9,6 +9,16 @@ const contexts = [
   'shipping',
   'notifications',
 ];
+// Directed edges: [from, to] lets `from` import the barrel of `to`. Maintained by the
+// schematics from the Context map of docs/<from>/README.md; undeclared edges stay forbidden.
+const contextRelations = [
+  ['ordering', 'catalog'],
+  ['ordering', 'inventory'],
+  ['ordering', 'payments'],
+  ['shipping', 'ordering'],
+  ['notifications', 'ordering'],
+  ['notifications', 'shipping'],
+];
 const layers = [
   'type:feature',
   'type:ui',
@@ -68,6 +78,9 @@ export default [
               onlyDependOnLibsWithTags: [
                 `context:${context}`,
                 'context:shared',
+                ...contextRelations
+                  .filter(([from]) => from === context)
+                  .map(([, to]) => `context:${to}`),
               ],
             })),
             {

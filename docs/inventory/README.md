@@ -11,7 +11,12 @@
 
 The classification is an assumption until the person confirms it; the strict level applies meanwhile.
 
-Context map: not mapped yet.
+## Context map
+
+The contexts this one depends on, each through its public barrel only. A dependency not listed here is refused by the schematics and by the lint boundaries. Relationship is `customer-supplier`, `conformist` or `acl`.
+
+| Depends on | Relationship |
+| ---------- | ------------ |
 
 ## Architecture level: strict
 

@@ -50,6 +50,7 @@ const generate = async (): Promise<Record<string, string>> => {
     context: 'billing',
     purpose: 'Bills customers.',
     subdomains: 'invoicing,payouts',
+    context_map: 'ledger:conformist',
   });
   // The docs a human writes after the skeleton: the model and features of invoicing, a bare payouts.
   tree = {

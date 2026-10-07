@@ -4,6 +4,7 @@ import {
   DOMAIN_MODEL,
   ESLINT_CONFIG,
   TSCONFIG_BASE,
+  addContextRelation,
   addLintContext,
   addTsPath,
   apiAlias,
@@ -30,10 +31,47 @@ const LEVEL_TEXT: Record<Level, string> = {
 const ASSUMED_NOTE =
   'The classification is an assumption until the person confirms it; the strict level applies meanwhile.';
 
+const RELATIONSHIPS = ['customer-supplier', 'conformist', 'acl'];
+
+const parseContextMap = (
+  text: string,
+  context: string,
+): [provider: string, relationship: string][] =>
+  text
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [provider, relationship, ...rest] = entry
+        .split(':')
+        .map((part) => part.trim());
+      if (!provider || !relationship || rest.length > 0)
+        throw new Error(
+          `context_map entry "${entry}" must be <context>:<relationship>`,
+        );
+      assertDashed(provider, 'context_map context');
+      if (provider === context)
+        throw new Error(`${context} cannot depend on itself`);
+      if (!RELATIONSHIPS.includes(relationship))
+        throw new Error(
+          `relationship "${relationship}" must be one of ${RELATIONSHIPS.join(', ')}`,
+        );
+      return [provider, relationship];
+    });
+
+const contextMap = (relations: [string, string][]): string => `## Context map
+
+The contexts this one depends on, each through its public barrel only. A dependency not listed here is refused by the schematics and by the lint boundaries. Relationship is \`customer-supplier\`, \`conformist\` or \`acl\`.
+
+| Depends on | Relationship |
+| --- | --- |
+${relations.map(([provider, relationship]) => `| ${provider} | ${relationship} |\n`).join('')}`;
+
 const classification = (
   input: Input,
   level: Level,
   assumed: boolean,
+  relations: [string, string][],
 ): string => `## Classification
 
 | Axis | Value | What it decides |
@@ -43,8 +81,7 @@ const classification = (
 | Volatility | ${input.volatility}${assumed ? ' (assumed)' : ''} | how much cleanup is worth |
 | Architecture level | ${level} | derived: strict when the class is core or the criticality is high |
 ${assumed ? `\n${ASSUMED_NOTE}\n` : ''}
-Context map: ${input.context_map ? input.context_map.replace(/\.+$/, '') : 'not mapped yet'}.
-
+${contextMap(relations)}
 ## Architecture level: ${level}
 
 ${LEVEL_TEXT[level]}
@@ -145,6 +182,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
     assumed || input.subdomain_class === 'core' || input.criticality === 'high'
       ? 'strict'
       : 'standard';
+  const relations = parseContextMap(input.context_map ?? '', context);
   const subdomains = (input.subdomains ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -163,6 +201,12 @@ export default async (input: Input, shared?: WriteBuffer) => {
     TSCONFIG_BASE,
     'the alias is registered in the workspace tsconfig',
   );
+  for (const [provider] of relations) {
+    if (!tsconfig.includes(`"${apiAlias(provider)}":`))
+      throw new Error(
+        `${provider} is not a registered context — create it first`,
+      );
+  }
   const lint = await buffer.readRequired(
     ESLINT_CONFIG,
     'the context is registered in the lint boundary list',
@@ -186,7 +230,13 @@ export default async (input: Input, shared?: WriteBuffer) => {
       `./${apiLibDir(context)}/src/index.ts`,
     ),
   );
-  await buffer.write(ESLINT_CONFIG, addLintContext(lint, context));
+  await buffer.write(
+    ESLINT_CONFIG,
+    relations.reduce(
+      (config, [provider]) => addContextRelation(config, context, provider),
+      addLintContext(lint, context),
+    ),
+  );
 
   if (readme === undefined) {
     create(`${docs}/README.md`, {
@@ -194,7 +244,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
 ${input.purpose}
 
-${classification(input, level, assumed)}
+${classification(input, level, assumed, relations)}
 ## Subdomains
 
 One slice of code per row; docs mirror the code, so a context with several subdomains keeps one folder per subdomain.
@@ -216,7 +266,7 @@ ${
   } else if (!readme.includes('## Classification')) {
     replaceContent(
       `${docs}/README.md`,
-      `${readme.replace(/\n*$/, '\n')}\n${classification(input, level, assumed)}`,
+      `${readme.replace(/\n*$/, '\n')}\n${classification(input, level, assumed, relations)}`,
     );
   }
 
