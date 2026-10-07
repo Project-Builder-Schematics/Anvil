@@ -9,7 +9,9 @@ const origin = z
 
 export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
-  NODE_ENV: z.string().default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
   CORS_ORIGIN: origin,
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().positive(),

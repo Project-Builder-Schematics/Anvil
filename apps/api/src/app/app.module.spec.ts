@@ -34,6 +34,12 @@ describe('AppModule environment validation', () => {
     );
   });
 
+  it('fails to start on a NODE_ENV typo such as prod', async () => {
+    await expect(bootstrap({ ...valid, NODE_ENV: 'prod' })).rejects.toThrow(
+      'NODE_ENV',
+    );
+  });
+
   it('fails to start when CORS_ORIGIN is not an origin', async () => {
     await expect(
       bootstrap({ ...valid, CORS_ORIGIN: 'http://localhost:4200/app' }),

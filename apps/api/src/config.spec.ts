@@ -44,6 +44,24 @@ describe('envSchema', () => {
     );
   });
 
+  it.each(['prod', 'Production', 'staging', ''])(
+    'rejects %p as NODE_ENV, so a typo cannot switch OpenAPI on in production',
+    (value) => {
+      expect(() => envSchema.parse({ ...valid, NODE_ENV: value })).toThrow(
+        'NODE_ENV',
+      );
+    },
+  );
+
+  it.each(['development', 'test', 'production'])(
+    'accepts %p as NODE_ENV',
+    (value) => {
+      expect(envSchema.parse({ ...valid, NODE_ENV: value }).NODE_ENV).toBe(
+        value,
+      );
+    },
+  );
+
   it('defaults NODE_ENV to development', () => {
     expect(envSchema.parse(valid).NODE_ENV).toBe('development');
     expect(envSchema.parse({ ...valid, NODE_ENV: 'production' }).NODE_ENV).toBe(
