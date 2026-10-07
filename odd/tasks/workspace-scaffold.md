@@ -245,6 +245,9 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
     - [ ] The duplicated subdomain parse in hex-use-case (68). Left open: hex-context falls back to the raw cell, so merging changes error behaviour.
     - [ ] The legacy siblings in gherkin.ts (56). Left open.
     - [ ] The interpolation check and comment in tools/dev/infra.ts (34-38). Left open.
+  - Review of 2f1ecc7..74ce6a4: approved and acknowledged (review-f2bd1039971c633d). It left two open items:
+    - [ ] The `kind=context` re-run path is not proven by a test (hex-driven-port:159-165).
+    - [ ] The `implements` regex is narrow (hex-driven-port:142).
 
 ## Next step
 
