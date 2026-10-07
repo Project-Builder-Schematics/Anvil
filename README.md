@@ -72,6 +72,8 @@ Each git worktree gets its own ports, compose project and database, so any numbe
 
 One shared Postgres and pgadmin (project `demo`, network `demo-shared-net`) serve every worktree; each worktree runs only its own `api` container. Angular runs on the host and proxies `/api` to that worktree's API port.
 
+Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect` on the debug port; open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
+
 ```sh
 bun run dev                 # shared infra, DB, api container, then the web dev server (Ctrl+C stops this worktree's api)
 bun run dev --detach        # same, web server in the background (.dev/web.log)
@@ -82,4 +84,4 @@ bun run dev:seed            # re-run the seed on this worktree's DB
 bun run dev --port-offset=N # override the derived offset (0-999)
 ```
 
-A new worktree's database is created and seeded automatically the first time `dev` runs; an existing database is never re-seeded. `dev:seed` re-runs the seed on demand. There is no ORM or migration yet, so the seed currently only verifies the connection, and a new worktree starts with an empty database.
+A new worktree's database is created and seeded automatically the first time `dev` runs; an existing database is never re-seeded, and a failed seed drops the new database so the next run seeds it again. `dev:seed` re-runs the seed on demand (statements must be upserts) and retries transient connection errors. Exit codes follow the web server's. There is no ORM or migration yet, so the seed currently only verifies the connection, and a new worktree starts with an empty database.

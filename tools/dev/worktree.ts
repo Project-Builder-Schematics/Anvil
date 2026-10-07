@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 
-const SHARED_INFRA_PORTS = [5432, 5050];
-
 export interface GitPaths {
   toplevel: string;
   gitDir: string;
@@ -19,7 +17,11 @@ export interface Identity {
   dbName: string;
 }
 
-export function deriveIdentity(git: GitPaths, portOffset?: number): Identity {
+export function deriveIdentity(
+  git: GitPaths,
+  portOffset: number | undefined,
+  sharedPorts: readonly number[],
+): Identity {
   const primary = git.gitDir === git.commonDir;
   const hash = createHash('sha256')
     .update(git.toplevel)
@@ -48,7 +50,7 @@ export function deriveIdentity(git: GitPaths, portOffset?: number): Identity {
   };
 
   const clash = [identity.webPort, identity.apiPort, identity.debugPort].find(
-    (port) => SHARED_INFRA_PORTS.includes(port),
+    (port) => sharedPorts.includes(port),
   );
   if (clash !== undefined) {
     throw new Error(

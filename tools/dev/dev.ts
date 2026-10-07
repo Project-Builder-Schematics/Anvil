@@ -7,29 +7,40 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { connect, createServer } from 'node:net';
+import { exitCodeFor, parsePortOffset } from './cli';
 import { planDatabase } from './database';
-import { deriveIdentity, readGitPaths } from './worktree';
+import { infraValue, loadInfraEnv } from './infra';
+import { isFree, isListening } from './net';
+import { deriveIdentity, readGitPaths, type Identity } from './worktree';
 
 const SHARED_PROJECT = 'demo';
 const NETWORK = 'demo-shared-net';
-const DB_USER = process.env['DB_USER'] ?? 'demo';
 const PID_FILE = '.dev/web.pid';
 const LOG_FILE = '.dev/web.log';
 
 const args = process.argv.slice(2);
 const command = args.find((arg) => !arg.startsWith('--')) ?? 'up';
 const detach = args.includes('--detach');
-const offsetFlag = args
-  .find((arg) => arg.startsWith('--port-offset='))
-  ?.split('=')[1];
 
-const id = deriveIdentity(
-  readGitPaths(),
-  offsetFlag === undefined ? undefined : Number(offsetFlag),
-);
+function fail(error: unknown): never {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+}
+
+const infra = loadInfraEnv();
+const dbUser = infraValue(infra, 'DB_USER');
+let id: Identity;
+try {
+  id = deriveIdentity(readGitPaths(), parsePortOffset(args), [
+    Number(infraValue(infra, 'DB_PORT')),
+    Number(infraValue(infra, 'PGADMIN_PORT')),
+  ]);
+} catch (error) {
+  fail(error);
+}
 const env = {
   ...process.env,
+  ...infra,
   WEB_PORT: String(id.webPort),
   API_PORT: String(id.apiPort),
   DEBUG_PORT: String(id.debugPort),
@@ -49,33 +60,6 @@ function docker(...dockerArgs: string[]): string {
 
 const compose = (project: string, ...rest: string[]) =>
   docker('compose', '-p', project, ...rest);
-
-function isFree(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once('error', () => {
-      resolve(false);
-    });
-    server.listen(port, () => {
-      server.close(() => {
-        resolve(true);
-      });
-    });
-  });
-}
-
-function isListening(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = connect(port, '127.0.0.1');
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once('error', () => {
-      resolve(false);
-    });
-  });
-}
 
 async function waitFor(
   check: () => boolean | Promise<boolean>,
@@ -103,9 +87,16 @@ function readWebPid(): number | undefined {
   return startedAt(saved.pid) === saved.startedAt ? saved.pid : undefined;
 }
 
-function ensureSharedInfra(): boolean {
-  if (Bun.spawnSync(['docker', 'network', 'inspect', NETWORK]).exitCode !== 0) {
-    docker('network', 'create', NETWORK);
+function ensureSharedInfra() {
+  const networkExists = () =>
+    Bun.spawnSync(['docker', 'network', 'inspect', NETWORK]).exitCode === 0;
+  if (!networkExists()) {
+    try {
+      docker('network', 'create', NETWORK);
+    } catch (error) {
+      // Another worktree starting at the same time may have created it first.
+      if (!networkExists()) throw error;
+    }
   }
   compose(SHARED_PROJECT, 'up', '-d', '--wait', 'db', 'pgadmin');
 
@@ -117,7 +108,7 @@ function ensureSharedInfra(): boolean {
       'db',
       'psql',
       '-U',
-      DB_USER,
+      dbUser,
       '-d',
       'postgres',
       ...psqlArgs,
@@ -126,17 +117,28 @@ function ensureSharedInfra(): boolean {
     psql('-tAc', `SELECT 1 FROM pg_database WHERE datname='${id.dbName}'`),
   );
   if (plan.create) psql('-c', `CREATE DATABASE "${id.dbName}"`);
-  return plan.seed;
+  return {
+    seed: plan.seed,
+    dropDatabase: () =>
+      psql('-c', `DROP DATABASE IF EXISTS "${id.dbName}" WITH (FORCE)`),
+  };
 }
 
-async function up() {
-  const seed = ensureSharedInfra();
-  if (seed) {
+async function up(): Promise<number> {
+  await stopWeb();
+  const infraState = ensureSharedInfra();
+  if (infraState.seed) {
     const result = Bun.spawnSync(['bun', 'tools/dev/seed.ts'], {
       env,
       stdio: ['inherit', 'inherit', 'inherit'],
     });
-    if (result.exitCode !== 0) throw new Error('seed failed');
+    if (result.exitCode !== 0) {
+      // The database is only seeded when it is created, so a half-seeded one would never be retried.
+      infraState.dropDatabase();
+      throw new Error(
+        'seed failed; the new database was dropped so the next run seeds it again',
+      );
+    }
   }
 
   compose(id.composeProject, 'rm', '-sf', 'api');
@@ -151,43 +153,62 @@ async function up() {
   }
   compose(id.composeProject, 'up', '-d', '--force-recreate', 'api');
 
-  const serve = ['bunx', 'nx', 'serve', 'web', `--port=${id.webPort}`];
-  if (detach) {
-    mkdirSync('.dev', { recursive: true });
-    const log = openSync(LOG_FILE, 'w');
-    const web = Bun.spawn(serve, {
-      env,
-      detached: true,
-      stdio: ['ignore', log, log],
-    });
-    closeSync(log);
-    web.unref();
-    writeFileSync(
-      PID_FILE,
-      JSON.stringify({ pid: web.pid, startedAt: startedAt(web.pid) }),
-    );
-    if (!(await waitFor(() => isListening(id.webPort), 30_000))) {
-      throw new Error(
-        `web did not listen on ${id.webPort} within 30s; see ${LOG_FILE}`,
-      );
+  let keepRunning = false;
+  try {
+    if (detach) {
+      await startDetached();
+      keepRunning = true;
+      return 0;
     }
-    status();
-    return;
+    return await runForeground();
+  } finally {
+    if (!keepRunning) {
+      await stop().catch((error: unknown) => {
+        console.error(error instanceof Error ? error.message : error);
+      });
+    }
   }
+}
 
-  const web = Bun.spawn(serve, {
+const serve = () => ['bunx', 'nx', 'serve', 'web', `--port=${id.webPort}`];
+
+async function startDetached() {
+  mkdirSync('.dev', { recursive: true });
+  const log = openSync(LOG_FILE, 'w');
+  const web = Bun.spawn(serve(), {
+    env,
+    detached: true,
+    stdio: ['ignore', log, log],
+  });
+  closeSync(log);
+  web.unref();
+  writeFileSync(
+    PID_FILE,
+    JSON.stringify({ pid: web.pid, startedAt: startedAt(web.pid) }),
+  );
+  if (!(await waitFor(() => isListening(id.webPort), 30_000))) {
+    throw new Error(
+      `web did not listen on ${id.webPort} within 30s; see ${LOG_FILE}`,
+    );
+  }
+  status();
+}
+
+async function runForeground(): Promise<number> {
+  const web = Bun.spawn(serve(), {
     env,
     stdio: ['inherit', 'inherit', 'inherit'],
   });
-  process.once('SIGINT', () => {
-    web.kill();
-    compose(id.composeProject, 'stop', 'api');
-    process.exit(0);
-  });
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => {
+      web.kill(signal);
+    });
+  }
   await web.exited;
+  return exitCodeFor(web.exitCode, web.signalCode);
 }
 
-async function stop() {
+async function stopWeb() {
   const pid = readWebPid();
   if (pid !== undefined) {
     process.kill(-pid, 'SIGTERM');
@@ -195,6 +216,10 @@ async function stop() {
       process.kill(-pid, 'SIGKILL');
   }
   rmSync(PID_FILE, { force: true });
+}
+
+async function stop() {
+  await stopWeb();
   compose(id.composeProject, 'stop', 'api');
 }
 
@@ -260,8 +285,8 @@ if (!run) {
   process.exit(1);
 }
 try {
-  await run();
+  const code = await run();
+  if (typeof code === 'number') process.exit(code);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+  fail(error);
 }

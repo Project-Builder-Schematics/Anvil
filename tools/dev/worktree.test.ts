@@ -6,6 +6,7 @@ const primary = {
   gitDir: '/work/demo/.git',
   commonDir: '/work/demo/.git',
 };
+const shared = [5432, 5050];
 const linked = {
   toplevel: '/work/demo-feat/Checkout Flow!',
   gitDir: '/work/demo/.git/worktrees/x',
@@ -14,7 +15,7 @@ const linked = {
 
 describe('deriveIdentity', () => {
   it('uses base ports and the shared names for the primary checkout', () => {
-    expect(deriveIdentity(primary)).toMatchObject({
+    expect(deriveIdentity(primary, undefined, shared)).toMatchObject({
       primary: true,
       offset: 0,
       webPort: 4200,
@@ -26,8 +27,8 @@ describe('deriveIdentity', () => {
   });
 
   it('derives a stable offset in 2..199 and hashed names for a linked worktree', () => {
-    const first = deriveIdentity(linked);
-    expect(deriveIdentity(linked)).toEqual(first);
+    const first = deriveIdentity(linked, undefined, shared);
+    expect(deriveIdentity(linked, undefined, shared)).toEqual(first);
     expect(first.primary).toBe(false);
     expect(first.offset).toBeGreaterThanOrEqual(2);
     expect(first.offset).toBeLessThan(200);
@@ -38,13 +39,13 @@ describe('deriveIdentity', () => {
 
   it('cuts the slug to 24 characters', () => {
     const long = { ...linked, toplevel: '/w/' + 'a'.repeat(40) };
-    expect(deriveIdentity(long).composeProject).toMatch(
+    expect(deriveIdentity(long, undefined, shared).composeProject).toMatch(
       /^demo-a{24}-[0-9a-f]{6}$/,
     );
   });
 
   it('lets --port-offset override the derived offset', () => {
-    expect(deriveIdentity(linked, 7)).toMatchObject({
+    expect(deriveIdentity(linked, 7, shared)).toMatchObject({
       offset: 7,
       webPort: 4207,
       apiPort: 3007,
@@ -52,10 +53,11 @@ describe('deriveIdentity', () => {
   });
 
   it.each([-1, 1000, 1.5])('rejects the offset %p', (offset) => {
-    expect(() => deriveIdentity(primary, offset)).toThrow(/0 and 999/);
+    expect(() => deriveIdentity(primary, offset, shared)).toThrow(/0 and 999/);
   });
 
   it('rejects an offset that lands on a shared-infra port', () => {
-    expect(() => deriveIdentity(primary, 850)).toThrow(/5050/);
+    expect(() => deriveIdentity(primary, 850, shared)).toThrow(/5050/);
+    expect(() => deriveIdentity(primary, 850, [9999])).not.toThrow();
   });
 });
