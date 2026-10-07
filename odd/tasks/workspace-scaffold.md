@@ -49,8 +49,8 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 
 ## Tasks
 
-- [ ] T1: Nx 23 workspace with Bun, git initial commit. Route: delegated (multi-file writer).
-- [ ] T2: `apps/api`, NestJS 12 with Rsbuild in node target, legacy decorators with metadata, and a health endpoint. Route: delegated.
+- [x] T1: Nx 23 workspace with Bun, git initial commit. Route: delegated (multi-file writer).
+- [x] T2: `apps/api`, NestJS 12 with Rsbuild in node target, legacy decorators with metadata, and a health endpoint. Route: delegated.
 - [ ] T3: `apps/web`, Angular 22, standalone, with routing. Route: delegated.
 - [ ] T4: Dockerfiles for api and web, plus `docker-compose.yml` with postgres. Route: delegated.
 - [ ] T5: DDD skeleton.
@@ -60,6 +60,7 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - A fitness test that fails on a forbidden import.
   - Route: delegated.
 - [ ] T6: per-worktree Docker dev isolation (design pending, inspired by LCWebApp CORE-3655-worktree-dev)
+- [ ] T7: design system from awesome-design-md themes with theme- and component-level A/B testing
 
 ## Acceptance criteria
 
@@ -72,7 +73,14 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 ## Progress
 
 - 2026-10-07: document created. The domain chosen is order management. The frontend approach chosen is DDD per context in Nx.
+- 2026-10-07: T1 done, commit 77a7599. `bun install`: 307 packages installed. `bunx nx --version`: local v23.2.1 (template pinned 23.2.0, bumped). `bunx nx show projects`: empty. Scope `@demo`, workspaces `apps/*` and `libs/*/*`. Dropped the template's non-Claude agent config dirs (.cursor, .gemini, .opencode, .codex, .github, opencode.json). Test runner is whatever each generator picks (recorded in T2/T3).
+- 2026-10-07: T2 done (commit in the T3 progress line). Generated with @nx/nest:application (webpack default), then switched to Rsbuild: removed webpack.config.js, @nx/webpack plugin and webpack deps; added @nx/rsbuild 23.2.1 via `@nx/rsbuild:configuration --target=node`. Rsbuild config: `source.decorators.version: legacy`, node_modules externalized (regex keeps `@demo/*` bundled). Nest 12.1.2 is ESM-only, so the api is `type: module` and the jest generator output (CJS-style) failed with an ESM syntax error; replaced with vitest 4.1.11 + unplugin-swc (the runner recommended in Nest docs, needed for decorator metadata). Test runner for api: vitest. Replaced the generated AppController/AppService with HealthController (GET /api/health returning `{status:ok}`; global prefix `api` is set in main.ts).
+  - RED: `bunx nx test api` with the spec written and no implementation: FAIL, `Cannot find module ./health.controller`. (An earlier jest attempt failed for ESM syntax reasons and is not counted as RED.)
+  - GREEN: `bunx nx test api`: 1 file, 1 test passed.
+  - `bunx nx run-many -t lint test typecheck`: all 3 api tasks succeeded.
+  - `bunx nx show project api --json`: build target command is `rsbuild build` (technology rsbuild); no webpack reference remains outside this document and bun.lock.
+  - Not verified (user rule, no builds): that `rsbuild build` bundles and the output runs. The `/api/health` route is covered only by the controller unit test.
 
 ## Next step
 
-T1.
+T3.
