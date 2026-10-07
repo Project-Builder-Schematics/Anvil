@@ -25,7 +25,6 @@ Feature: Cancel order
 
   Rule: Rule 9 - A command that names an order that does not exist is refused
 
-    @draft
     Scenario: an order that does not exist is refused
       Given an order id that names no order
       When the order is cancelled

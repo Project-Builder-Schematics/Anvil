@@ -106,7 +106,6 @@ Feature: Add order line
 
   Rule: Rule 9 - A command that names an order that does not exist is refused
 
-    @draft
     Scenario: an order that does not exist is refused
       Given an order id that names no order
       When 1 of "keyboard" is added to the order
@@ -114,25 +113,21 @@ Feature: Add order line
 
   Rule: Rule 11 - When several refusals hold, the first of the list wins
 
-    @draft
     Scenario: the order is looked up before the quantity is checked
       Given an order id that names no order
       When 0 of "keyboard" is added to the order
       Then it is refused with "ORDER_NOT_FOUND"
 
-    @draft
     Scenario: the quantity is checked before the product
       When 0 of "ghost" is added to the order
       Then it is refused with "QUANTITY_OUT_OF_RANGE"
 
-    @draft
     Scenario: the product is checked before the order state
       Given 1 of "keyboard" is added to the order
       And the order has been placed
       When 1 of "ghost" is added to the order
       Then it is refused with "PRODUCT_NOT_FOUND"
 
-    @draft
     Scenario: the order state is checked before the sum
       Given 1 of "keyboard" is added to the order
       And the order has been placed

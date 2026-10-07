@@ -21,7 +21,6 @@ Feature: Place order
 
   Rule: Rule 9 - A command that names an order that does not exist is refused
 
-    @draft
     Scenario: an order that does not exist is refused
       Given an order id that names no order
       When the order is placed
@@ -29,7 +28,6 @@ Feature: Place order
 
   Rule: Rule 10 - Only a Draft order may be placed
 
-    @draft
     Scenario: a placed order cannot be placed again
       Given 1 of "keyboard" is added to the order
       And the order has been placed
@@ -37,7 +35,6 @@ Feature: Place order
       Then it is refused with "ORDER_NOT_EDITABLE"
       And the order is "Placed"
 
-    @draft
     Scenario: a cancelled order cannot be placed
       Given 1 of "keyboard" is added to the order
       And the order has been cancelled
@@ -47,7 +44,6 @@ Feature: Place order
 
   Rule: Rule 11 - When several refusals hold, the first of the list wins
 
-    @draft
     Scenario: the order state is checked before the lines
       Given the order has been cancelled
       When the order is placed

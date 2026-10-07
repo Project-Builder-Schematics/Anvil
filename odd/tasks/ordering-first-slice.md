@@ -124,6 +124,8 @@ Strict.
     - State is a process-local map: restarting the api loses every order.
     - A whitespace-only or very long id in the URL, and a non-JSON body, were not exercised.
 
+- 2026-10-08: the user confirmed rules 9 to 11 and the status mapping. They are now `decided`, and the `@draft` tags are removed from all 11 scenarios. `nx test api-ordering`: 14 files, 100 tests passed. `prettier --check docs/ordering`: clean.
+
 ## Next step
 
-The user confirms the assumed rules 9 to 11 (Business rules table) and reviews the slice; runtime checks are listed in the O5 progress line. Then the next slice (inventory reservation, payments and events).
+Native review of the slice. The runtime checks are listed in the O5 progress line. After that comes the next slice: inventory reservation, payments and events.
