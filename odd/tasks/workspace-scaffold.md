@@ -134,32 +134,41 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
   - 5b977fa `docs: confirm the bounded-context classification`. "(assumed)" and the assumption note removed; levels recomputed: standard for catalog, shipping, notifications; strict for inventory, ordering, payments. Nothing consumes the level yet; it is only documentation.
   - 3958395 `docs(schematics): add a project skill for choosing and running schematics`: `.claude/skills/schematics/SKILL.md`, a slimmer AGENTS.md section and `schematics/_shared/catalog.test.ts` (RED seen by removing a row, then a section, from each).
   - Checks: `bun test schematics` 182 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean.
+- 2026-10-08: T10 done except Stryker. TDD: RED observed first for `bun test tools/dev` (4 files failing on missing modules `cli`, `retry`, `net`, `infra`, plus the `[9999]` shared-port case in `worktree.test.ts`) and for `nx test api` (8 failing: 5 CORS origin shapes, `NODE_ENV` default, OpenAPI gate, one startup-validation case; the CSRF and missing-env tests were characterization tests, proven by the mutation checks above). Commits: 77d3a4f `fix(docker)`, 85e0773 `fix(dev)`, 2d3efad `fix(api)`, 3a19b1a `ci`. Checks: `bun test tools` 45 pass; `bun test schematics` 182 pass; `bunx nx run-many -t lint test typecheck` succeeded for 18 projects; `bunx prettier --check .` clean; `docker compose config -q` ok.
 
 ## Follow-ups
 
-- [ ] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval.
-  - **tools/dev/dev.ts**
-    - An empty `--port-offset` is coerced to 0 (lines 23-29).
-    - The foreground exit code is not propagated (166-175), and a web exit leaks the api container.
-    - A `--detach` re-run or timeout can orphan the web process (131-163).
-    - The readiness probe is IPv4-only (61-67).
-    - `docker network create` races when two worktrees start at once (96-98).
-    - The seed is not retried and not retry-safe (114-128).
-  - **docker-compose.yml**
-    - pgadmin and db are exposed with default credentials.
-    - Image tags are unpinned.
-    - The debug port has no inspector behind it.
-    - Host `node_modules` is mounted into a Linux container.
-  - **tools/dev**
-    - The shared-infra ports are hardcoded in worktree.ts.
-    - The DB credential defaults are duplicated in seed.ts.
+- [x] T10: harden the dev scripts and config. These are the advisory review findings; none blocked approval. Done except the Stryker end-to-end run (kept open, see below). Route: delegated direct, one writer.
+  - **tools/dev/dev.ts** (85e0773)
+    - [x] An empty `--port-offset` is rejected (`parsePortOffset`, `cli.test.ts`; also a bare flag, non-integers and negatives).
+    - [x] The dev command exits with the web child's code (`exitCodeFor`, signals map to 128+n) and stops the worktree's api and web group on every exit path (`finally` in `up`).
+    - [x] A `--detach` re-run stops the previous web group first (`stopWeb` at the start of `up`); a readiness timeout or any later failure kills its own group, removes the pid file and stops the api.
+    - [x] The readiness probe tries `127.0.0.1` and `::1` (`net.ts`, tested against real v4 and v6 listeners). `isFree` now also rejects a port held by a loopback-only listener.
+    - [x] `docker network create` is treated as success when the network exists afterwards.
+    - [x] The seed retries transient connection errors (5 attempts, 500 ms doubling, capped at 4 s; `retry.ts`) and runs in one transaction. A failed seed drops the freshly created database, so the next run creates and seeds it again.
+  - **docker-compose.yml** (77d3a4f)
+    - [x] All published ports bind to `127.0.0.1`. Credentials stay `${VAR:-default}` with the defaults documented in the new `.env.example` (`.env` is git-ignored and docker-ignored). Zero-setup still works.
+    - [x] Images pinned: `postgres:17.11`, `dpage/pgadmin4:9.18.0`, `oven/bun:1.3.14` (all three tags resolved with `docker manifest inspect`; bun matches the local 1.3.14). The Dockerfiles still use `oven/bun:1` and `node:24-slim`, outside this item.
+    - [x] The debug port now has an inspector: `bun --inspect=0.0.0.0:9229` (flag from `bun --help`; a local run printed the listening URL).
+    - [x] `node_modules` is a named volume on `/repo/node_modules`, and the container runs `bun install --frozen-lockfile` before starting.
+  - **tools/dev** (85e0773)
+    - [x] Shared-infra ports come from `DB_PORT` and `PGADMIN_PORT` in `.env.example` (`infra.ts`), passed into `deriveIdentity`.
+    - [x] DB credentials in `seed.ts` and `dev.ts` come from the same file. `infra.test.ts` fails if `docker-compose.yml` defaults and `.env.example` drift apart, in either direction.
   - **API and CI**
-    - CORS_ORIGIN shape: config.ts:5.
-    - CSRF rejection and startup env validation are not proven by tests.
-    - The OpenAPI JSON is served without auth.
-    - CI actions are not pinned to SHAs.
-    - The coverage scope of `libs/api/*/vitest.config.mts` does not match.
-    - Stryker is not verified end to end.
+    - [x] CORS_ORIGIN is validated as an origin with Zod: http(s) scheme, no path, query, credentials or trailing slash (2d3efad).
+    - [x] CSRF rejection is proven by a test (cross-origin unsafe request gets 403, the trusted origin gets 201); startup env validation is proven by compiling `AppModule` with an invalid env (2d3efad). Mutation checks: removing `enableCsrfProtection` fails the CSRF test; removing `validationSchema` fails both startup tests.
+    - [x] The OpenAPI JSON is served only when `NODE_ENV !== 'production'` (new `NODE_ENV` in the env schema, default `development`; the api image sets production). Tested both ways (2d3efad).
+    - [x] CI actions pinned to full commit SHAs with the version in a trailing comment, resolved with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`; all four tags are lightweight (commit objects), so no dereferencing was needed (3a19b1a).
+    - [x] The coverage scope of `libs/api/*/vitest.config.mts` was already fixed by T9d (`include: src/**/{domain,application}/**/*.ts` in all six libs); no change here.
+    - [ ] Stryker is not verified end to end. Left open on purpose: there is no domain code to mutate yet. Do it with T8 once a context has code.
+  - **Verify manually at runtime** (no builds or boots were run):
+    - `bun run dev`: the api container installs its `node_modules` volume, starts, and `bun run dev:logs` prints a `debug.bun.sh` URL that attaches on the debug port.
+    - Ctrl+C in `bun run dev` returns 130 and the api container is stopped; a web crash returns the web code and stops the api.
+    - `bun run dev --detach` twice in a row leaves one web process; a forced readiness timeout (occupy the web port) leaves no web process and no api container.
+    - Two worktrees running `bun run dev` at the same moment both succeed on the network create.
+    - A failing seed (stop the db right after it is created) drops the new database and the next run seeds again.
+    - pgadmin still accepts `PGADMIN_EMAIL=admin@demo.local` (some pgadmin versions reject `.local` addresses); change the default in `.env.example` and compose together if it does not.
+    - `docker compose` direct use with no `.env` still works with the defaults.
 
 - [ ] T11: decisions and gaps left by T9. None blocks.
   - [x] Decide how contexts may depend on each other: a barrel import along a relation declared in the docs Context map and `contextRelations` (a2293de).
@@ -197,4 +206,4 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
 
 ## Next step
 
-Finish T8 (Stryker end to end once domain code exists) and T10, then the domain-modeling step: write `docs/<ctx>/domain-model.md` and the features for one context and generate it with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
+Finish T8 (Stryker end to end once domain code exists, the one open T10 item), then the domain-modeling step: write `docs/<ctx>/domain-model.md` and the features for one context and generate it with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
