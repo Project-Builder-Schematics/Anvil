@@ -26,7 +26,7 @@ describe('ng-service', () => {
       [...tree.keys()].filter((path) => path.startsWith(`${dir}/`)).sort(),
     ).toEqual([`${dir}/order-store.spec.ts`, `${dir}/order-store.ts`]);
     expect(tree.get(`${dir}/order-store.ts`)).toBe(
-      "import { Injectable } from '@angular/core';\n\n@Injectable({ providedIn: 'root' })\nexport class OrderStore {}\n",
+      "import { Service } from '@angular/core';\n\n@Service()\nexport class OrderStore {}\n",
     );
     expect(tree.get(`${LIB}/src/index.ts`)).toBe(
       "export * from './lib/order-store/order-store';\n",
@@ -52,7 +52,7 @@ describe('ng-service', () => {
       ).tree.get(`${dir}/order-store.ts`) ?? '';
 
     expect(source).toContain(
-      "import { Injectable, signal } from '@angular/core';",
+      "import { Service, signal } from '@angular/core';",
     );
     expect(source).toContain('private readonly _count = signal<number>(0);');
     expect(source).toContain('readonly count = this._count.asReadonly();');

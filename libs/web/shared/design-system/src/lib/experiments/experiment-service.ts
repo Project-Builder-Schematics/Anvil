@@ -1,8 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import {
   inject,
-  Injectable,
   provideAppInitializer,
+  Service,
   signal,
   type EnvironmentProviders,
   type Signal,
@@ -17,7 +17,7 @@ import {
 
 const definitions: readonly ExperimentDef[] = experiments;
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ExperimentService {
   private readonly document = inject(DOCUMENT);
   private readonly subjectId = inject(SUBJECT_ID);

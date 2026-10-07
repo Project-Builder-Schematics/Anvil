@@ -42,9 +42,9 @@ export default async (input: Input, shared?: WriteBuffer) => {
 
   // Deliberately fail-closed: a service that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
-    template: `import { Injectable${fields.length > 0 ? ', signal' : ''} } from '@angular/core';
+    template: `import { Service${fields.length > 0 ? ', signal' : ''} } from '@angular/core';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ${cls} ${
       fields.length > 0
         ? `{\n${fields

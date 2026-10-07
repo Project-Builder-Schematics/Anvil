@@ -66,7 +66,7 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - errorStatuses nesting (lib.ts:219-250).
   - Old IMPACT rows were reflowed by prettier.
   - `.mcp.json` runs `bunx ng`; pin it to the local binary.
-- [ ] S6: `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice.
+- [x] S6: `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice: the factory emits `@Service()` (RED: 2 factory tests failed first), the design-system `ExperimentService` was regenerated, and the IMPACT row is recorded.
 
 ## Next step
 

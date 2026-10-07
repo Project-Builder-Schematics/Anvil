@@ -134,7 +134,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component
 
 ### `ng-service`
 
-`lib`, `name`; _fields_ (`name:type`, string|number|boolean, optionally `[]`), _folder_.
+`lib`, `name`; _fields_ (`name:type`, string|number|boolean, optionally `[]`), _folder_. The class is a root singleton declared with `@Service()` (Angular 22), not `@Injectable({ providedIn: 'root' })`.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-service --lib=libs/web/catalog/data-access --name=order-store --fields=count:number,ids:string[]
