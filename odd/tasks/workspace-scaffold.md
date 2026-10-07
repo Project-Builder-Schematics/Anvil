@@ -203,7 +203,29 @@ TDD with observed RED applies from the first domain behavior onwards. The test r
     - The docs and the lint edges can drift apart in hex-bounded-context (233-239).
     - `addContextRelation` depends on the exact formatting of `eslint.config.mjs` (lib.ts:336-348).
     - The relationship list is duplicated, and duplicate providers are accepted in `context_map` (hex-bounded-context:34-68).
+- [ ] T13: second-round findings on the T10 hardening. These are advisory and none blocked approval. The T10 range 21f7ebb..6ae4bdc was approved and acknowledged (review-c22ca6ccede2fdb1).
+  - **API config** (apps/api/src/config.ts:12)
+    - OpenAPI gating fails open, because `NODE_ENV` is a free string: a typo such as `prod` exposes OpenAPI.
+    - Make `NODE_ENV` an enum, or gate OpenAPI with an explicit flag that is off by default.
+  - **Environment parsing** (tools/dev/infra.ts)
+    - The `.env.example` parser does not handle quotes, and diverges from compose (6-18).
+    - The precedence comment is unclear (23-32).
+    - The infra load is unguarded (dev.ts:30-31).
+  - **Seed** (tools/dev/seed.ts)
+    - It connects to `localhost`, which can resolve to IPv6 while the db is IPv4-only (seed.ts:17-19).
+    - The drop after a failed seed can mask the original error (dev.ts:135-141).
+    - It passes empty shared ports (seed.ts:9).
+  - **Tests and CLI**
+    - The `dev.ts` orchestration is untested (156-168).
+    - The IPv6 test skips silently (net.test.ts:27-31).
+    - The drift test has duplicates (infra.test.ts:29-34).
+    - `--port-offset` matches by prefix (cli.ts:4-6).
+  - **Compose**
+    - The inspector is reachable from the shared network (docker-compose.yml:40).
 
 ## Next step
 
-Finish T8 (Stryker end to end once domain code exists, the one open T10 item), then the domain-modeling step: write `docs/<ctx>/domain-model.md` and the features for one context and generate it with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
+1. T12: harden the schematics.
+2. T13: the T10 second-round findings.
+3. The domain-modeling step for `ordering`: write `docs/ordering/domain-model.md` and the features, then generate the context with `hex-subdomain`. Log each real use in `schematics/IMPACT.md`.
+4. Finish T8: run Stryker end to end once domain code exists.
