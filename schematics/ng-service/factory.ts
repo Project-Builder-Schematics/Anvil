@@ -35,14 +35,10 @@ export default async (input: Input, shared?: WriteBuffer) => {
   const buffer = shared ?? writeBuffer();
   const name = assertDashed(input.name, 'name');
   const lib = await readNgLib(buffer, input.lib.replace(/\/+$/, ''));
-  if (lib.type !== 'data-access' && lib.type !== 'feature') {
-    throw new Error(
-      `${lib.name} is a ${lib.type || 'untyped'} lib: services with state live in data-access or feature libs`,
-    );
-  }
   const fields = parseFields(input.fields ?? '');
   const cls = className(name);
-  const dir = `${lib.dir}/src/lib/${name}`;
+  const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
+  const dir = `${lib.dir}/src/lib/${folder}`;
 
   // Deliberately fail-closed: a service that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
@@ -80,7 +76,7 @@ ${fields.length > 0 ? fields.map((f) => `    expect(service.${f.name}()).${f.lis
   const barrelPath = `${lib.dir}/src/index.ts`;
   await buffer.write(
     barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${name}/${name}`),
+    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
   );
   await buffer.write(
     `${lib.dir}/project.json`,

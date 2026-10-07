@@ -1,7 +1,7 @@
 // What the ng-* schematics share: reading the Angular lib they write into, the unit-test
 // target an Angular lib needs with its first spec, and the barrel export.
 
-import { pascal, withStatement, type WriteBuffer } from './lib.ts';
+import { EMPTY_MODULE, pascal, type WriteBuffer } from './lib.ts';
 
 export interface NgLib {
   dir: string;
@@ -83,10 +83,19 @@ export const withTestTarget = (project: string, dir: string): string => {
   );
 };
 
+/** Appends `export * from` to the barrel, one line per lib file. */
 export const withBarrelExport = (
   barrel: string | undefined,
   path: string,
-): string => withStatement(barrel ?? '', `export * from '${path}';`);
+): string => {
+  const line = `export * from '${path}';`;
+  const body = (
+    barrel === undefined || barrel === EMPTY_MODULE ? '' : barrel
+  ).replace(/\n+$/, '');
+  return body.split('\n').includes(line)
+    ? `${body}\n`
+    : `${body}${body ? '\n' : ''}${line}\n`;
+};
 
 /** `label:string,count:number` → [{ name, type }]; only the types the generated specs can fill. */
 export const parseInputs = (

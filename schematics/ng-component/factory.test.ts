@@ -37,6 +37,22 @@ describe('ng-component', () => {
     );
   });
 
+  it('groups the files in a shared folder when asked to', async () => {
+    const { tree, error } = await go({ folder: 'cards' });
+
+    expect(error).toBeUndefined();
+    expect(tree.has(`${UI}/src/lib/cards/order-card.ts`)).toBe(true);
+    expect(tree.get(`${UI}/src/lib/cards/order-card.ts`)).toContain(
+      "templateUrl: './order-card.html'",
+    );
+    expect(tree.get(`${UI}/src/index.ts`)).toBe(
+      "export * from './lib/cards/order-card';\n",
+    );
+    expect(String((await go({ folder: 'Cards' })).error)).toContain(
+      'dash-case',
+    );
+  });
+
   it('follows the Angular 22 component rules', async () => {
     const source =
       (
@@ -116,7 +132,7 @@ describe('ng-component', () => {
     );
 
     expect(tree.get(`${UI}/src/index.ts`)).toBe(
-      "export * from './lib/other/other';\n\nexport * from './lib/order-card/order-card';\n",
+      "export * from './lib/other/other';\nexport * from './lib/order-card/order-card';\n",
     );
   });
 

@@ -39,7 +39,8 @@ export default async (input: Input, shared?: WriteBuffer) => {
   }
 
   const cls = className(name);
-  const dir = `${lib.dir}/src/lib/${name}`;
+  const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
+  const dir = `${lib.dir}/src/lib/${folder}`;
   const angular = [
     'Component',
     ...(inputs.length > 0 ? ['input'] : []),
@@ -87,7 +88,7 @@ ${inputs.map((i) => `    fixture.componentRef.setInput('${i.name}', ${SAMPLE[i.t
   const barrelPath = `${lib.dir}/src/index.ts`;
   await buffer.write(
     barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${name}/${name}`),
+    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
   );
   await buffer.write(
     `${lib.dir}/project.json`,

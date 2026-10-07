@@ -33,6 +33,16 @@ describe('ng-service', () => {
     );
   });
 
+  it('groups the files in a shared folder when asked to', async () => {
+    const { tree } = await go({ folder: 'orders' });
+
+    expect(tree.has(`${LIB}/src/lib/orders/order-store.ts`)).toBe(true);
+    expect(tree.has(`${LIB}/src/lib/orders/order-store.spec.ts`)).toBe(true);
+    expect(tree.get(`${LIB}/src/index.ts`)).toBe(
+      "export * from './lib/orders/order-store';\n",
+    );
+  });
+
   it('keeps each state field in a private writable signal exposed as readonly', async () => {
     const source =
       (
@@ -72,10 +82,8 @@ describe('ng-service', () => {
     expect(project.targets.test.executor).toBe('@angular/build:unit-test');
   });
 
-  it('refuses ui and domain libs, whose layers hold no state', async () => {
-    expect(String((await go({ lib: 'libs/web/catalog/ui' })).error)).toContain(
-      'web-catalog-ui is a ui lib',
-    );
+  it('also serves a ui lib, where the design system keeps its experiment service, but not a domain lib', async () => {
+    expect((await go({ lib: 'libs/web/catalog/ui' })).error).toBeUndefined();
     expect(
       String((await go({ lib: 'libs/web/catalog/domain' })).error),
     ).toContain('not an Angular lib');

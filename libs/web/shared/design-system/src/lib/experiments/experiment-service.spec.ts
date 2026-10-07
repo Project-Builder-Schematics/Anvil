@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { DOCUMENT } from '@angular/common';
+import { ExperimentService } from './experiment-service';
 import {
   EXPERIMENT_OVERRIDES,
-  ExperimentService,
   ExposureSink,
   SUBJECT_ID,
   type Exposure,

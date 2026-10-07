@@ -18,7 +18,8 @@ export default async (input: Input, shared?: WriteBuffer) => {
     );
   const selector = `${lib.prefix}${pascal(name)}`;
   const cls = `${pascal(lib.prefix)}${pascal(name)}`;
-  const dir = `${lib.dir}/src/lib/${name}`;
+  const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
+  const dir = `${lib.dir}/src/lib/${folder}`;
 
   // Deliberately fail-closed: a directive that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
@@ -58,7 +59,7 @@ describe('${cls}', () => {
   const barrelPath = `${lib.dir}/src/index.ts`;
   await buffer.write(
     barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${name}/${name}`),
+    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
   );
   await buffer.write(
     `${lib.dir}/project.json`,

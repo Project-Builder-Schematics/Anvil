@@ -1,11 +1,7 @@
 import { ApplicationInitStatus } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  EXPERIMENT_OVERRIDES,
-  ExposureSink,
-  provideExperiments,
-  SUBJECT_ID,
-} from './experiments';
+import { EXPERIMENT_OVERRIDES, ExposureSink, SUBJECT_ID } from './experiments';
+import { provideExperiments } from './experiment-service';
 
 function memoryStorage(): Storage {
   const map = new Map<string, string>();

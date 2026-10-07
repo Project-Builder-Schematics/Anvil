@@ -6,7 +6,7 @@ import {
   TemplateRef,
   ViewContainerRef,
 } from '@angular/core';
-import { ExperimentService } from './experiments';
+import { ExperimentService } from './experiment-service';
 import type { ExperimentKey } from './registry';
 
 /** `<ng-container *dsVariant="'checkout-cta'; is: 'b'">` renders only for that variant. */

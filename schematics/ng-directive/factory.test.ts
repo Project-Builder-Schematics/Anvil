@@ -29,6 +29,15 @@ describe('ng-directive', () => {
     );
   });
 
+  it('groups the files in a shared folder when asked to', async () => {
+    const { tree } = await go({ folder: 'effects' });
+
+    expect(tree.has(`${LIB}/src/lib/effects/highlight.ts`)).toBe(true);
+    expect(tree.get(`${LIB}/src/index.ts`)).toBe(
+      "export * from './lib/effects/highlight';\n",
+    );
+  });
+
   it('names a directive of a prefix-only lib the way the design system does', async () => {
     const files = {
       ...webLib('libs/web/shared/design-system', 'ui', 'shared'),
