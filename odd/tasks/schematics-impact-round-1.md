@@ -50,6 +50,24 @@ The IMPACT row for the missing tsconfig paths in the api vitest config is alread
 - 2026-10-08: document created. The user approved doing the improvements, then the next slice.
 - 2026-10-08: S1 to S4 done, each with its IMPACT row.
 
+## Follow-ups
+
+The review of 3d8c341..(the vscode settings commit) was approved and acknowledged (review-749c2a4d268e1e68). It left these advisory items:
+
+- [ ] S5: harden the generated error filter.
+  - The status map is not regenerated on a re-run after a docs change, so it goes stale (hex-route:265-271).
+  - The filter is applied only to the first controller.
+  - The catch-all `@Catch()` preempts global filters (OrderingErrorFilter.ts:22).
+  - An unmapped domain error becomes a silent 500. It should be logged.
+  - The status map is untyped, so exhaustiveness over the error codes is lost (OrderingErrorFilter.ts:5).
+  - The generated filter has no behavioural test.
+- [ ] Minor:
+  - The Answers and command-field regexes are greedy or narrow (lib.ts:224-226, hex-route:219).
+  - errorStatuses nesting (lib.ts:219-250).
+  - Old IMPACT rows were reflowed by prettier.
+  - `.mcp.json` runs `bunx ng`; pin it to the local binary.
+- [ ] S6: `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice.
+
 ## Next step
 
-None. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 246 pass; `nx run-many -t lint test typecheck` green for 18 projects.
+S6 lands with the ordering UI slice. S5 comes before the next context generates a filter, which is slice 2. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 246 pass; `nx run-many -t lint test typecheck` green for 18 projects.
