@@ -2,14 +2,12 @@
 
 ## Classification
 
-| Axis               | Value                | What it decides                                                   |
-| ------------------ | -------------------- | ----------------------------------------------------------------- |
-| Subdomain class    | supporting (assumed) | design investment                                                 |
-| Criticality        | medium (assumed)     | verification rigor                                                |
-| Volatility         | medium (assumed)     | how much cleanup is worth                                         |
-| Architecture level | strict               | derived: strict when the class is core or the criticality is high |
-
-The classification is an assumption until the person confirms it; the strict level applies meanwhile.
+| Axis               | Value      | What it decides                                                   |
+| ------------------ | ---------- | ----------------------------------------------------------------- |
+| Subdomain class    | supporting | design investment                                                 |
+| Criticality        | medium     | verification rigor                                                |
+| Volatility         | medium     | how much cleanup is worth                                         |
+| Architecture level | standard   | derived: strict when the class is core or the criticality is high |
 
 ## Context map
 
@@ -18,6 +16,6 @@ The contexts this one depends on, each through its public barrel only. A depende
 | Depends on | Relationship |
 | ---------- | ------------ |
 
-## Architecture level: strict
+## Architecture level: standard
 
-Use cases receive their driven ports (`make<UseCase>(ports)`) and are wired in the slice's `composition.ts` with `useFactory`/`inject`. `application/` and `domain/` import no infrastructure and no framework. Rules are pure functions, tested without a database.
+Use cases may import their adapters directly; driven ports are optional. Promote a slice to strict when it starts to handle money, access or an external system.

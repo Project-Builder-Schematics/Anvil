@@ -2,14 +2,12 @@
 
 ## Classification
 
-| Axis               | Value                | What it decides                                                   |
-| ------------------ | -------------------- | ----------------------------------------------------------------- |
-| Subdomain class    | supporting (assumed) | design investment                                                 |
-| Criticality        | high (assumed)       | verification rigor                                                |
-| Volatility         | medium (assumed)     | how much cleanup is worth                                         |
-| Architecture level | strict               | derived: strict when the class is core or the criticality is high |
-
-The classification is an assumption until the person confirms it; the strict level applies meanwhile.
+| Axis               | Value      | What it decides                                                   |
+| ------------------ | ---------- | ----------------------------------------------------------------- |
+| Subdomain class    | supporting | design investment                                                 |
+| Criticality        | high       | verification rigor                                                |
+| Volatility         | medium     | how much cleanup is worth                                         |
+| Architecture level | strict     | derived: strict when the class is core or the criticality is high |
 
 ## Context map
 
