@@ -24,7 +24,7 @@ The single subdomain of [Payments](README.md). Terms are in the [glossary](gloss
 
 Numbered; every validation cites one; state precedence when several can hold; `<` vs `<=` spelled. `Source` is `decided[ — <reason>]` or `assumed`, and an `assumed` rule may only back a `@draft` feature. Error codes are CAPS tokens in backticks.
 
-Rules 1 to 5 were approved by the user on 2026-10-08. Rules 6 to 11 fill gaps the approved rules leave open; the simplest reading was taken and the user has not confirmed them.
+Rules 1 to 5 were approved by the user on 2026-10-08. Rules 6 to 11 fill gaps the approved rules leave open; the simplest reading was taken and the user confirmed them on 2026-10-09.
 
 | #   | Rule                                                                                                                                                                                                                               | Source  |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -33,12 +33,12 @@ Rules 1 to 5 were approved by the user on 2026-10-08. Rules 6 to 11 fill gaps th
 | 3   | When the gateway declines the charge, the payment is stored as `Failed` and the charge is refused with `PAYMENT_DECLINED`.                                                                                                         | decided |
 | 4   | Only a `Captured` payment can be refunded; refunding any other payment is refused with `PAYMENT_NOT_REFUNDABLE`.                                                                                                                   | decided |
 | 5   | A charge takes an opaque `paymentMethodToken` and never card data. The gateway receives the token; the payment keeps none. The fake gateway declines `tok_decline` and captures any other token.                                   | decided |
-| 6   | The amount is an integer in minor units; a fractional amount is refused with `INVALID_AMOUNT`.                                                                                                                                     | assumed |
-| 7   | Only a `Captured` or `Refunded` payment counts as the order's successful charge (rule 2). Charging an order whose payment is `Failed` charges again and replaces the failed payment, so the customer can retry.                    | assumed |
-| 8   | Refunding an order that has no payment is refused with `PAYMENT_NOT_REFUNDABLE`, like a payment that is not `Captured` (rule 4).                                                                                                   | assumed |
-| 9   | A refund changes the payment only; the gateway has no refund operation in this slice.                                                                                                                                              | assumed |
-| 10  | When several refusals hold, `INVALID_AMOUNT` wins: the amount is checked before an existing payment is looked up, so an invalid amount is refused even when the order is already charged.                                          | assumed |
-| 11  | The currency is carried as the caller gives it and not re-checked; ordering guarantees three uppercase letters.                                                                                                                    | assumed |
+| 6   | The amount is an integer in minor units; a fractional amount is refused with `INVALID_AMOUNT`.                                                                                                                                     | decided |
+| 7   | Only a `Captured` or `Refunded` payment counts as the order's successful charge (rule 2). Charging an order whose payment is `Failed` charges again and replaces the failed payment, so the customer can retry.                    | decided |
+| 8   | Refunding an order that has no payment is refused with `PAYMENT_NOT_REFUNDABLE`, like a payment that is not `Captured` (rule 4).                                                                                                   | decided |
+| 9   | A refund changes the payment only; the gateway has no refund operation in this slice.                                                                                                                                              | decided |
+| 10  | When several refusals hold, `INVALID_AMOUNT` wins: the amount is checked before an existing payment is looked up, so an invalid amount is refused even when the order is already charged.                                          | decided |
+| 11  | The currency is carried as the caller gives it and not re-checked; ordering guarantees three uppercase letters.                                                                                                                    | decided |
 
 ## Use cases
 

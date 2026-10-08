@@ -53,7 +53,6 @@ Feature: Charge payment
 
   Rule: Rule 6 - The amount is an integer
 
-    @draft
     Scenario: a fractional amount is refused
       When order "o1" is charged 10.5 "USD" with token "tok_visa"
       Then it is refused with "INVALID_AMOUNT"
@@ -61,13 +60,11 @@ Feature: Charge payment
 
   Rule: Rule 7 - A failed payment does not count as the order's charge
 
-    @draft
     Scenario: charging again after a decline charges again
       Given order "o1" has been declined with token "tok_decline"
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
 
-    @draft
     Scenario: a refunded payment is still the order's charge
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       And order "o1" has been refunded
@@ -76,7 +73,6 @@ Feature: Charge payment
 
   Rule: Rule 10 - INVALID_AMOUNT wins over an existing charge
 
-    @draft
     Scenario: an invalid amount is refused even when the order is already charged
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o1" is charged 0 "USD" with token "tok_visa"

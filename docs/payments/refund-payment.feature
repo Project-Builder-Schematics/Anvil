@@ -23,7 +23,6 @@ Feature: Refund payment
 
   Rule: Rule 8 - An order with no payment cannot be refunded
 
-    @draft
     Scenario: an order that was never charged is refused
       When order "ghost" is refunded
       Then it is refused with "PAYMENT_NOT_REFUNDABLE"
