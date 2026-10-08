@@ -185,4 +185,4 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
 
 ## Next step
 
-S5 to S11 are done. S12 (scaffold instead of several creates) is open. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects.
+S5 to S12 are done. The S11 and S12 review (review-27a9c8a20286306e) was approved and acknowledged on 2026-10-08. It left advisory items only: the collision message names the unrendered `scaffold` path, the callee walk has no cycle guard, and a JSON `null` purpose is not refused. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter, starting with U5. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 335 pass; `nx run-many -t lint test typecheck` green for 18 projects.
