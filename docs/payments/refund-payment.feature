@@ -16,7 +16,7 @@ Feature: Refund payment
       And the payment of order "o1" is "Refunded" for 4500 "USD"
 
     Scenario: a failed payment cannot be refunded
-      Given order "o2" has been declined with token "tok_decline"
+      Given order "o2" has been declined at 4500 "USD" with token "tok_decline"
       When order "o2" is refunded
       Then it is refused with "PAYMENT_NOT_REFUNDABLE"
       And the payment of order "o2" is "Failed" for 4500 "USD"

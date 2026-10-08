@@ -5,10 +5,12 @@ Feature: Charge payment
     Scenario: a positive amount is captured
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
 
     Scenario: the smallest amount is accepted
       When order "o1" is charged 1 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 1 "USD"
+      And the answer is "Captured" for 1 "USD" on order "o1"
 
     Scenario: zero is refused and nothing is stored
       When order "o1" is charged 0 "USD" with token "tok_visa"
@@ -26,12 +28,14 @@ Feature: Charge payment
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o1" is charged 9000 "USD" with token "tok_other"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
       And the gateway has been charged 1 in total
 
     Scenario: another order is charged on its own
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o2" is charged 100 "USD" with token "tok_visa"
       Then the payment of order "o2" is "Captured" for 100 "USD"
+      And the answer is "Captured" for 100 "USD" on order "o2"
       And the gateway has been charged 2 in total
 
   Rule: Rule 3 - A gateway decline leaves the payment Failed
@@ -50,6 +54,7 @@ Feature: Charge payment
     Scenario: any token but the declined one is captured
       When order "o1" is charged 4500 "USD" with token "tok_anything"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
 
   Rule: Rule 6 - The amount is an integer
 
@@ -61,15 +66,17 @@ Feature: Charge payment
   Rule: Rule 7 - A failed payment does not count as the order's charge
 
     Scenario: charging again after a decline charges again
-      Given order "o1" has been declined with token "tok_decline"
+      Given order "o1" has been declined at 4500 "USD" with token "tok_decline"
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
 
     Scenario: a refunded payment is still the order's charge
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       And order "o1" has been refunded
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Refunded" for 4500 "USD"
+      And the answer is "Refunded" for 4500 "USD" on order "o1"
 
   Rule: Rule 10 - INVALID_AMOUNT wins over an existing charge
 
@@ -77,6 +84,7 @@ Feature: Charge payment
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o1" is charged 0 "USD" with token "tok_visa"
       Then it is refused with "INVALID_AMOUNT"
+      And the payment of order "o1" is "Captured" for 4500 "USD"
 
   Rule: Rule 12 - A charge is stored Pending before the gateway is called
 
@@ -115,4 +123,5 @@ Feature: Charge payment
     Scenario: two charges started together take the money once
       When order "o1" is charged 4500 "USD" with token "tok_visa" twice at once
       Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
       And the gateway has been charged 1 in total
