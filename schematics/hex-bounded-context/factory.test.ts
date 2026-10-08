@@ -181,6 +181,16 @@ describe('hex-bounded-context: the lib files', () => {
     );
   });
 
+  it.each(['{}', '["a"]', '{"a": 1}'])(
+    'refuses the purpose %s: it reads as JSON, which the engine decodes before it prints',
+    async (purpose) => {
+      const { tree, error } = await go({ purpose });
+
+      expect(String(error)).toContain('reads as JSON');
+      expect([...tree.keys()]).toEqual([]);
+    },
+  );
+
   it('names the project and its source root after the lib', async () => {
     expect(JSON.parse((await lib())('project.json'))).toEqual({
       name: 'api-tenancy',

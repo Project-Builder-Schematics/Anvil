@@ -113,9 +113,22 @@ const withGlossaryLinks = (glossary: string, subdomains: string[]): string => {
   return `${body}${/^## Subdomains\s*$/m.test(body) ? '' : '\n## Subdomains\n\n'}${missing.join('\n')}\n`;
 };
 
+/** The engine decodes a text option that holds a JSON list or object, and prints `map[]` for `{}`. */
+const readsAsJsonContainer = (text: string): boolean => {
+  try {
+    return typeof JSON.parse(text) === 'object';
+  } catch {
+    return false;
+  }
+};
+
 export default async (input: Input) => {
   const run = startRun();
   const context = assertDashed(input.context, 'context');
+  if (readsAsJsonContainer(input.purpose))
+    throw new Error(
+      `purpose "${input.purpose}" reads as JSON, which the engine decodes before it prints — write a sentence`,
+    );
   const docs = docsDir(context);
   const assumed = input.classification_status === 'assumed';
   const level: Level =
