@@ -3,7 +3,7 @@ import { Payment } from '../domain/Payment';
 import { MemoryPayments } from './MemoryPayments';
 
 const pending = (orderId: string, id = `p-${orderId}`) =>
-  Payment.pending(id, orderId, Amount.of(100), 'USD');
+  Payment.pending(id, orderId, Amount.of(100), 'USD', 'tok_visa');
 
 describe('MemoryPayments (Payments contract)', () => {
   it('answers null for an order that was never saved', async () => {

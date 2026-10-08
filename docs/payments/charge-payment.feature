@@ -109,17 +109,24 @@ Feature: Charge payment
       And the gateway has been charged 1 in total
       And the number of idempotency keys the gateway was given is 1
 
-    Scenario: charging again with another request than the first is refused by the gateway
+    Scenario: charging again with another token resolves with the first request
       Given the gateway took the money of order "o1" at 4500 "USD" with token "tok_visa" but its answer was lost
-      When order "o1" is charged 9000 "USD" with token "tok_visa"
-      Then the charge fails with "idempotency key reused with different parameters"
-      And the payment of order "o1" is "Pending" for 4500 "USD"
+      When order "o1" is charged 9000 "USD" with token "tok_decline"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the answer is "Captured" for 4500 "USD" on order "o1"
+      And the gateway was last asked to charge 4500 "USD" with token "tok_visa"
+      And the gateway has been charged 1 in total
+      And the number of idempotency keys the gateway was given is 1
 
-    Scenario: charging again with a declined token fails the pending payment
-      Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_visa"
-      When order "o1" is charged 4500 "USD" with token "tok_decline"
+    Scenario: a pending payment declined with its stored token fails and the next charge starts a new one
+      Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_decline"
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then it is refused with "PAYMENT_DECLINED"
       And the payment of order "o1" is "Failed" for 4500 "USD"
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the gateway was last asked to charge 4500 "USD" with token "tok_visa"
+      And the number of idempotency keys the gateway was given is 2
 
   Rule: Rule 14 - The idempotency key is the id of the payment
 

@@ -9,6 +9,7 @@ export class Payment {
     readonly orderId: string,
     readonly amount: Amount,
     readonly currency: string,
+    readonly paymentMethodToken: string,
     readonly status: PaymentStatus,
   ) {}
 
@@ -17,8 +18,16 @@ export class Payment {
     orderId: string,
     amount: Amount,
     currency: string,
+    paymentMethodToken: string,
   ): Payment {
-    return new Payment(id, orderId, amount, currency, 'Pending');
+    return new Payment(
+      id,
+      orderId,
+      amount,
+      currency,
+      paymentMethodToken,
+      'Pending',
+    );
   }
 
   /** A refunded payment was charged once, so it still counts as the order's charge. */
@@ -46,6 +55,7 @@ export class Payment {
       this.orderId,
       this.amount,
       this.currency,
+      this.paymentMethodToken,
       status,
     );
   }

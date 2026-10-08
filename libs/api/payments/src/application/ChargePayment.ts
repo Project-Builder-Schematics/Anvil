@@ -25,14 +25,21 @@ export const makeChargePayment =
   (payments: Payments, paymentGateway: PaymentGateway): ChargePayment =>
   async ({ orderId, amount, currency, paymentMethodToken }) => {
     const started = await payments.startCharge(
-      Payment.pending(randomUUID(), orderId, Amount.of(amount), currency),
+      Payment.pending(
+        randomUUID(),
+        orderId,
+        Amount.of(amount),
+        currency,
+        paymentMethodToken,
+      ),
     );
     if (started.isCharged) return toView(started);
 
+    // A Pending retry resolves with the request it stored, not the retry's own.
     const outcome = await paymentGateway.charge({
-      amount,
-      currency,
-      paymentMethodToken,
+      amount: started.amount.value,
+      currency: started.currency,
+      paymentMethodToken: started.paymentMethodToken,
       idempotencyKey: started.id,
     });
     if (outcome === 'Declined') {

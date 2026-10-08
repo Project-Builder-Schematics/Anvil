@@ -9,6 +9,7 @@ describe('toView', () => {
       'o1',
       Amount.of(4500),
       'USD',
+      'tok_visa',
     ).capture();
     expect(toView(payment)).toEqual({
       orderId: 'o1',

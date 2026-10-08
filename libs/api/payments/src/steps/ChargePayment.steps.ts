@@ -158,6 +158,15 @@ Then(
 );
 
 Then(
+  'the gateway was last asked to charge {int} {string} with token {string}',
+  (world: PaymentsWorld, amount: number, currency: string, token: string) => {
+    expect(world.charge).toHaveBeenLastCalledWith(
+      expect.objectContaining({ amount, currency, paymentMethodToken: token }),
+    );
+  },
+);
+
+Then(
   'the number of idempotency keys the gateway was given is {int}',
   (world: PaymentsWorld, count: number) => {
     const keys = world.charge.mock.calls.map(([r]) => r.idempotencyKey);

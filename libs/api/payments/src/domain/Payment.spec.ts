@@ -1,7 +1,8 @@
 import { Amount } from './Amount';
 import { Payment } from './Payment';
 
-const pending = () => Payment.pending('p1', 'o1', Amount.of(4500), 'USD');
+const pending = () =>
+  Payment.pending('p1', 'o1', Amount.of(4500), 'USD', 'tok_visa');
 
 describe('Payment', () => {
   it('starts pending with what it was asked to charge', () => {
@@ -10,11 +11,13 @@ describe('Payment', () => {
       orderId: 'o1',
       amount: Amount.of(4500),
       currency: 'USD',
+      paymentMethodToken: 'tok_visa',
       status: 'Pending',
     });
   });
 
   it('keeps its id through every transition', () => {
+    expect(pending().capture().paymentMethodToken).toBe('tok_visa');
     expect(pending().capture().id).toBe('p1');
     expect(pending().fail().id).toBe('p1');
     expect(pending().capture().refund().id).toBe('p1');
