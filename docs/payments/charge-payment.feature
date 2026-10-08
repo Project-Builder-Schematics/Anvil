@@ -26,13 +26,13 @@ Feature: Charge payment
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o1" is charged 9000 "USD" with token "tok_other"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
-      And the gateway has been asked to charge 1 time
+      And the gateway has been charged 1 in total
 
     Scenario: another order is charged on its own
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o2" is charged 100 "USD" with token "tok_visa"
       Then the payment of order "o2" is "Captured" for 100 "USD"
-      And the gateway has been asked to charge 2 times
+      And the gateway has been charged 2 in total
 
   Rule: Rule 3 - A gateway decline leaves the payment Failed
 
