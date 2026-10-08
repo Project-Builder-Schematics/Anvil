@@ -82,10 +82,10 @@ One row per use case; `Feature` links the `.feature` written next to this file b
 
 400 is the Zod body check (text where text is due, a number for the quantity). Everything else is a rule: 404 for rule 9, 409 for the state refusals (rules 4, 8, 10, 13), 422 for the value refusals (rules 2, 3, 5, 6, 7) and 402 for a declined payment (rule 14). An unknown charge outcome (rule 17) is not a rule refusal: it answers 500.
 
-| Route                          | Use case       | Answers                                                                      | Caller               |
-| ------------------------------ | -------------- | ---------------------------------------------------------------------------- | -------------------- |
-| `POST /orders`                 | `CreateOrder`  | 201                                                                          | public — no auth yet |
-| `POST /orders/:orderId/lines`  | `AddOrderLine` | 200 · 400 · 404 rule 9 · 409 rule 4 · 422 rules 2, 3, 5, 7                   | public — no auth yet |
-| `POST /orders/:orderId/place`  | `PlaceOrder`   | 200 · 400 rule 16 · 402 rule 14 · 404 rule 9 · 409 rules 10, 13 · 422 rule 6 | public — no auth yet |
-| `POST /orders/:orderId/cancel` | `CancelOrder`  | 200 · 404 rule 9 · 409 rule 8                                                | public — no auth yet |
-| `GET /orders/:orderId`         | `GetOrder`     | 200 · 404 rule 9                                                             | public — no auth yet |
+| Route                          | Use case       | Answers                                                              | Caller               |
+| ------------------------------ | -------------- | -------------------------------------------------------------------- | -------------------- |
+| `POST /orders`                 | `CreateOrder`  | 201                                                                  | public — no auth yet |
+| `POST /orders/:orderId/lines`  | `AddOrderLine` | 200 · 400 · 404 rule 9 · 409 rule 4 · 422 rules 2, 3, 5, 7           | public — no auth yet |
+| `POST /orders/:orderId/place`  | `PlaceOrder`   | 200 · 400 · 402 rule 14 · 404 rule 9 · 409 rules 10, 13 · 422 rule 6 | public — no auth yet |
+| `POST /orders/:orderId/cancel` | `CancelOrder`  | 200 · 404 rule 9 · 409 rule 8                                        | public — no auth yet |
+| `GET /orders/:orderId`         | `GetOrder`     | 200 · 404 rule 9                                                     | public — no auth yet |

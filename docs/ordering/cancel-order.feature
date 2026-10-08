@@ -18,7 +18,9 @@ Feature: Cancel order
       When the order is cancelled
       Then it is refused with "ORDER_NOT_CANCELLABLE"
       And the order is "Paid"
-      And no event is published
+      And the events published are
+        | event     |
+        | OrderPaid |
 
     Scenario: a cancelled order cannot be cancelled again
       Given the order has been cancelled
