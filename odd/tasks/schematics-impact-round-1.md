@@ -121,7 +121,7 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Stryker on ordering 100.00 (123 mutants, 0 survived). The sandbox could not copy the symlinks (`ENOTSUP`), so `stryker.config.json` now ignores `schematics` (aba8bd6).
   - Checks at the last commit: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects; `prettier --check .` clean; `eslint schematics` and `tsc -p schematics` clean.
 
-- [ ] S11: findings from the S9/S10 reviews. Four slices, all approved and acknowledged on 2026-10-08:
+- [x] S11 (dc33081, acaf8c5, f3fb8b6): findings from the S9/S10 reviews. Four slices, all approved and acknowledged on 2026-10-08:
   - review-0a17fef4731c7aad (S9, 52f82ac..f7970fb)
   - review-b5985f55821573b0 (S10a, ..db0b468)
   - review-58f91ff5adecae6f (S10b, ..90e5ba9)
@@ -146,8 +146,36 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - top-level await in the seed
   - the dumbness check only parses, the inline-template detector is narrow, and the named regex check is vacuous
 
-  Also: the three suspected SDK issues (a text option decoded as JSON, `runFactoryForTest` keeps templates unrendered, `scaffold` refuses a symlinked `from`) are not filed yet; that is the user's call.
+  Also: the suspected SDK issues (a text option decoded as JSON, `runFactoryForTest` keeps templates unrendered, `scaffold` refuses a symlinked `from`, and `defineFactory` and `ContractFake` have no public subpath) are not filed yet; that is the user's call.
+
+  Done (route: single writer, strict TDD; trigger evidence: 7 files across `schematics/`). Verdict per finding:
+  - `web-shared-lib/factory.ts:25-34`: not real. `scaffold` keeps the refusal. Real engine (builder v0.9.11, scratch workspace): a second run of `web-shared-lib` fails with `create failed at libs/web/shared/zz/eslint.config.mjs: path-collision`. With `project.json` deleted it still refuses and writes nothing, and the alias is registered once. `web-context` (`libs/web/zzweb/ui/eslint.config.mjs`) and `hex-bounded-context` (`libs/api/zzctx/COD100.md`) refuse the same way. The SDK types say it too: a create over an existing file is rejected unless `force: true`, and `scaffold` passes `force` (default false) to every file. The existing factory tests already cover it.
+  - `stryker.config.json:18`: not real, kept. Mutation targets `libs/api/*/src/{domain,application}`; no lib imports from `schematics/`, and the root vitest projects glob finds no config in it (the schematics run on `bun test`). Ignoring it hides nothing the mutants touch, and it is what avoids the ENOTSUP copy of the symlinked template folders. Stryker was not rerun: the config did not change.
+  - `_shared/testing.ts:8-9`: no public subpath (`@pbuilder/sdk`, `/commons` and `/testing` export neither). Kept the import with a one-line WHY and listed it as a suspected SDK issue above.
+  - `_shared/testing.ts:269-286`: not real. The SDK keeps the active run in `AsyncLocalStorage`, and a throwaway test that interleaved two `runFactory` calls with timers and a shared seed saw no leak and left the seed untouched. `webLibs` already runs two in `Promise.all`. Not kept as a test.
+  - `hex-bounded-context/factory.ts:182-186`: real (acaf8c5). Reproduced on the real engine: `--purpose='{}'` wrote `map[]` into the README and `COD100.md`. The schematic now refuses a purpose that reads as a JSON object or list, before writing. RED: 3 new cases failed (`{}`, `["a"]`, `{"a": 1}`). IMPACT row added; the skill line updated. Scalars (`42`, `"x"`) were not reproduced, so they are not refused.
+  - `templates.fitness.test.ts` (dc33081):
+    - 70-79 not transitive: real. `hex-context` runs `hex-subdomain`, which names no file, so the check passed with a leaf folder missing. It now follows callees transitively and expands a named folder to its files. RED: with `hex-context/files/route` removed, the old test passed (26 pass) and the new one failed.
+    - nested symlinks: real. `scaffold` silently skips a nested symlinked directory, so a new test refuses any symlink below a walked folder. RED: a link planted in `hex-bounded-context/files/lib` failed the new test (and the template walk).
+    - 57 inline detector: real. `/\btemplate:/` missed the shorthand and quoted keys; the new pattern is tested on four forms and on `templateFile`.
+    - 25-28 vacuous regex: real. A floor (more than 20 names overall) and a per-schematic check that a factory with `templateFile` or `scaffold(` names at least one.
+    - 19-23 symlink cycle: not real. A cycle throws `ELOOP` (reproduced), it does not hang, and none exists.
+    - 50 only parses: not real. `parse` is the whole subset and throws on anything else; `render.test.ts` already covers the rejected actions.
+  - `_shared/lib.ts:4`: not real, not reproducible. The file imports only `@pbuilder/sdk/commons`. Every other package the schematics import resolves from `package.json` (`@pbuilder/sdk` brings `ts-morph`; `@angular/compiler` and `postcss` are devDependencies); a scratch workspace without them fails with "factory module could not be resolved or loaded".
+  - Suggestions:
+    - `lib.ts:111` (`strip`): not real. Escaped pipes, backticks, empty cells and trailing blanks read as documented.
+    - `hex-route/factory.ts:150-156`: real (f3fb8b6). A row that `parseRoute` rejects was dropped silently, so the error said the route was "not in the table". It now lists the unreadable rows. RED: the new test failed. (The "pass --path" rule for several rows stays: a test asserts it. The schema label says "default: /", which is loose.)
+    - error filter with empty statuses: not a defect. It renders `STATUS = { }` and a later run fills it; a test was added, green at once.
+    - top-level await in the seed: not real. Importing `testing.ts` takes about 0.5 s and a failure rethrows the factory's own error.
+  - Checks at the last commit: `bun test schematics` 335 pass; `nx run-many -t lint test typecheck` green; `prettier --check .` clean. The pre-commit hook also ran eslint, `tsc -p schematics` and the schematics tests on each commit.
+  - Deviation: the `_shared/testing.ts` comment change went into f3fb8b6 with the hex-route fix.
+
+- [ ] S12: use `scaffold` instead of several `create` calls where a schematic always writes the same fixed set of files into one folder. `scaffold` translates `__x__` tokens in file names and strips `.template` (see the SDK commons typings).
+  - Candidates: ng-component (4 files), ng-directive (2), ng-service (2), and the fixed part of hex-slice.
+  - Keep `create` where it is justified: a conditional create-if-missing (the hex-bounded-context docs), a choice between template variants (glossary vs glossary-nested, the hex-driven-port adapter), or files in different folders (hex-route, hex-use-case).
+  - Depends on the S11 verdict on whether `scaffold` keeps the fail-closed refusal over existing files: it does (see S11, first finding).
+  - Proof: byte-identical output and the suite green.
 
 ## Next step
 
-S5 to S10 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects.
+S5 to S11 are done. S12 (scaffold instead of several creates) is open. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects.
