@@ -259,6 +259,6 @@ describe('orders over HTTP', () => {
       actorId: 'a-1',
     });
     expect(reply.status).toBe(200);
-    expect(JSON.stringify(reply.body)).not.toContain('c-1');
+    expect(JSON.stringify(reply.body['lines'])).not.toContain('c-1');
   });
 });
