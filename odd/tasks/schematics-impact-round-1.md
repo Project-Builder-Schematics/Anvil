@@ -121,6 +121,33 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Stryker on ordering 100.00 (123 mutants, 0 survived). The sandbox could not copy the symlinks (`ENOTSUP`), so `stryker.config.json` now ignores `schematics` (aba8bd6).
   - Checks at the last commit: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects; `prettier --check .` clean; `eslint schematics` and `tsc -p schematics` clean.
 
+- [ ] S11: findings from the S9/S10 reviews. Four slices, all approved and acknowledged on 2026-10-08:
+  - review-0a17fef4731c7aad (S9, 52f82ac..f7970fb)
+  - review-b5985f55821573b0 (S10a, ..db0b468)
+  - review-58f91ff5adecae6f (S10b, ..90e5ba9)
+  - review-09ab0a68cd7a52a0 (S10c, ..aba8bd6)
+
+  The envelopes carry only an id and a location per finding, so each one needs a verification before it is fixed.
+
+  Warnings:
+  - `web-shared-lib/factory.ts:25-34`: the fail-closed guard against regenerating over an existing lib may be gone with `createFile`. Check whether `scaffold` overwrites.
+  - `stryker.config.json:18`: `schematics` is ignored by the sandbox.
+  - `_shared/testing.ts:8-9`: private SDK imports (`defineFactory`, `ContractFake` by file path).
+  - `_shared/testing.ts:269-286`: the fixture is unsafe under concurrent runs.
+  - `hex-bounded-context/factory.ts:182-186`: a purpose that reads as JSON is decoded by the engine.
+  - `templates.fitness.test.ts:70-79`: the fitness check is not transitive.
+  - `_shared/lib.ts:4`: unseen dependencies.
+
+  Suggestions:
+  - `lib.ts:111`
+  - `hex-route/factory.ts:150-156`
+  - the error-filter template with empty statuses
+  - the symlinked templates and a possible symlink cycle
+  - top-level await in the seed
+  - the dumbness check only parses, the inline-template detector is narrow, and the named regex check is vacuous
+
+  Also: the three suspected SDK issues (a text option decoded as JSON, `runFactoryForTest` keeps templates unrendered, `scaffold` refuses a symlinked `from`) are not filed yet; that is the user's call.
+
 ## Next step
 
 S5 to S10 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects.
