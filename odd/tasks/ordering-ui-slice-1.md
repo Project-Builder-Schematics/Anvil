@@ -51,7 +51,7 @@ Route per task: delegated writer (single writer, no parallel writers). Trigger e
 - [x] U0 (schematic extension): `ng-component` accepts PascalCase types for inputs and outputs, plus `type_import`. Commit a7758ff. RED: 4 factory tests failed first. The AXE helper and the focus ring came with 44221d5, and `axe-core` with 150c352.
 - [x] U1: `domain`: DTOs, totals, status predicates, `isQuantity`, and the error-message map. Commit b8d7cb0 (and `isQuantity` in 1a5f43c). RED: 3 suites failed on a missing module, then 12 `isQuantity` cases failed.
 - [x] U2: `data-access`: `OrderingApi` (HttpClient commands, `httpResource` read), `errorCodeOf`, `OrderStore`. Commits c329901 and 13e7eda. RED: compile errors for the missing members, then 2 store tests, then the boolean results.
-- [x] U3: `ui`: `order-summary`, `line-list`, `add-line-form` (Signal Forms), `order-actions` (`*dsVariant` place label). Commit 1a5f43c. RED: 4 spec files failed (22 of 32 tests) before the templates existed.
+- [x] U3: `ui`: `order-summary`, `line-list`, `add-line-form` (Signal Forms), `order-actions` (`*dsVariant` place label). Commit 1a5f43c. RED: 4 spec files failed (26 of 32 tests) before the templates existed.
 - [x] U4: `feature`: `order-page`, `order-new`, `orderingRoutes`, wiring into `apps/web` (lazy `orders` route, redirect from `/`, `provideHttpClient`, the page shell). Commit e0c315f. RED: 13 feature tests failed before the containers existed, the routes spec failed on a missing module, and 3 app specs failed before the wiring.
 
 ## Acceptance criteria
@@ -85,7 +85,7 @@ Product decisions the doc did not settle; each is the simplest option.
 ## Progress
 
 - 2026-10-08: document created after the user chose vertical slices. It runs after `schematics-impact-round-1.md` and before `order-fulfilment-slice-2.md`.
-- 2026-10-08: S6, U0 and U1 to U4 done in 11 commits on `feat/workspace-scaffold`; every commit left `bun test schematics` (252 pass), `nx run-many -t lint test typecheck` (18 projects) and `prettier --check .` green. The Engram mirror `odd/ordering-ui-slice-1/tasks` was not updated by the writer.
+- 2026-10-08: S6, U0 and U1 to U4 done in 12 commits on `feat/workspace-scaffold`; every commit left `bun test schematics` (252 pass), `nx run-many -t lint test typecheck` (18 projects) and `prettier --check .` green. The Engram mirror `odd/ordering-ui-slice-1/tasks` was not updated by the writer.
 
 ## Runtime checklist (for the user, in the browser)
 
