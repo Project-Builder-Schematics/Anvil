@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Amount } from '../domain/Amount';
 import { Payment } from '../domain/Payment';
 import { PaymentsError } from '../domain/errors';
@@ -24,7 +25,7 @@ export const makeChargePayment =
   (payments: Payments, paymentGateway: PaymentGateway): ChargePayment =>
   async ({ orderId, amount, currency, paymentMethodToken }) => {
     const started = await payments.startCharge(
-      Payment.pending(orderId, Amount.of(amount), currency),
+      Payment.pending(randomUUID(), orderId, Amount.of(amount), currency),
     );
     if (started.isCharged) return toView(started);
 
@@ -32,7 +33,7 @@ export const makeChargePayment =
       amount,
       currency,
       paymentMethodToken,
-      idempotencyKey: orderId,
+      idempotencyKey: started.id,
     });
     if (outcome === 'Declined') {
       await payments.save(started.fail());

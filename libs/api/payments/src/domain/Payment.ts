@@ -5,14 +5,20 @@ export type PaymentStatus = 'Pending' | 'Captured' | 'Failed' | 'Refunded';
 
 export class Payment {
   private constructor(
+    readonly id: string,
     readonly orderId: string,
     readonly amount: Amount,
     readonly currency: string,
     readonly status: PaymentStatus,
   ) {}
 
-  static pending(orderId: string, amount: Amount, currency: string): Payment {
-    return new Payment(orderId, amount, currency, 'Pending');
+  static pending(
+    id: string,
+    orderId: string,
+    amount: Amount,
+    currency: string,
+  ): Payment {
+    return new Payment(id, orderId, amount, currency, 'Pending');
   }
 
   /** A refunded payment was charged once, so it still counts as the order's charge. */
@@ -35,6 +41,12 @@ export class Payment {
   }
 
   private becomes(status: PaymentStatus): Payment {
-    return new Payment(this.orderId, this.amount, this.currency, status);
+    return new Payment(
+      this.id,
+      this.orderId,
+      this.amount,
+      this.currency,
+      status,
+    );
   }
 }

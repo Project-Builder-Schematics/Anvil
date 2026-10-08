@@ -3,7 +3,6 @@ import { vi } from 'vitest';
 import { makeChargePayment } from '../application/ChargePayment';
 import { makeRefundPayment } from '../application/RefundPayment';
 import type { PaymentView } from '../application/PaymentView';
-import { PaymentsError } from '../domain/errors';
 import { MemoryPaymentGateway } from '../infrastructure/MemoryPaymentGateway';
 import { MemoryPayments } from '../infrastructure/MemoryPayments';
 
@@ -23,15 +22,12 @@ export class PaymentsWorld extends QuickPickleWorld {
   /** What a gateway that gives no answer throws. */
   readonly timeout = new Error('gateway timeout');
 
-  /** Runs a command; a business refusal or a gateway timeout is kept for "it is refused with", anything else fails the step. */
+  /** Runs a command; any error it throws is kept until a step claims it, or the After hook fails the scenario. */
   async attempt<T>(run: () => Promise<T>): Promise<T | undefined> {
     try {
       return await run();
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error === this.timeout || error instanceof PaymentsError)
-      ) {
+      if (error instanceof Error) {
         this.refusals.push(error);
         return undefined;
       }

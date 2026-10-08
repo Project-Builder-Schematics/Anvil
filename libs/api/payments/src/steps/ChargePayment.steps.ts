@@ -129,7 +129,7 @@ Then(
 Then(
   'the gateway has been charged {int} in total',
   (world: PaymentsWorld, times: number) => {
-    expect(world.gateway.capturedKeys.size).toBe(times);
+    expect(world.gateway.captured).toBe(times);
   },
 );
 
@@ -147,10 +147,20 @@ Then(
 );
 
 Then(
-  'the gateway was given the idempotency key {string}',
-  (world: PaymentsWorld, idempotencyKey: string) => {
-    expect(world.charge).toHaveBeenCalledWith(
-      expect.objectContaining({ idempotencyKey }),
+  'the gateway was given the id of the payment of order {string} as its idempotency key',
+  async (world: PaymentsWorld, orderId: string) => {
+    const payment = await world.payments.byOrderId(orderId);
+    expect(payment?.id).not.toBe(orderId);
+    expect(world.charge).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ idempotencyKey: payment?.id }),
     );
+  },
+);
+
+Then(
+  'the number of idempotency keys the gateway was given is {int}',
+  (world: PaymentsWorld, count: number) => {
+    const keys = world.charge.mock.calls.map(([r]) => r.idempotencyKey);
+    expect(new Set(keys).size).toBe(count);
   },
 );

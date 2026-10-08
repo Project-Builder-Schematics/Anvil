@@ -15,23 +15,41 @@ const DECLINED_TOKEN = 'tok_decline';
 const outcomeOf = ({ status }: GatewayResult): ChargeOutcome =>
   status === 'succeeded' ? 'Captured' : 'Declined';
 
+interface Remembered {
+  readonly request: string;
+  readonly outcome: ChargeOutcome;
+}
+
 @Injectable()
 export class MemoryPaymentGateway implements PaymentGateway {
-  /** The keys that took money; a decline is not remembered, so its key can be charged again. */
-  readonly capturedKeys = new Set<string>();
+  /** The first outcome per idempotency key, a decline included; a call that throws leaves nothing. */
+  readonly outcomes = new Map<string, Remembered>();
+
+  get captured(): number {
+    return [...this.outcomes.values()].filter((r) => r.outcome === 'Captured')
+      .length;
+  }
 
   charge({
+    amount,
+    currency,
     paymentMethodToken,
     idempotencyKey,
   }: ChargeRequest): Promise<ChargeOutcome> {
-    if (this.capturedKeys.has(idempotencyKey))
-      return Promise.resolve('Captured');
+    const request = JSON.stringify([amount, currency, paymentMethodToken]);
+    const first = this.outcomes.get(idempotencyKey);
+    if (first)
+      return first.request === request
+        ? Promise.resolve(first.outcome)
+        : Promise.reject(
+            new Error('idempotency key reused with different parameters'),
+          );
     const result: GatewayResult = {
       status:
         paymentMethodToken === DECLINED_TOKEN ? 'card_declined' : 'succeeded',
     };
     const outcome = outcomeOf(result);
-    if (outcome === 'Captured') this.capturedKeys.add(idempotencyKey);
+    this.outcomes.set(idempotencyKey, { request, outcome });
     return Promise.resolve(outcome);
   }
 }

@@ -107,6 +107,13 @@ Feature: Charge payment
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
       And the gateway has been charged 1 in total
+      And the number of idempotency keys the gateway was given is 1
+
+    Scenario: charging again with another request than the first is refused by the gateway
+      Given the gateway took the money of order "o1" at 4500 "USD" with token "tok_visa" but its answer was lost
+      When order "o1" is charged 9000 "USD" with token "tok_visa"
+      Then the charge fails with "idempotency key reused with different parameters"
+      And the payment of order "o1" is "Pending" for 4500 "USD"
 
     Scenario: charging again with a declined token fails the pending payment
       Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_visa"
@@ -114,14 +121,21 @@ Feature: Charge payment
       Then it is refused with "PAYMENT_DECLINED"
       And the payment of order "o1" is "Failed" for 4500 "USD"
 
-  Rule: Rule 14 - The gateway is given the order id as the idempotency key
+  Rule: Rule 14 - The idempotency key is the id of the payment
 
-    Scenario: the gateway is given the order id as its key
+    Scenario: the gateway is given the id of the payment as its key
       When order "o1" is charged 4500 "USD" with token "tok_visa"
-      Then the gateway was given the idempotency key "o1"
+      Then the gateway was given the id of the payment of order "o1" as its idempotency key
 
     Scenario: two charges started together take the money once
       When order "o1" is charged 4500 "USD" with token "tok_visa" twice at once
       Then the payment of order "o1" is "Captured" for 4500 "USD"
       And the answer is "Captured" for 4500 "USD" on order "o1"
       And the gateway has been charged 1 in total
+      And the number of idempotency keys the gateway was given is 1
+
+    Scenario: charging again after a decline uses a new key and captures
+      Given order "o1" has been declined at 4500 "USD" with token "tok_decline"
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the number of idempotency keys the gateway was given is 2

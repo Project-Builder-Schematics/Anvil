@@ -2,8 +2,8 @@ import { Amount } from '../domain/Amount';
 import { Payment } from '../domain/Payment';
 import { MemoryPayments } from './MemoryPayments';
 
-const pending = (orderId: string) =>
-  Payment.pending(orderId, Amount.of(100), 'USD');
+const pending = (orderId: string, id = `p-${orderId}`) =>
+  Payment.pending(id, orderId, Amount.of(100), 'USD');
 
 describe('MemoryPayments (Payments contract)', () => {
   it('answers null for an order that was never saved', async () => {
@@ -35,17 +35,17 @@ describe('MemoryPayments (Payments contract)', () => {
     it.each([
       ['captured', pending('o1').capture()],
       ['refunded', pending('o1').capture().refund()],
-    ])('answers the %s payment and keeps it', async (_status, charged) => {
+      ['pending', pending('o1')],
+    ])('answers the %s payment and keeps it', async (_status, held) => {
       const payments = new MemoryPayments();
-      await payments.save(charged);
-      expect(await payments.startCharge(pending('o1'))).toBe(charged);
-      expect(await payments.byOrderId('o1')).toBe(charged);
+      await payments.save(held);
+      expect(await payments.startCharge(pending('o1', 'new'))).toBe(held);
+      expect(await payments.byOrderId('o1')).toBe(held);
     });
 
     it.each([
       ['nothing', undefined],
       ['a failed payment', pending('o1').fail()],
-      ['a pending payment', pending('o1')],
     ])('stores the pending payment over %s', async (_status, before) => {
       const payments = new MemoryPayments();
       if (before) await payments.save(before);

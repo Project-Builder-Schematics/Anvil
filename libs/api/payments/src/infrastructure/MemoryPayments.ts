@@ -17,7 +17,8 @@ export class MemoryPayments implements Payments {
 
   startCharge(pending: Payment): Promise<Payment> {
     const existing = this.payments.get(pending.orderId);
-    if (existing?.isCharged) return Promise.resolve(existing);
+    if (existing && existing.status !== 'Failed')
+      return Promise.resolve(existing);
     this.payments.set(pending.orderId, pending);
     return Promise.resolve(pending);
   }

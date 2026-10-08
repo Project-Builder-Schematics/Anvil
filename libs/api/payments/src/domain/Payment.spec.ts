@@ -1,16 +1,23 @@
 import { Amount } from './Amount';
 import { Payment } from './Payment';
 
-const pending = () => Payment.pending('o1', Amount.of(4500), 'USD');
+const pending = () => Payment.pending('p1', 'o1', Amount.of(4500), 'USD');
 
 describe('Payment', () => {
   it('starts pending with what it was asked to charge', () => {
     expect(pending()).toMatchObject({
+      id: 'p1',
       orderId: 'o1',
       amount: Amount.of(4500),
       currency: 'USD',
       status: 'Pending',
     });
+  });
+
+  it('keeps its id through every transition', () => {
+    expect(pending().capture().id).toBe('p1');
+    expect(pending().fail().id).toBe('p1');
+    expect(pending().capture().refund().id).toBe('p1');
   });
 
   it('is captured or failed from pending', () => {
