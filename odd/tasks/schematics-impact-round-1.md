@@ -170,11 +170,18 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Checks at the last commit: `bun test schematics` 335 pass; `nx run-many -t lint test typecheck` green; `prettier --check .` clean. The pre-commit hook also ran eslint, `tsc -p schematics` and the schematics tests on each commit.
   - Deviation: the `_shared/testing.ts` comment change went into f3fb8b6 with the hex-route fix.
 
-- [ ] S12: use `scaffold` instead of several `create` calls where a schematic always writes the same fixed set of files into one folder. `scaffold` translates `__x__` tokens in file names and strips `.template` (see the SDK commons typings).
+- [x] S12 (9e89656): use `scaffold` instead of several `create` calls where a schematic always writes the same fixed set of files into one folder. `scaffold` translates `__x__` tokens in file names and strips `.template` (see the SDK commons typings).
   - Candidates: ng-component (4 files), ng-directive (2), ng-service (2), and the fixed part of hex-slice.
   - Keep `create` where it is justified: a conditional create-if-missing (the hex-bounded-context docs), a choice between template variants (glossary vs glossary-nested, the hex-driven-port adapter), or files in different folders (hex-route, hex-use-case).
   - Depends on the S11 verdict on whether `scaffold` keeps the fail-closed refusal over existing files: it does (see S11, first finding).
   - Proof: byte-identical output and the suite green.
+
+  Done (route: single writer; the existing tests are the RED of a refactor, so none was added):
+  - Converted: ng-component (4 files), ng-directive (2), ng-service (2). Templates moved to `files/<kind>/__name__.<ext>.template`, one `scaffold({ from, to, options })` each with the options merged. Factories: 38 lines out, 16 in (net -22: ng-component -14, ng-service -5, ng-directive -3).
+  - Skipped: hex-slice. Its files are not a fixed set: `errors.ts` is a choice between two variants, and `composition.ts` is written only for a nested slice, in another folder. The rings were already a `scaffold`.
+  - Proof, builder v0.9.11, scratch workspaces for HEAD 3f4d8a6 and for the new tree: `web-context`, then `ng-directive`, `ng-service` (with and without fields) and `ng-component` (typed inputs and outputs, and a container in a folder). `diff -r` of the 39 generated lib files and the root files: identical. Both trees refuse a second `ng-directive` run with `path-collision`.
+  - Deviation, a message regression: the engine words the collision with the path as scaffold's token names it (`.../highlight/{= .name =}.spec.ts: path-collision`) instead of `highlight.ts`. The refusal is the same. The three factory tests now assert the folder, `src/lib/<folder>/`. Suspected SDK issue (not filed): a collision over a scaffolded file names the unrendered path.
+  - Checks: `bun test schematics` 335 pass (the commit hook also ran eslint and `tsc -p schematics`); `nx run-many -t lint test typecheck` and `prettier --check .` below.
 
 ## Next step
 
