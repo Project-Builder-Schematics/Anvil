@@ -1,4 +1,7 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface DomainEvents {}
+import type { OrderEvent } from '../events';
+
+export interface DomainEvents {
+  publish(event: OrderEvent): Promise<void>;
+}
 
 export const DOMAIN_EVENTS = Symbol('DomainEvents');

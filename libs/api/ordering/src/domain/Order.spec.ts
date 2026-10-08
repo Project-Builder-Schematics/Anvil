@@ -13,6 +13,7 @@ const mouse = ProductId.of('mouse');
 const usd = (amount: number) => Money.of(amount, 'USD');
 const draft = () => Order.create(OrderId.of('ord-1'));
 const withKeyboard = () => draft().addLine(keyboard, Quantity.of(1), usd(4500));
+const paid = () => withKeyboard().place().pay();
 const summary = (order: Order) =>
   order.lines.map((line) => [
     line.productId.value,
@@ -95,6 +96,12 @@ describe('Order', () => {
       ).toThrow(refused('ORDER_NOT_EDITABLE'));
     });
 
+    it('refuses a paid order (rule 4)', () => {
+      expect(() => paid().addLine(mouse, Quantity.of(1), usd(2500))).toThrow(
+        refused('ORDER_NOT_EDITABLE'),
+      );
+    });
+
     it('refuses a cancelled order (rule 4)', () => {
       expect(() =>
         draft().cancel().addLine(keyboard, Quantity.of(1), usd(4500)),
@@ -129,10 +136,15 @@ describe('Order', () => {
       expect(() => draft().place()).toThrow(refused('ORDER_EMPTY'));
     });
 
-    it('refuses a placed order (rule 10)', () => {
-      expect(() => withKeyboard().place().place()).toThrow(
-        refused('ORDER_NOT_EDITABLE'),
-      );
+    it('places a placed order again and keeps it as it is (rule 17)', () => {
+      const placed = withKeyboard().place();
+      const again = placed.place();
+      expect(again.status).toBe('Placed');
+      expect(summary(again)).toEqual([['keyboard', 1, 4500, 'USD']]);
+    });
+
+    it('refuses a paid order (rule 10)', () => {
+      expect(() => paid().place()).toThrow(refused('ORDER_NOT_EDITABLE'));
     });
 
     it('refuses a cancelled order with the state refusal before the empty one (rules 10, 11)', () => {
@@ -147,11 +159,20 @@ describe('Order', () => {
       expect(draft().cancel().status).toBe('Cancelled');
     });
 
-    it('cancels a placed order and keeps its lines', () => {
-      const cancelled = withKeyboard().place().cancel();
-      expect(cancelled.status).toBe('Cancelled');
+    it('cancels a draft and keeps its lines', () => {
+      const cancelled = withKeyboard().cancel();
       expect(summary(cancelled)).toEqual([['keyboard', 1, 4500, 'USD']]);
       expect(cancelled.id.value).toBe('ord-1');
+    });
+
+    it('refuses a placed order (rule 19)', () => {
+      expect(() => withKeyboard().place().cancel()).toThrow(
+        refused('ORDER_NOT_CANCELLABLE'),
+      );
+    });
+
+    it('refuses a paid order', () => {
+      expect(() => paid().cancel()).toThrow(refused('ORDER_NOT_CANCELLABLE'));
     });
 
     it('does not change the order it was called on', () => {
@@ -164,6 +185,52 @@ describe('Order', () => {
       expect(() => draft().cancel().cancel()).toThrow(
         refused('ORDER_NOT_CANCELLABLE'),
       );
+    });
+  });
+
+  describe('pay (rule 12)', () => {
+    it('pays a placed order and keeps its lines', () => {
+      const result = paid();
+      expect(result.status).toBe('Paid');
+      expect(summary(result)).toEqual([['keyboard', 1, 4500, 'USD']]);
+    });
+
+    it.each([
+      ['a draft', () => withKeyboard()],
+      ['a paid order', () => paid()],
+      ['a cancelled order', () => draft().cancel()],
+    ])('refuses %s', (_name, make) => {
+      expect(() => make().pay()).toThrow(refused('ORDER_NOT_EDITABLE'));
+    });
+  });
+
+  describe('reopen (rules 13, 14)', () => {
+    it('sends a placed order back to draft and keeps its lines', () => {
+      const reopened = withKeyboard().place().reopen();
+      expect(reopened.status).toBe('Draft');
+      expect(summary(reopened)).toEqual([['keyboard', 1, 4500, 'USD']]);
+    });
+
+    it.each([
+      ['a draft', () => withKeyboard()],
+      ['a paid order', () => paid()],
+    ])('refuses %s', (_name, make) => {
+      expect(() => make().reopen()).toThrow(refused('ORDER_NOT_EDITABLE'));
+    });
+  });
+
+  describe('total (rule 12)', () => {
+    it('refuses an order without lines', () => {
+      expect(() => draft().total()).toThrow(refused('ORDER_EMPTY'));
+    });
+
+    it('sums quantity times unit price in the order currency', () => {
+      const order = withKeyboard()
+        .addLine(keyboard, Quantity.of(1), usd(4500))
+        .addLine(mouse, Quantity.of(3), usd(2500));
+      const total = order.total();
+      expect(total.amount).toBe(2 * 4500 + 3 * 2500);
+      expect(total.currency).toBe('USD');
     });
   });
 });

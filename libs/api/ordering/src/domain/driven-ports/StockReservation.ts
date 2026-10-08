@@ -1,4 +1,13 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface StockReservation {}
+import type { OrderId } from '../OrderId';
+import type { OrderLine } from '../OrderLine';
+
+export interface StockReservation {
+  reserve(
+    orderId: OrderId,
+    lines: readonly OrderLine[],
+  ): Promise<'Reserved' | 'OutOfStock'>;
+  release(orderId: OrderId): Promise<void>;
+  commit(orderId: OrderId): Promise<void>;
+}
 
 export const STOCK_RESERVATION = Symbol('StockReservation');

@@ -6,6 +6,8 @@ export const ORDERING_ERROR = {
   CURRENCY_MISMATCH: 'ordering.currency_mismatch',
   ORDER_NOT_CANCELLABLE: 'ordering.order_not_cancellable',
   ORDER_NOT_FOUND: 'ordering.order_not_found',
+  INSUFFICIENT_STOCK: 'ordering.insufficient_stock',
+  PAYMENT_DECLINED: 'ordering.payment_declined',
 } as const;
 
 export type OrderingErrorCode = keyof typeof ORDERING_ERROR;

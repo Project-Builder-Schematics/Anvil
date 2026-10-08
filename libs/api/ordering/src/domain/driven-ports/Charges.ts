@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface Charges {}
+import type { Money } from '../Money';
+import type { OrderId } from '../OrderId';
+
+export interface Charges {
+  charge(
+    orderId: OrderId,
+    total: Money,
+    paymentMethodToken: string,
+  ): Promise<'Captured' | 'Declined'>;
+}
 
 export const CHARGES = Symbol('Charges');

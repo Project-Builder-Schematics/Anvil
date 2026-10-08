@@ -1,13 +1,11 @@
 import { OrderingError } from './errors';
-import type { Money } from './Money';
+import { Money } from './Money';
 import type { OrderId } from './OrderId';
 import type { OrderLine } from './OrderLine';
 import type { ProductId } from './ProductId';
 import type { Quantity } from './Quantity';
 
-export type OrderStatus = 'Draft' | 'Placed' | 'Cancelled';
-
-const CANCELLABLE: readonly OrderStatus[] = ['Draft', 'Placed'];
+export type OrderStatus = 'Draft' | 'Placed' | 'Paid' | 'Cancelled';
 
 export class Order {
   private constructor(
@@ -43,20 +41,46 @@ export class Order {
     ]);
   }
 
+  /** A placed order places again to retry an unknown charge outcome (rule 17). */
   place(): Order {
-    this.assertDraft();
+    if (this.status !== 'Placed') this.assertDraft();
     if (this.lines.length === 0) throw new OrderingError('ORDER_EMPTY');
     return this.next('Placed', this.lines);
   }
 
+  pay(): Order {
+    this.assertPlaced();
+    return this.next('Paid', this.lines);
+  }
+
+  reopen(): Order {
+    this.assertPlaced();
+    return this.next('Draft', this.lines);
+  }
+
   cancel(): Order {
-    if (!CANCELLABLE.includes(this.status))
+    if (this.status !== 'Draft')
       throw new OrderingError('ORDER_NOT_CANCELLABLE');
     return this.next('Cancelled', this.lines);
   }
 
+  /** Lines share one currency (rule 7), so the first gives it. */
+  total(): Money {
+    const [first] = this.lines;
+    if (!first) throw new OrderingError('ORDER_EMPTY');
+    const amount = this.lines.reduce(
+      (sum, line) => sum + line.quantity.value * line.unitPrice.amount,
+      0,
+    );
+    return Money.of(amount, first.unitPrice.currency);
+  }
+
   private assertDraft(): void {
     if (this.status !== 'Draft') throw new OrderingError('ORDER_NOT_EDITABLE');
+  }
+
+  private assertPlaced(): void {
+    if (this.status !== 'Placed') throw new OrderingError('ORDER_NOT_EDITABLE');
   }
 
   private next(status: OrderStatus, lines: readonly OrderLine[]): Order {
