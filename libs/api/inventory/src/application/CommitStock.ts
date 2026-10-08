@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- stub until the use case is implemented */
 import type { Reservations } from '../domain/driven-ports/Reservations';
 import type { StockItems } from '../domain/driven-ports/StockItems';
+import { settle } from './settle';
 
 export interface CommitStockCommand {
   readonly orderId: string;
@@ -16,5 +16,5 @@ export const COMMIT_STOCK = Symbol('CommitStock');
 
 export const makeCommitStock =
   (stockItems: StockItems, reservations: Reservations): CommitStock =>
-  () =>
-    Promise.reject(new Error('CommitStock is not implemented'));
+  ({ orderId }) =>
+    settle(stockItems, reservations, orderId, 'commit');
