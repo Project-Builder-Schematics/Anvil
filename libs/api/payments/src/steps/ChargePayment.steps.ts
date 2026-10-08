@@ -20,6 +20,13 @@ When(
   },
 );
 
+When(
+  'order {string} is charged {int} {string} with token {string} twice at once',
+  async (world: PaymentsWorld, ...args: [string, number, string, string]) => {
+    await Promise.all([charged(world, ...args), charged(world, ...args)]);
+  },
+);
+
 Given(
   'order {string} has been charged {int} {string} with token {string}',
   async (world: PaymentsWorld, ...args: [string, number, string, string]) => {
@@ -66,17 +73,28 @@ Then('it is refused with {string}', (world: PaymentsWorld, code: string) => {
 Then(
   'the gateway has been charged {int} in total',
   (world: PaymentsWorld, times: number) => {
-    expect(world.charge).toHaveBeenCalledTimes(times);
+    expect(world.gateway.capturedKeys.size).toBe(times);
   },
 );
 
 Then(
   'the gateway was asked to charge {int} {string} with token {string}',
   (world: PaymentsWorld, amount: number, currency: string, token: string) => {
-    expect(world.charge).toHaveBeenCalledExactlyOnceWith({
-      amount,
-      currency,
-      paymentMethodToken: token,
-    });
+    expect(world.charge).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        amount,
+        currency,
+        paymentMethodToken: token,
+      }),
+    );
+  },
+);
+
+Then(
+  'the gateway was given the idempotency key {string}',
+  (world: PaymentsWorld, idempotencyKey: string) => {
+    expect(world.charge).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey }),
+    );
   },
 );

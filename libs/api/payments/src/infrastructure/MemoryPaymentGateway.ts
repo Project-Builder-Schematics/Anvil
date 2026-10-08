@@ -17,11 +17,21 @@ const outcomeOf = ({ status }: GatewayResult): ChargeOutcome =>
 
 @Injectable()
 export class MemoryPaymentGateway implements PaymentGateway {
-  charge({ paymentMethodToken }: ChargeRequest): Promise<ChargeOutcome> {
+  /** The keys that took money; a decline is not remembered, so its key can be charged again. */
+  readonly capturedKeys = new Set<string>();
+
+  charge({
+    paymentMethodToken,
+    idempotencyKey,
+  }: ChargeRequest): Promise<ChargeOutcome> {
+    if (this.capturedKeys.has(idempotencyKey))
+      return Promise.resolve('Captured');
     const result: GatewayResult = {
       status:
         paymentMethodToken === DECLINED_TOKEN ? 'card_declined' : 'succeeded',
     };
-    return Promise.resolve(outcomeOf(result));
+    const outcome = outcomeOf(result);
+    if (outcome === 'Captured') this.capturedKeys.add(idempotencyKey);
+    return Promise.resolve(outcome);
   }
 }

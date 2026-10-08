@@ -77,3 +77,14 @@ Feature: Charge payment
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o1" is charged 0 "USD" with token "tok_visa"
       Then it is refused with "INVALID_AMOUNT"
+
+  Rule: Rule 14 - The gateway is given the order id as the idempotency key
+
+    Scenario: the gateway is given the order id as its key
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the gateway was given the idempotency key "o1"
+
+    Scenario: two charges started together take the money once
+      When order "o1" is charged 4500 "USD" with token "tok_visa" twice at once
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the gateway has been charged 1 in total

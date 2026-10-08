@@ -31,6 +31,7 @@ export const makeChargePayment =
       amount,
       currency,
       paymentMethodToken,
+      idempotencyKey: orderId,
     });
     if (outcome === 'Declined') {
       await payments.save(pending.fail());
