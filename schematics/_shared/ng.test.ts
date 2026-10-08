@@ -5,10 +5,8 @@ import {
   parseInputs,
   parseOutputs,
   readNgLib,
-  withBarrelExport,
   withTestTarget,
 } from './ng.ts';
-import { writeBuffer } from './lib.ts';
 
 describe('parseInputs', () => {
   it('reads typed camelCase inputs', () => {
@@ -99,27 +97,11 @@ describe('withTestTarget', () => {
   });
 });
 
-describe('withBarrelExport', () => {
-  it('appends the export once', () => {
-    const once = withBarrelExport("export * from './a';\n", './b');
-
-    expect(once).toBe("export * from './a';\nexport * from './b';\n");
-    expect(withBarrelExport(once, './b')).toBe(once);
-  });
-
-  it('starts from an empty barrel', () => {
-    expect(withBarrelExport('export {};\n', './a')).toBe(
-      "export * from './a';\n",
-    );
-    expect(withBarrelExport(undefined, './a')).toBe("export * from './a';\n");
-  });
-});
-
 describe('readNgLib', () => {
   const read = (project: string) =>
     runFactoryForTest(
       async () => {
-        const lib = await readNgLib(writeBuffer(), 'libs/web/x/ui');
+        const lib = await readNgLib('libs/web/x/ui');
         throw new Error(JSON.stringify({ ...lib, project: undefined }));
       },
       {} as never,

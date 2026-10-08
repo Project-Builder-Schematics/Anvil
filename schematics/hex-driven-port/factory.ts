@@ -1,23 +1,29 @@
 import type { Input } from './schema.generated.ts';
+import { find } from '@pbuilder/sdk/commons';
+import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
   SCOPE,
   ESLINT_CONFIG,
   TSCONFIG_BASE,
-  addContextRelation,
-  addModuleEntry,
   assertDashed,
   assertPascal,
   camel,
   constant,
+  createFile,
   dashed,
   pascal,
   docsDir,
+  readRequired,
   resolveSlice,
   row,
-  withImports,
-  writeBuffer,
-  type WriteBuffer,
 } from '../_shared/lib.ts';
+import {
+  addContextRelation,
+  addModuleEntry,
+  startRun,
+  withAst,
+  type Run,
+} from '../_shared/ts.ts';
 
 type Kind = 'memory' | 'context';
 
@@ -64,21 +70,20 @@ const kindFromDoc = (
   return undefined;
 };
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input, shared?: Run) => {
+  const run = shared ?? startRun();
   const context = assertDashed(input.context, 'context');
   const name = assertPascal(input.name, 'name');
   const { code, docs } = await resolveSlice(
     context,
     assertDashed(input.slice, 'slice'),
-    buffer,
   );
   const compositionPath = `${code}/composition.ts`;
-  const composition = await buffer.readRequired(
+  await readRequired(
     compositionPath,
     `create the slice first: hex-slice --context=${context} --slice=${input.slice}`,
   );
-  const model = await buffer.readRequired(
+  const model = await readRequired(
     `${docs}/domain-model.md`,
     'the port is generated from its domain model',
   );
@@ -98,7 +103,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
     if (provider === context)
       throw new Error(`${context} cannot be its own provider`);
     const alias = `${SCOPE}/api-${provider}`;
-    const tsconfig = await buffer.readRequired(
+    const tsconfig = await readRequired(
       TSCONFIG_BASE,
       'the provider alias is read from the workspace tsconfig',
     );
@@ -107,7 +112,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
         `${alias} is not registered in ${TSCONFIG_BASE} — create the context first`,
       );
     const readmePath = `${docsDir(context)}/README.md`;
-    const readme = await buffer.readRequired(
+    const readme = await readRequired(
       readmePath,
       'the context map declares which contexts this one may depend on',
     );
@@ -136,55 +141,66 @@ export default async (input: Input, shared?: WriteBuffer) => {
   const adapterPath = `${code}/infrastructure/${adapter}.ts`;
   const portPath = `${code}/domain/driven-ports/${name}.ts`;
   // A re-run (hex-subdomain after a doc change) keeps existing files, hand-edited or not; an adapter is this port's only if it implements it.
-  const existingAdapter = await buffer.read(adapterPath);
+  const existingAdapter = await find(adapterPath).read();
   if (
     existingAdapter !== undefined &&
     !new RegExp(`\\bimplements ${name}\\b`).test(existingAdapter)
   )
     throw new Error(`${adapterPath} already exists for another port`);
-  const taken = new RegExp(
-    `import \\{[^}]*\\b${token}\\b[^}]*\\} from '(?!\\./domain/driven-ports/${name}')`,
-  );
-  if (taken.test(composition))
-    throw new Error(
-      `${token} is already taken by another port of ${code} — rename ${name}`,
-    );
-  const provided = new RegExp(`provide: ${token},\\s*useClass: (\\w+)`).exec(
-    composition,
-  )?.[1];
-  if (provided && provided !== adapter)
-    throw new Error(
-      `${token} is already provided by ${provided} in ${compositionPath} — fix the doc or remove it first`,
-    );
-  if ((await buffer.read(portPath)) === undefined)
-    await buffer.write(portPath, portSource(name));
+  if ((await find(portPath).read()) === undefined)
+    createFile(portPath, portSource(name));
   if (existingAdapter === undefined)
-    await buffer.write(
+    createFile(
       adapterPath,
       kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
     );
-  if (kind === 'context')
-    await buffer.write(
+  if (kind === 'context') {
+    await readRequired(
       ESLINT_CONFIG,
-      addContextRelation(
-        await buffer.readRequired(
-          ESLINT_CONFIG,
-          'the relation is declared in the lint boundaries',
-        ),
-        context,
-        provider,
-      ),
+      'the relation is declared in the lint boundaries',
     );
-  await buffer.write(
-    compositionPath,
-    addModuleEntry(
-      withImports(composition, [
-        `import { ${token} } from './domain/driven-ports/${name}';`,
-        `import { ${adapter} } from './infrastructure/${adapter}';`,
-      ]),
-      'providers',
-      `{ provide: ${token}, useClass: ${adapter} }`,
-    ),
-  );
-  if (!shared) buffer.flush();
+    run.edit(ESLINT_CONFIG, (file) =>
+      withAst(file, (ast) => {
+        addContextRelation(ast, context, provider);
+      }),
+    );
+  }
+  const portModule = `./domain/driven-ports/${name}`;
+  run.edit(compositionPath, async (file) => {
+    const { taken, provided } = await withAst(file, (ast) => ({
+      taken: ast
+        .getImportDeclarations()
+        .some(
+          (d) =>
+            d.getModuleSpecifierValue() !== portModule &&
+            d.getNamedImports().some((n) => n.getName() === token),
+        ),
+      provided: ast
+        .getDescendantsOfKind(astLibrary.SyntaxKind.ObjectLiteralExpression)
+        .find(
+          (o) => o.getProperty('provide')?.getText() === `provide: ${token}`,
+        )
+        ?.getProperty('useClass')
+        ?.getText()
+        .replace(/^useClass:\s*/, ''),
+    }));
+    if (taken)
+      throw new Error(
+        `${token} is already taken by another port of ${code} — rename ${name}`,
+      );
+    if (provided && provided !== adapter)
+      throw new Error(
+        `${token} is already provided by ${provided} in ${compositionPath} — fix the doc or remove it first`,
+      );
+    file.addImport(token, portModule);
+    file.addImport(adapter, `./infrastructure/${adapter}`);
+    await withAst(file, (ast) => {
+      addModuleEntry(
+        ast,
+        'providers',
+        `{ provide: ${token}, useClass: ${adapter} }`,
+      );
+    });
+  });
+  if (!shared) await run.flush();
 };

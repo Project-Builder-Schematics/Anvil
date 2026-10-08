@@ -5,13 +5,12 @@ import {
   TSCONFIG_BASE,
   addTsPath,
   assertDashed,
-  writeBuffer,
-  type WriteBuffer,
+  readRequired,
+  rewrite,
 } from '../_shared/lib.ts';
 import { webLibFiles } from '../_shared/libs.ts';
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
   if (!/^[a-z]+$/.test(input.prefix))
     throw new Error(
@@ -19,7 +18,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
     );
   const layer = input.layer ?? 'ui';
   const dir = `libs/web/shared/${name}`;
-  const tsconfig = await buffer.readRequired(
+  const tsconfig = await readRequired(
     TSCONFIG_BASE,
     'the alias is registered in the workspace tsconfig',
   );
@@ -34,9 +33,9 @@ export default async (input: Input, shared?: WriteBuffer) => {
   });
   for (const [path, template] of Object.entries(files))
     create(path, { template, options: {} });
-  await buffer.write(
+  rewrite(
     TSCONFIG_BASE,
+    tsconfig,
     addTsPath(tsconfig, `${SCOPE}/web-shared-${name}`, `./${dir}/src/index.ts`),
   );
-  if (!shared) buffer.flush();
 };

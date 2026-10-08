@@ -178,7 +178,7 @@ describe('hex-driven-port', () => {
     const first = await go({ name: 'LedgerGateway' });
 
     expect(first.tree.get('eslint.config.mjs')).toContain(
-      "const contextRelations = [\n  ['billing', 'ledger'],\n];",
+      "const contextRelations = [['billing', 'ledger']];",
     );
     expect((await go()).tree.has('eslint.config.mjs')).toBe(false);
   });

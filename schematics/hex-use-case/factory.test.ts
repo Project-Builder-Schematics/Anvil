@@ -87,7 +87,11 @@ describe('hex-use-case', () => {
       "import { ISSUE_INVOICE, makeIssueInvoice } from './application/IssueInvoice';",
     );
     expect(composition).toContain(
-      '{ provide: ISSUE_INVOICE, useFactory: makeIssueInvoice, inject: [INVOICE_REPOSITORY, CLOCK] }',
+      `{
+      provide: ISSUE_INVOICE,
+      useFactory: makeIssueInvoice,
+      inject: [INVOICE_REPOSITORY, CLOCK],
+    }`,
     );
     expect(composition).toContain('exports: [ISSUE_INVOICE]');
   });
@@ -99,7 +103,7 @@ describe('hex-use-case', () => {
       "export { ISSUE_INVOICE } from './invoicing/application/IssueInvoice';",
     );
     expect(index).toContain(
-      "export type { IssueInvoice, IssueInvoiceCommand, IssueInvoiceResult } from './invoicing/application/IssueInvoice';",
+      "export type {\n  IssueInvoice,\n  IssueInvoiceCommand,\n  IssueInvoiceResult,\n} from './invoicing/application/IssueInvoice';",
     );
     expect(index).toContain("export { BillingModule } from './composition';");
   });

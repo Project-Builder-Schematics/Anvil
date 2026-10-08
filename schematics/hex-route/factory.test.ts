@@ -3,6 +3,7 @@ import {
   after,
   billingSeed,
   DOCS,
+  flat,
   invoicingDocs,
   invoicingModel,
   LIB,
@@ -16,6 +17,13 @@ import factory from './factory.ts';
 
 const slice = `${LIB}/src/invoicing`;
 const controller = `${slice}/infrastructure/http/invoices.controller.ts`;
+
+/** The names a controller imports from @nestjs/common, sorted. */
+const nestCommon = (source: string): string[] =>
+  /import \{ ([^}]*) \} from '@nestjs\/common'/
+    .exec(source)?.[1]
+    ?.split(', ')
+    .sort() ?? [];
 
 const prepared = async (): Promise<Record<string, string>> => {
   let seed = billingSeed();
@@ -62,10 +70,14 @@ describe('hex-route', () => {
     const { tree, error } = await go();
 
     expect(error).toBeUndefined();
-    const source = tree.get(controller) ?? '';
-    expect(source).toContain(
-      "import { Body, Controller, Inject, Post, UseFilters } from '@nestjs/common';",
-    );
+    const source = flat(tree.get(controller) ?? '');
+    expect(nestCommon(source)).toEqual([
+      'Body',
+      'Controller',
+      'Inject',
+      'Post',
+      'UseFilters',
+    ]);
     expect(source).toContain("import { z } from 'zod';");
     expect(source).toContain("} from '../../application/IssueInvoice';");
     expect(source).toContain('const issueInvoiceBody = z.object({});');
@@ -89,7 +101,7 @@ describe('hex-route', () => {
     const { tree, error } = await go({ method: 'DELETE', path: '/:invoiceId' });
 
     expect(error).toBeUndefined();
-    const source = tree.get(controller) ?? '';
+    const source = flat(tree.get(controller) ?? '');
     expect(source).toContain(
       'const voidInvoiceParams = z.object({ invoiceId: z.string() });',
     );
@@ -134,10 +146,18 @@ describe('hex-route', () => {
     );
 
     expect(second.error).toBeUndefined();
-    const source = second.tree.get(controller) ?? '';
-    expect(source).toContain(
-      "import { Body, Controller, Delete, HttpCode, Inject, Param, Post, Query, UseFilters } from '@nestjs/common';",
-    );
+    const source = flat(second.tree.get(controller) ?? '');
+    expect(nestCommon(source)).toEqual([
+      'Body',
+      'Controller',
+      'Delete',
+      'HttpCode',
+      'Inject',
+      'Param',
+      'Post',
+      'Query',
+      'UseFilters',
+    ]);
     expect(source.match(/@Controller\(/g)).toHaveLength(1);
     expect(source).toContain(
       '@Inject(ISSUE_INVOICE) private readonly issueInvoiceUseCase: IssueInvoice,',
@@ -243,7 +263,7 @@ describe('hex-route', () => {
 
     it('defaults to an empty object, since Express leaves a missing body undefined and the pipe validates it as is', async () => {
       const seed = await withModel([['`{ customerId }`', '`{}`']]);
-      const source = (await go({}, seed)).tree.get(controller) ?? '';
+      const source = flat((await go({}, seed)).tree.get(controller) ?? '');
 
       expect(source).toContain(
         'const issueInvoiceBody = z.object({}).default({});',
@@ -267,7 +287,7 @@ describe('hex-route', () => {
     });
 
     it('keeps the plain empty object when the command has fields the body will carry', async () => {
-      const source = (await go()).tree.get(controller) ?? '';
+      const source = flat((await go()).tree.get(controller) ?? '');
 
       expect(source).toContain('const issueInvoiceBody = z.object({});');
     });
@@ -331,13 +351,13 @@ describe('hex-route', () => {
     });
 
     it('registers the filter on the generated controller', async () => {
-      const source = (await go()).tree.get(controller) ?? '';
+      const source = flat((await go()).tree.get(controller) ?? '');
 
       expect(source).toContain(
         "import { InvoicingErrorFilter } from './InvoicingErrorFilter';",
       );
       expect(source).toContain(
-        "@Controller('invoices')\n@UseFilters(InvoicingErrorFilter)\nexport class",
+        "@Controller('invoices') @UseFilters(InvoicingErrorFilter) export class",
       );
     });
 

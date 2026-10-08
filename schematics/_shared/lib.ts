@@ -1,21 +1,7 @@
 // Shared by the hex-* and web/ng-* schematics: naming, workspace layout, the
-// domain-model.md readers, and the text edits generators make to existing files.
+// domain-model.md readers, and the JSON edits generators make to existing files.
 
 import { create, find, replaceContent } from '@pbuilder/sdk/commons';
-
-/**
- * The engine accepts one write directive per path per run: a second `replaceContent`
- * on a file comes back as `path-collision`. One hex-subdomain run calls the leaf
- * factories once per use case and once per route, and several of those calls land on
- * the same files (the context barrel, the module, a controller). They read and write
- * through this buffer instead, and the run emits one directive per path when it flushes.
- */
-export interface WriteBuffer {
-  read(path: string): Promise<string | undefined>;
-  readRequired(path: string, hint: string): Promise<string>;
-  write(path: string, content: string): Promise<void>;
-  flush(): void;
-}
 
 /** `create` renders its content as a template; the opening delimiter is written as a literal so the file holds what it was given, as `replaceContent` does. */
 export const createFile = (path: string, content: string): void => {
@@ -25,42 +11,18 @@ export const createFile = (path: string, content: string): void => {
   });
 };
 
-export const writeBuffer = (): WriteBuffer => {
-  // What the path held before the run touched it: decides create vs replaceContent.
-  const original = new Map<string, string | undefined>();
-  const pending = new Map<string, string>();
+/** Replaces a file's content, unless the edit left it as it was. */
+export const rewrite = (path: string, before: string, after: string): void => {
+  if (after !== before) replaceContent(path, after);
+};
 
-  const source = async (path: string): Promise<string | undefined> => {
-    const content = await find(path).read();
-    if (!original.has(path)) original.set(path, content);
-    return content;
-  };
-
-  const read = async (path: string): Promise<string | undefined> =>
-    pending.has(path) ? pending.get(path) : source(path);
-
-  return {
-    read,
-    readRequired: async (path, hint) => {
-      const content = await read(path);
-      if (content === undefined) throw new Error(`${path} not found — ${hint}`);
-      return content;
-    },
-    write: async (path, content) => {
-      await source(path);
-      pending.set(path, content);
-    },
-    flush: () => {
-      for (const [path, content] of pending) {
-        const before = original.get(path);
-        if (content === before) continue;
-        if (before === undefined) createFile(path, content);
-        else replaceContent(path, content);
-      }
-      pending.clear();
-      original.clear();
-    },
-  };
+export const readRequired = async (
+  path: string,
+  hint: string,
+): Promise<string> => {
+  const content = await find(path).read();
+  if (content === undefined) throw new Error(`${path} not found — ${hint}`);
+  return content;
 };
 
 const DASHED = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -134,19 +96,18 @@ export interface SlicePaths {
 export const resolveSlice = async (
   context: string,
   slice: string,
-  buffer: WriteBuffer,
 ): Promise<SlicePaths> => {
   const docs = docsDir(context);
   const src = `${apiLibDir(context)}/src`;
-  if ((await buffer.read(`${docs}/${slice}/${DOMAIN_MODEL}`)) !== undefined) {
+  if ((await find(`${docs}/${slice}/${DOMAIN_MODEL}`).read()) !== undefined) {
     return {
       code: `${src}/${slice}`,
       docs: `${docs}/${slice}`,
       segment: `${slice}/`,
     };
   }
-  const readme = await buffer.read(`${docs}/README.md`);
-  const inline = (await buffer.read(`${docs}/${DOMAIN_MODEL}`)) !== undefined;
+  const readme = await find(`${docs}/README.md`).read();
+  const inline = (await find(`${docs}/${DOMAIN_MODEL}`).read()) !== undefined;
   if (
     inline &&
     readme !== undefined &&
@@ -261,65 +222,7 @@ export const parseRoute = (
     : undefined;
 };
 
-// --- Text edits to existing files.
-
-export const EMPTY_MODULE = 'export {};\n';
-
-/** Adds import lines after the last existing import (or at the top); skips ones already present. */
-export const withImports = (source: string, importLines: string[]): string => {
-  const base = source === EMPTY_MODULE ? '' : source;
-  const missing = importLines.filter((line) => !base.includes(line));
-  if (missing.length === 0) return base;
-
-  const lines = base.split('\n');
-  let last = -1;
-  lines.forEach((line, i) => {
-    if (/^import\s/.test(line)) last = i;
-  });
-  // An import ends on the line holding its module string: `from '…'`, or the bare `'…'` of a side-effect import.
-  while (
-    last >= 0 &&
-    !/['"][^'"]+['"];?\s*$/.test(lines[last] ?? '') &&
-    last < lines.length - 1
-  )
-    last += 1;
-
-  if (last === -1) return `${missing.join('\n')}\n${base ? `\n${base}` : ''}`;
-  lines.splice(last + 1, 0, ...missing);
-  return lines.join('\n');
-};
-
-/** Appends a statement at the end of a module; skips it when already present. */
-export const withStatement = (source: string, statement: string): string => {
-  const base = source === EMPTY_MODULE ? '' : source;
-  if (base.includes(statement)) return base;
-  const body = base.replace(/\n+$/, '');
-  return `${body}${body ? '\n\n' : ''}${statement}\n`;
-};
-
-/** Adds names to the `import { … } from '<from>'` line, creating it when absent. */
-export const withNamedImports = (
-  source: string,
-  from: string,
-  names: string[],
-): string => {
-  const pattern = new RegExp(
-    `^import \\{([^}]*)\\} from '${from.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}';$`,
-    'm',
-  );
-  const existing = pattern.exec(source);
-  const merged = [
-    ...new Set([
-      ...(existing?.[1] ?? '')
-        .split(',')
-        .map((n) => n.trim())
-        .filter(Boolean),
-      ...names,
-    ]),
-  ].sort();
-  const line = `import { ${merged.join(', ')} } from '${from}';`;
-  return existing ? source.replace(pattern, line) : withImports(source, [line]);
-};
+// --- Edits to JSON files, which have no dialect.
 
 const PATHS_KEY = '"paths"';
 
@@ -357,151 +260,4 @@ export const addTsPath = (
       ? `\n${entry}`
       : `${inner.trimEnd().replace(/,?$/, ',')}\n${entry}`;
   return `${tsconfig.slice(0, open + 1)}${body}\n${closingIndent}${tsconfig.slice(close)}`;
-};
-
-/** Registers a bounded context in the root lint config's `contexts` list, which feeds the module-boundary constraints. */
-export const addLintContext = (config: string, context: string): string => {
-  const list = /const contexts = \[([\s\S]*?)\];/.exec(config);
-  if (!list)
-    throw new Error(
-      'eslint.config.mjs has no `const contexts = [...]` list to extend',
-    );
-  const names = [...(list[1] ?? '').matchAll(/'([^']+)'/g)].map(
-    (m) => m[1] ?? '',
-  );
-  if (names.includes(context)) return config;
-  const items = [...names, context].map((name) => `  '${name}',`).join('\n');
-  return config.replace(list[0], `const contexts = [\n${items}\n];`);
-};
-
-/** The `[…]` assigned to `const <name> =`: its span in the config, `;` included, and the text between the brackets. */
-const arrayLiteral = (
-  config: string,
-  name: string,
-): { start: number; end: number; inner: string } | undefined => {
-  const head = new RegExp(`const ${name} = \\[`).exec(config);
-  if (!head) return undefined;
-  const open = head.index + head[0].length - 1;
-  const skipTo = (token: string, from: number): number => {
-    const at = config.indexOf(token, from);
-    return at === -1 ? config.length : at + token.length - 1;
-  };
-  let depth = 0;
-  for (let i = open; i < config.length; i += 1) {
-    const c = config[i] ?? '';
-    if (c === "'" || c === '"') i = skipTo(c, i + 1);
-    else if (config.startsWith('//', i)) i = skipTo('\n', i);
-    else if (config.startsWith('/*', i)) i = skipTo('*/', i + 2);
-    else if (c === '[') depth += 1;
-    else if (c === ']' && (depth -= 1) === 0)
-      return {
-        start: head.index,
-        end: config[i + 1] === ';' ? i + 2 : i + 1,
-        inner: config.slice(open + 1, i),
-      };
-  }
-  return undefined;
-};
-
-const NAME_PAIR = /\[\s*(['"])([^'"]+)\1\s*,\s*(['"])([^'"]+)\3\s*,?\s*\]/g;
-
-/** Declares in the root lint config that `from` may depend on `to`'s barrel; the module-boundary constraints are built from this list. */
-export const addContextRelation = (
-  config: string,
-  from: string,
-  to: string,
-): string => {
-  const list = arrayLiteral(config, 'contextRelations');
-  if (!list)
-    throw new Error(
-      'eslint.config.mjs has no `const contextRelations = [...]` list to extend',
-    );
-  const inner = list.inner.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
-  if (inner.replace(NAME_PAIR, '').replace(/[\s,]/g, '') !== '')
-    throw new Error(
-      "contextRelations has an entry that is not a ['from', 'to'] pair of names",
-    );
-  const edges = [...inner.matchAll(NAME_PAIR)].map(
-    (m) => [m[2] ?? '', m[4] ?? ''] as const,
-  );
-  if (edges.some(([a, b]) => a === from && b === to)) return config;
-  const items = [...edges, [from, to]]
-    .map(([a, b]) => `  ['${a}', '${b}'],`)
-    .join('\n');
-  return `${config.slice(0, list.start)}const contextRelations = [\n${items}\n];${config.slice(list.end)}`;
-};
-
-// --- Nest module metadata: `@Module({ imports, controllers, providers, exports })`.
-
-const MODULE_KEYS = ['imports', 'controllers', 'providers', 'exports'] as const;
-type ModuleKey = (typeof MODULE_KEYS)[number];
-
-/** Splits `text` on commas that are not nested in brackets or strings. */
-const splitTopLevel = (text: string): string[] => {
-  const parts: string[] = [];
-  let depth = 0;
-  let quote = '';
-  let start = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    const c = text[i] ?? '';
-    if (quote) {
-      if (c === quote && text[i - 1] !== '\\') quote = '';
-    } else if (c === "'" || c === '"' || c === '`') quote = c;
-    else if ('([{'.includes(c)) depth += 1;
-    else if (')]}'.includes(c)) depth -= 1;
-    else if (c === ',' && depth === 0) {
-      parts.push(text.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(text.slice(start));
-  return parts.map((p) => p.trim()).filter(Boolean);
-};
-
-const squash = (text: string): string => text.replace(/\s+/g, '');
-
-/** Adds `entry` to one array of the file's `@Module({…})` metadata; the metadata is re-rendered in a fixed key order. */
-export const addModuleEntry = (
-  source: string,
-  key: ModuleKey,
-  entry: string,
-): string => {
-  const open = source.indexOf('@Module({');
-  if (open === -1) throw new Error('no @Module({…}) decorator to extend');
-  const bodyStart = open + '@Module({'.length;
-  let depth = 1;
-  let end = bodyStart;
-  for (; end < source.length && depth > 0; end += 1) {
-    if (source[end] === '{') depth += 1;
-    if (source[end] === '}') depth -= 1;
-  }
-  const body = source.slice(bodyStart, end - 1);
-
-  const arrays = new Map<string, string[]>();
-  const rest: string[] = [];
-  for (const prop of splitTopLevel(body)) {
-    const m = /^(\w+)\s*:\s*\[([\s\S]*)\]$/.exec(prop);
-    if (m) arrays.set(m[1] ?? '', splitTopLevel(m[2] ?? ''));
-    else rest.push(prop);
-  }
-  const items = arrays.get(key) ?? [];
-  if (!items.some((item) => squash(item) === squash(entry))) items.push(entry);
-  arrays.set(key, items);
-
-  const render = (name: string, values: string[]): string => {
-    const inline = `  ${name}: [${values.join(', ')}],`;
-    return inline.length <= 80
-      ? inline
-      : `  ${name}: [\n${values.map((v) => `    ${v},`).join('\n')}\n  ],`;
-  };
-  const lines = [
-    ...MODULE_KEYS.filter((k) => arrays.has(k)).map((k) =>
-      render(k, arrays.get(k) ?? []),
-    ),
-    ...[...arrays]
-      .filter(([k]) => !(MODULE_KEYS as readonly string[]).includes(k))
-      .map(([k, v]) => render(k, v)),
-    ...rest.map((r) => `  ${r},`),
-  ];
-  return `${source.slice(0, bodyStart)}\n${lines.join('\n')}\n${source.slice(end - 1)}`;
 };

@@ -1,23 +1,28 @@
 import type { Input } from './schema.generated.ts';
+import { find } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
-  addModuleEntry,
   apiLibDir,
   assertDashed,
   assertPascal,
   camel,
   constant,
+  createFile,
   dashed,
   docsDir,
+  readRequired,
   resolveSlice,
   row,
   table,
-  withImports,
-  withStatement,
-  writeBuffer,
-  type WriteBuffer,
 } from '../_shared/lib.ts';
 import { stepsSource } from '../_shared/gherkin.ts';
+import {
+  addModuleEntry,
+  addReExport,
+  startRun,
+  withAst,
+  type Run,
+} from '../_shared/ts.ts';
 
 const asPorts = (spec: string): string[] =>
   spec
@@ -56,12 +61,11 @@ export const make${name} =
  * phrase bound in one of them, in any subdomain, cannot be bound again.
  */
 const siblingSteps = async (
-  buffer: WriteBuffer,
   context: string,
   segment: string,
   own: { code: string; docs: string; stepsFile: string },
 ): Promise<string[]> => {
-  const readme = (await buffer.read(`${docsDir(context)}/README.md`)) ?? '';
+  const readme = (await find(`${docsDir(context)}/README.md`).read()) ?? '';
   const slices =
     segment === ''
       ? [own]
@@ -78,38 +82,38 @@ const siblingSteps = async (
         });
   const files = await Promise.all(
     slices.map(async ({ code, docs }) =>
-      table((await buffer.read(`${docs}/${DOMAIN_MODEL}`)) ?? '', 'Use cases')
+      table((await find(`${docs}/${DOMAIN_MODEL}`).read()) ?? '', 'Use cases')
         .map((r) => `${code}/steps/${r[0] ?? ''}.steps.ts`)
         .filter((file) => file !== own.stepsFile),
     ),
   );
   return Promise.all(
-    files.flat().map(async (file) => (await buffer.read(file)) ?? ''),
+    files.flat().map(async (file) => (await find(file).read()) ?? ''),
   );
 };
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input, shared?: Run) => {
+  const run = shared ?? startRun();
   const context = assertDashed(input.context, 'context');
   const slice = assertDashed(input.slice, 'slice');
   const name = assertPascal(input.name, 'name');
 
-  const { code, docs, segment } = await resolveSlice(context, slice, buffer);
+  const { code, docs, segment } = await resolveSlice(context, slice);
   const compositionPath = `${code}/composition.ts`;
   const indexPath = `${apiLibDir(context)}/src/index.ts`;
-  const composition = await buffer.readRequired(
+  await readRequired(
     compositionPath,
     `create the slice first: hex-slice --context=${context} --slice=${slice}`,
   );
-  const index = await buffer.readRequired(
+  await readRequired(
     indexPath,
     `create the context first: hex-bounded-context --context=${context}`,
   );
   // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
-  if ((await buffer.read(`${code}/application/${name}.ts`)) !== undefined)
+  if ((await find(`${code}/application/${name}.ts`).read()) !== undefined)
     return;
 
-  const model = await buffer.readRequired(
+  const model = await readRequired(
     `${docs}/${DOMAIN_MODEL}`,
     'the use case is generated from its domain model',
   );
@@ -128,7 +132,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
   }
   for (const port of ports) {
     if (
-      (await buffer.read(`${code}/domain/driven-ports/${port}.ts`)) ===
+      (await find(`${code}/domain/driven-ports/${port}.ts`).read()) ===
       undefined
     ) {
       throw new Error(
@@ -142,57 +146,44 @@ export default async (input: Input, shared?: WriteBuffer) => {
     `${dashed(name)}.feature`;
   // Docs are the contract: a row that links a feature the docs don't have is a gap in the doc,
   // never something for the generator to invent.
-  const feature = await buffer.read(`${docs}/${featureFile}`);
+  const feature = await find(`${docs}/${featureFile}`).read();
   if (feature === undefined) {
     throw new Error(
       `hex-use-case: ${docs}/${featureFile} does not exist — the use-case row links a feature the docs do not have`,
     );
   }
-  const siblings = await siblingSteps(buffer, context, segment, {
+  const siblings = await siblingSteps(context, segment, {
     code,
     docs,
     stepsFile: `${code}/steps/${name}.steps.ts`,
   });
 
-  await buffer.write(
-    `${code}/application/${name}.ts`,
-    useCaseSource(name, ports),
-  );
-  await buffer.write(
-    `${code}/steps/${name}.steps.ts`,
-    stepsSource(feature, siblings),
-  );
+  createFile(`${code}/application/${name}.ts`, useCaseSource(name, ports));
+  createFile(`${code}/steps/${name}.steps.ts`, stepsSource(feature, siblings));
 
   const token = constant(dashed(name));
   const tokens = ports.map((port) => constant(dashed(port)));
-  const imported = withImports(composition, [
-    `import { ${token}, make${name} } from './application/${name}';`,
-    ...ports.map(
-      (port, i) =>
-        `import { ${tokens[i] ?? ''} } from './domain/driven-ports/${port}';`,
-    ),
-  ]);
-  await buffer.write(
-    compositionPath,
-    addModuleEntry(
+  run.edit(compositionPath, (file) => {
+    file.addImport(token, `./application/${name}`);
+    file.addImport(`make${name}`, `./application/${name}`);
+    ports.forEach((port, i) => {
+      file.addImport(tokens[i] ?? '', `./domain/driven-ports/${port}`);
+    });
+    return withAst(file, (ast) => {
       addModuleEntry(
-        imported,
+        ast,
         'providers',
         `{ provide: ${token}, useFactory: make${name}, inject: [${tokens.join(', ')}] }`,
-      ),
-      'exports',
-      token,
-    ),
+      );
+      addModuleEntry(ast, 'exports', token);
+    });
+  });
+  run.edit(indexPath, (file) =>
+    withAst(file, (ast) => {
+      const from = `./${segment}application/${name}`;
+      addReExport(ast, from, [token]);
+      addReExport(ast, from, [name, `${name}Command`, `${name}Result`], true);
+    }),
   );
-  await buffer.write(
-    indexPath,
-    withStatement(
-      withStatement(
-        index,
-        `export { ${token} } from './${segment}application/${name}';`,
-      ),
-      `export type { ${name}, ${name}Command, ${name}Result } from './${segment}application/${name}';`,
-    ),
-  );
-  if (!shared) buffer.flush();
+  if (!shared) await run.flush();
 };

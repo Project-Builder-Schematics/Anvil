@@ -1,17 +1,11 @@
 import type { Input } from './schema.generated.ts';
 import { create } from '@pbuilder/sdk/commons';
-import {
-  assertDashed,
-  pascal,
-  writeBuffer,
-  type WriteBuffer,
-} from '../_shared/lib.ts';
-import { readNgLib, withBarrelExport, withTestTarget } from '../_shared/ng.ts';
+import { assertDashed, pascal } from '../_shared/lib.ts';
+import { readNgLib, registerInLib } from '../_shared/ng.ts';
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
-  const lib = await readNgLib(buffer, input.lib.replace(/\/+$/, ''));
+  const lib = await readNgLib(input.lib.replace(/\/+$/, ''));
   if (lib.type !== 'ui')
     throw new Error(
       `${lib.name} is a ${lib.type || 'untyped'} lib: directives live in ui libs`,
@@ -56,14 +50,5 @@ describe('${cls}', () => {
     options: {},
   });
 
-  const barrelPath = `${lib.dir}/src/index.ts`;
-  await buffer.write(
-    barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
-  );
-  await buffer.write(
-    `${lib.dir}/project.json`,
-    withTestTarget(lib.project, lib.dir),
-  );
-  if (!shared) buffer.flush();
+  await registerInLib(lib, `./lib/${folder}/${name}`);
 };

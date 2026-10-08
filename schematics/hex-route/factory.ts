@@ -1,25 +1,25 @@
 import type { Input } from './schema.generated.ts';
+import { find } from '@pbuilder/sdk/commons';
+import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
   SCOPE,
-  addModuleEntry,
   apiLibDir,
   assertDashed,
   assertPascal,
   camel,
   constant,
+  createFile,
   dashed,
   errorCodes,
   errorStatuses,
   parseRoute,
   pascal,
+  readRequired,
   resolveSlice,
   row,
   table,
-  withImports,
-  withNamedImports,
-  writeBuffer,
-  type WriteBuffer,
 } from '../_shared/lib.ts';
+import { addModuleEntry, startRun, withAst, type Run } from '../_shared/ts.ts';
 
 const APP_MODULE = 'apps/api/src/app/app.module.ts';
 
@@ -71,42 +71,23 @@ const operation = ({ useCase, method, path, status, fields }: Operation) => {
     // Express leaves a body-less request's body undefined, and the pipe validates it as is.
     `const ${name}${section} = z.object({})${section === 'Body' && fields?.every((f) => params.includes(f)) ? '.default({})' : ''};`,
   ];
-  const route = path === '/' ? '' : `'${path.replace(/^\//, '')}'`;
+  const route = path === '/' ? [] : [`'${path.replace(/^\//, '')}'`];
   const decorators = [
-    `  @${HTTP[method] ?? ''}(${route})`,
+    { name: HTTP[method] ?? '', arguments: route },
     ...(status === defaultStatus(method)
       ? []
-      : [`  @HttpCode(${String(status)})`]),
+      : [{ name: 'HttpCode', arguments: [String(status)] }]),
   ];
   const spread =
     inputs.length === 1
       ? (inputs[0]?.variable ?? '')
       : `{ ${inputs.map((i) => `...${i.variable}`).join(', ')} }`;
-  const handler = `${decorators.join('\n')}
-  ${name}(
-${inputs.map((i) => `    @${i.decorator}({ schema: ${i.schema} }) ${i.variable}: z.infer<typeof ${i.schema}>,`).join('\n')}
-  ): Promise<${useCase}Result> {
-    return this.${name}UseCase(${spread});
-  }`;
   const nest = [
-    'Controller',
-    'Inject',
     HTTP[method] ?? '',
     ...inputs.map((i) => i.decorator),
     ...(status === defaultStatus(method) ? [] : ['HttpCode']),
   ];
-  return { name, schemas, handler, nest, decorators };
-};
-
-/** The decorator lines above the controller's method `name`, or undefined when it has no such method. */
-const decoratorsOf = (controller: string, name: string): string | undefined => {
-  const lines = controller.split('\n');
-  const at = lines.findIndex((line) => line.startsWith(`  ${name}(`));
-  if (at === -1) return undefined;
-  const decorators: string[] = [];
-  for (let i = at - 1; (lines[i] ?? '').startsWith('  @'); i -= 1)
-    decorators.unshift(lines[i] ?? '');
-  return decorators.join('\n');
+  return { name, schemas, inputs, decorators, spread, nest };
 };
 
 /** Maps the domain errors the Answers cells cite to their status; an error nothing cites answers 500. */
@@ -149,21 +130,29 @@ export class ${pascal(slice)}ErrorFilter extends BaseExceptionFilter {
 `;
 };
 
-const injection = (useCase: string): string =>
-  `    @Inject(${constant(dashed(useCase))}) private readonly ${camel(useCase)}UseCase: ${useCase},`;
+const importTypes = (
+  ast: astLibrary.SourceFile,
+  from: string,
+  names: string[],
+): void => {
+  const declaration = ast.getImportDeclarationOrThrow(from);
+  const present = declaration.getNamedImports().map((n) => n.getName());
+  declaration.addNamedImports(
+    names
+      .filter((name) => !present.includes(name))
+      .map((name) => ({ name, isTypeOnly: true })),
+  );
+};
 
-const applicationImport = (useCase: string): string =>
-  `import { ${constant(dashed(useCase))}, type ${useCase}, type ${useCase}Result } from '../../application/${useCase}';`;
-
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input, shared?: Run) => {
+  const run = shared ?? startRun();
   const context = assertDashed(input.context, 'context');
   const slice = assertDashed(input.slice, 'slice');
   const resource = assertDashed(input.resource, 'resource');
-  const { code, docs } = await resolveSlice(context, slice, buffer);
+  const { code, docs } = await resolveSlice(context, slice);
 
   // The doc's Driving adapters row for this method + resource (+ path) decides what the flags may only confirm.
-  const model = await buffer.readRequired(
+  const model = await readRequired(
     `${docs}/domain-model.md`,
     'the route is generated from its domain model',
   );
@@ -226,111 +215,138 @@ export default async (input: Input, shared?: WriteBuffer) => {
   });
 
   const lib = apiLibDir(context);
-  const index = await buffer.readRequired(
-    `${lib}/src/index.ts`,
+  const indexPath = `${lib}/src/index.ts`;
+  await readRequired(
+    indexPath,
     `create the context first: hex-bounded-context --context=${context}`,
   );
   const token = constant(dashed(useCase));
-  if (!new RegExp(`export \\{[^}]*\\b${token}\\b[^}]*\\} from`).test(index)) {
-    throw new Error(
-      `@${context} does not export ${token} — run hex-use-case --name=${useCase} first`,
+  run.edit(indexPath, async (file) => {
+    const exported = await withAst(file, (ast) =>
+      ast
+        .getExportDeclarations()
+        .some((d) => d.getNamedExports().some((e) => e.getName() === token)),
     );
-  }
+    if (!exported)
+      throw new Error(
+        `@${context} does not export ${token} — run hex-use-case --name=${useCase} first`,
+      );
+  });
   const compositionPath = `${code}/composition.ts`;
-  const composition = await buffer.readRequired(
+  await readRequired(
     compositionPath,
     `create the slice first: hex-slice --context=${context} --slice=${slice}`,
   );
-  const app = await buffer.readRequired(
+  await readRequired(
     APP_MODULE,
     'the context module is registered in the API AppModule',
   );
 
   const controllerPath = `${code}/infrastructure/http/${resource}.controller.ts`;
-  const controller = await buffer.read(controllerPath);
   const className = `${pascal(resource)}Controller`;
-  const handled =
-    controller === undefined ? undefined : decoratorsOf(controller, op.name);
-  // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
-  if (handled === op.decorators.join('\n')) return;
-  if (handled !== undefined)
-    throw new Error(
-      `${className} already handles ${useCase} on another route — one controller method per use case`,
-    );
-  if (controller?.split('\n').includes(op.decorators[0] ?? ''))
-    throw new Error(
-      `${input.method} /${resource}${path === '/' ? '' : path} is already answered by ${className}`,
-    );
-  if (controller === undefined) {
-    const filter = `${pascal(slice)}ErrorFilter`;
-    const filtered = errorCodes(model).length > 0;
+  const filter = `${pascal(slice)}ErrorFilter`;
+  const filtered = errorCodes(model).length > 0;
+  const created = (await find(controllerPath).read()) === undefined;
+  if (created) {
     if (filtered)
-      await buffer.write(
+      createFile(
         `${code}/infrastructure/http/${filter}.ts`,
         errorFilterSource(slice, errorStatuses(model)),
       );
-    await buffer.write(
+    createFile(
       controllerPath,
-      `${withNamedImports(
-        withImports(`import { z } from 'zod';\n`, [
-          applicationImport(useCase),
-          ...(filtered ? [`import { ${filter} } from './${filter}';`] : []),
-        ]),
-        '@nestjs/common',
-        [...op.nest, ...(filtered ? ['UseFilters'] : [])],
-      )}
-${op.schemas.join('\n')}
-
-@Controller('${resource}')${filtered ? `\n@UseFilters(${filter})` : ''}
-export class ${className} {
-  constructor(
-${injection(useCase)}
-  ) {}
-
-${op.handler}
-}
-`,
-    );
-  } else {
-    const withSchemas = controller.replace(
-      /\n@Controller\(/,
-      `\n${op.schemas.join('\n')}\n\n@Controller(`,
-    );
-    const withInjection = withSchemas.replace(
-      /\n {2}\) \{\}/,
-      `\n${injection(useCase)}\n  ) {}`,
-    );
-    const withHandler = withInjection.replace(/\}\n$/, `\n${op.handler}\n}\n`);
-    await buffer.write(
-      controllerPath,
-      withNamedImports(
-        withImports(withHandler, [applicationImport(useCase)]),
-        '@nestjs/common',
-        op.nest,
-      ),
+      `@Controller('${resource}')\nexport class ${className} {}\n`,
     );
   }
+  const application = `../../application/${useCase}`;
+  const routeDecorators = op.decorators.map(
+    (d) => `@${d.name}(${d.arguments.join(', ')})`,
+  );
+  run.edit(controllerPath, async (file) => {
+    const seen = await withAst(file, (ast) => {
+      const cls = ast.getClass(className);
+      if (!cls) throw new Error(`${controllerPath} has no ${className}`);
+      const same = cls
+        .getMethod(op.name)
+        ?.getDecorators()
+        .map((d) => d.getText());
+      return {
+        same,
+        answered: cls
+          .getMethods()
+          .some((m) =>
+            m.getDecorators().some((d) => d.getText() === routeDecorators[0]),
+          ),
+      };
+    });
+    // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
+    if (seen.same?.join('\n') === routeDecorators.join('\n')) return;
+    if (seen.same !== undefined)
+      throw new Error(
+        `${className} already handles ${useCase} on another route — one controller method per use case`,
+      );
+    if (seen.answered)
+      throw new Error(
+        `${input.method} /${resource}${path === '/' ? '' : path} is already answered by ${className}`,
+      );
+    for (const name of new Set([
+      'Controller',
+      'Inject',
+      ...op.nest,
+      ...(created && filtered ? ['UseFilters'] : []),
+    ]))
+      file.addImport(name, '@nestjs/common');
+    file.addImport('z', 'zod');
+    file.addImport(token, application);
+    if (created && filtered) file.addImport(filter, `./${filter}`);
+    await withAst(file, (ast) => {
+      importTypes(ast, application, [useCase, `${useCase}Result`]);
+      const common = ast.getImportDeclarationOrThrow('@nestjs/common');
+      const names = common.getNamedImports().map((n) => n.getName());
+      common.removeNamedImports();
+      common.addNamedImports(names.sort());
+      const cls = ast.getClassOrThrow(className);
+      ast.insertStatements(
+        cls.getChildIndex(),
+        `${astLibrary.Node.isImportDeclaration(cls.getPreviousSibling()) ? '\n' : ''}${op.schemas.join('\n')}`,
+      );
+      if (created && filtered)
+        cls.addDecorator({ name: 'UseFilters', arguments: [filter] });
+      (cls.getConstructors()[0] ?? cls.addConstructor()).addParameter({
+        name: `${camel(useCase)}UseCase`,
+        type: useCase,
+        scope: astLibrary.Scope.Private,
+        isReadonly: true,
+        decorators: [{ name: 'Inject', arguments: [token] }],
+      });
+      cls.addMethod({
+        name: op.name,
+        decorators: op.decorators,
+        parameters: op.inputs.map((i) => ({
+          name: i.variable,
+          type: `z.infer<typeof ${i.schema}>`,
+          decorators: [
+            { name: i.decorator, arguments: [`{ schema: ${i.schema} }`] },
+          ],
+        })),
+        returnType: `Promise<${useCase}Result>`,
+        statements: `return this.${op.name}UseCase(${op.spread});`,
+      });
+    });
+  });
 
-  await buffer.write(
-    compositionPath,
-    addModuleEntry(
-      withImports(composition, [
-        `import { ${className} } from './infrastructure/http/${resource}.controller';`,
-      ]),
-      'controllers',
-      className,
-    ),
-  );
+  run.edit(compositionPath, (file) => {
+    file.addImport(className, `./infrastructure/http/${resource}.controller`);
+    return withAst(file, (ast) => {
+      addModuleEntry(ast, 'controllers', className);
+    });
+  });
   const contextModule = `${pascal(context)}Module`;
-  await buffer.write(
-    APP_MODULE,
-    addModuleEntry(
-      withImports(app, [
-        `import { ${contextModule} } from '${SCOPE}/api-${context}';`,
-      ]),
-      'imports',
-      contextModule,
-    ),
-  );
-  if (!shared) buffer.flush();
+  run.edit(APP_MODULE, (file) => {
+    file.addImport(contextModule, `${SCOPE}/api-${context}`);
+    return withAst(file, (ast) => {
+      addModuleEntry(ast, 'imports', contextModule);
+    });
+  });
+  if (!shared) await run.flush();
 };

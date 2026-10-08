@@ -1,6 +1,7 @@
 // Fixtures shared by the schematic tests: a miniature workspace and a hand-written domain model.
 
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
+import { format } from 'prettier';
 import { apiLibFiles, webLibFiles } from './libs.ts';
 
 export const tsconfigBase = `{
@@ -115,20 +116,47 @@ export const billingSeed = (
   ...over,
 });
 
+/** A source on one line, trailing commas in braces and brackets dropped, so an assertion does not depend on where prettier wrapped it. */
+export const flat = (source: string): string =>
+  source.replace(/\s+/g, ' ').replace(/, ([}\]])/g, ' $1');
+
 export const packageDir = (schematic: string): string =>
   `${import.meta.dir}/../${schematic}`;
 
-/** Runs a factory on a seeded tree; the result's tree holds only what the run committed. */
-export const run = (
+/**
+ * Runs a factory on a seeded tree; the result's tree holds only what the run committed. The
+ * TypeScript files the run edited come back prettier-formatted, as they do after the
+ * `prettier --write` step the skill asks for, since the dialect prints with its own quotes.
+ */
+export const run = async (
   factory: (input: never, shared?: never) => unknown,
   schematic: string,
   input: Record<string, unknown>,
   seed: Record<string, string>,
-) =>
-  runFactoryForTest(factory as never, input as never, {
+) => {
+  const result = await runFactoryForTest(factory as never, input as never, {
     packageDir: packageDir(schematic),
     seed,
   });
+  const tree = new Map(result.tree);
+  for (const batch of result.emitted) {
+    for (const directive of batch.instructions) {
+      if (
+        directive.op !== 'modify' ||
+        !/\.(ts|mjs)$/.test(directive.modify.path)
+      )
+        continue;
+      const { path } = directive.modify;
+      const content = tree.get(path);
+      if (content !== undefined)
+        tree.set(
+          path,
+          await format(content, { parser: 'typescript', singleQuote: true }),
+        );
+    }
+  }
+  return { ...result, tree };
+};
 
 /** The workspace after a run: the seed with the committed writes laid over it. */
 export const after = (

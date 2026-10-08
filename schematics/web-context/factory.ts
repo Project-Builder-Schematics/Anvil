@@ -3,25 +3,26 @@ import {
   ESLINT_CONFIG,
   SCOPE,
   TSCONFIG_BASE,
-  addLintContext,
   addTsPath,
   assertDashed,
   createFile,
-  writeBuffer,
-  type WriteBuffer,
+  readRequired,
+  rewrite,
 } from '../_shared/lib.ts';
 import { webLibFiles, type WebLayer } from '../_shared/libs.ts';
+import { addLintContext, startRun, withAst } from '../_shared/ts.ts';
 
 const LAYERS: WebLayer[] = ['ui', 'feature', 'data-access', 'domain'];
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
+  const run = startRun();
   const context = assertDashed(input.context, 'context');
-  let tsconfig = await buffer.readRequired(
+  const original = await readRequired(
     TSCONFIG_BASE,
     'the aliases are registered in the workspace tsconfig',
   );
-  const lint = await buffer.readRequired(
+  let tsconfig = original;
+  await readRequired(
     ESLINT_CONFIG,
     'the context is registered in the lint boundary list',
   );
@@ -44,7 +45,11 @@ export default async (input: Input, shared?: WriteBuffer) => {
       `./${dir}/src/index.ts`,
     );
   }
-  await buffer.write(TSCONFIG_BASE, tsconfig);
-  await buffer.write(ESLINT_CONFIG, addLintContext(lint, context));
-  if (!shared) buffer.flush();
+  rewrite(TSCONFIG_BASE, original, tsconfig);
+  run.edit(ESLINT_CONFIG, (file) =>
+    withAst(file, (ast) => {
+      addLintContext(ast, context);
+    }),
+  );
+  await run.flush();
 };

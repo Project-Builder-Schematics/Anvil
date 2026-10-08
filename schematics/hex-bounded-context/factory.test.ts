@@ -88,7 +88,7 @@ describe('hex-bounded-context: the lib', () => {
     const { tree } = await go();
 
     expect(tree.get('eslint.config.mjs')).toContain(
-      "  'catalog',\n  'tenancy',\n];",
+      "const contexts = ['ledger', 'catalog', 'tenancy'];",
     );
   });
 

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { runFactoryForTest } from '@pbuilder/sdk/testing';
 import {
-  addContextRelation,
-  addLintContext,
-  addModuleEntry,
   addTsPath,
   assertDashed,
   assertPascal,
@@ -16,13 +13,12 @@ import {
   pascal,
   sentence,
   title,
+  readRequired,
   resolveSlice,
+  rewrite,
   row,
   table,
-  withImports,
-  withNamedImports,
-  withStatement,
-  writeBuffer,
+  createFile,
 } from './lib.ts';
 
 describe('naming', () => {
@@ -44,94 +40,39 @@ describe('naming', () => {
   });
 });
 
-describe('writeBuffer', () => {
-  it('emits one directive per path however many times it is written', async () => {
-    const factory = async () => {
-      const buffer = writeBuffer();
-      await buffer.write('a.txt', 'one');
-      await buffer.write('a.txt', 'two');
-      await buffer.write('b.txt', 'new');
-      buffer.flush();
-    };
-    const result = await runFactoryForTest(factory, {} as never, {
-      seed: { 'a.txt': 'zero' },
-    });
+describe('file helpers', () => {
+  it('keeps the template delimiter in a new file literal, as in a replaced one', async () => {
+    const result = await runFactoryForTest(() => {
+      createFile('new.md', 'use {= as is, then {= again');
+    }, {} as never);
 
-    expect(result.error).toBeUndefined();
-    expect(result.tree.get('a.txt')).toBe('two');
-    expect(result.tree.get('b.txt')).toBe('new');
-    expect(result.emitted.flatMap((batch) => batch.instructions)).toHaveLength(
-      2,
+    const [instruction] = result.emitted.flatMap((batch) => batch.instructions);
+    expect(JSON.stringify(instruction)).toContain(
+      '"template":"use {= \\"{=\\" =} as is, then {= \\"{=\\" =} again"',
     );
   });
 
-  it('writes nothing for a file whose final content equals what it held', async () => {
-    const factory = async () => {
-      const buffer = writeBuffer();
-      await buffer.write('a.txt', 'same');
-      buffer.flush();
-    };
-    const result = await runFactoryForTest(factory, {} as never, {
-      seed: { 'a.txt': 'same' },
-    });
-
-    expect([...result.tree.keys()]).toEqual([]);
-  });
-
-  it('reads back what it has pending and fails closed on a missing required file', async () => {
-    const factory = async () => {
-      const buffer = writeBuffer();
-      await buffer.write('a.txt', 'pending');
-      if ((await buffer.read('a.txt')) !== 'pending')
-        throw new Error('did not read pending');
-      await buffer.readRequired('missing.txt', 'create it first');
-    };
-    const result = await runFactoryForTest(factory, {} as never);
+  it('fails closed on a missing required file, naming the way to create it', async () => {
+    const result = await runFactoryForTest(async () => {
+      await readRequired('missing.txt', 'create it first');
+    }, {} as never);
 
     expect(String(result.error)).toContain(
       'missing.txt not found — create it first',
     );
   });
 
-  it('creates a path the run found missing and replaces one it found', async () => {
-    const factory = async () => {
-      const buffer = writeBuffer();
-      await buffer.write('old.txt', 'changed');
-      await buffer.write('new.txt', 'fresh');
-      buffer.flush();
-    };
-    const result = await runFactoryForTest(factory, {} as never, {
-      seed: { 'old.txt': 'before' },
-    });
-
-    expect(
-      result.emitted
-        .flatMap((batch) => batch.instructions)
-        .map((instruction) =>
-          instruction.op === 'create'
-            ? ['create', instruction.create.pathTemplate]
-            : instruction.op === 'modify'
-              ? ['modify', instruction.modify.path]
-              : [instruction.op],
-        ),
-    ).toEqual([
-      ['modify', 'old.txt'],
-      ['create', 'new.txt'],
-    ]);
-  });
-
-  it('keeps the template delimiter in a new file literal, as in a replaced one', async () => {
-    const factory = async () => {
-      const buffer = writeBuffer();
-      await buffer.write('new.md', 'use {= as is, then {= again');
-      buffer.flush();
-    };
-    const result = await runFactoryForTest(factory, {} as never);
-
-    const [instruction] = result.emitted.flatMap((batch) => batch.instructions);
-    expect(JSON.stringify(instruction)).toContain(
-      '"template":"use {= \\"{=\\" =} as is, then {= \\"{=\\" =} again"',
+  it('rewrites a file only when the edit changed it', async () => {
+    const result = await runFactoryForTest(
+      () => {
+        rewrite('same.txt', 'a', 'a');
+        rewrite('changed.txt', 'a', 'b');
+      },
+      {} as never,
+      { seed: { 'same.txt': 'a', 'changed.txt': 'a' } },
     );
+
+    expect([...result.tree]).toEqual([['changed.txt', 'b']]);
   });
 });
 
@@ -139,7 +80,7 @@ describe('resolveSlice', () => {
   const run = (seed: Record<string, string>, slice = 'marketing') =>
     runFactoryForTest(
       async () => {
-        const out = await resolveSlice('growth', slice, writeBuffer());
+        const out = await resolveSlice('growth', slice);
         throw new Error(JSON.stringify(out));
       },
       {} as never,
@@ -259,78 +200,6 @@ describe('addTsPath', () => {
   });
 });
 
-describe('addLintContext', () => {
-  const config = `const contexts = [\n  'catalog',\n  'ordering',\n];\nconst layers = [];\n`;
-
-  it('adds the context to the contexts list once', () => {
-    const out = addLintContext(config, 'billing');
-
-    expect(out).toContain(`  'ordering',\n  'billing',\n];`);
-    expect(addLintContext(out, 'billing')).toBe(out);
-  });
-
-  it('refuses a config without the list', () => {
-    expect(() => addLintContext('export default [];', 'x')).toThrow('contexts');
-  });
-});
-
-describe('addContextRelation', () => {
-  const config = `const contexts = ['a', 'b'];\nconst contextRelations = [\n  ['a', 'b'],\n];\n`;
-
-  it('appends the edge once', () => {
-    const out = addContextRelation(config, 'b', 'a');
-
-    expect(out).toContain(`  ['a', 'b'],\n  ['b', 'a'],\n];`);
-    expect(addContextRelation(out, 'b', 'a')).toBe(out);
-  });
-
-  it('fills an empty list', () => {
-    expect(addContextRelation('const contextRelations = [];\n', 'a', 'b')).toBe(
-      `const contextRelations = [\n  ['a', 'b'],\n];\n`,
-    );
-  });
-
-  it('reads the list whatever its formatting, comments and quotes', () => {
-    const formatted = [
-      'const contextRelations = [ // from, to',
-      '  [ "a" , \'b\' ], /* kept out of the way ] */',
-      "  ['c', 'd']",
-      '];',
-      'const layers = [];',
-      '',
-    ].join('\n');
-
-    const out = addContextRelation(formatted, 'b', 'a');
-
-    expect(out).toBe(
-      "const contextRelations = [\n  ['a', 'b'],\n  ['c', 'd'],\n  ['b', 'a'],\n];\nconst layers = [];\n",
-    );
-    expect(addContextRelation(formatted, 'c', 'd')).toBe(formatted);
-  });
-
-  it('reads a list on one line', () => {
-    expect(
-      addContextRelation("const contextRelations = [['a', 'b']];\n", 'b', 'a'),
-    ).toBe("const contextRelations = [\n  ['a', 'b'],\n  ['b', 'a'],\n];\n");
-  });
-
-  it('refuses an entry that is not a pair of names', () => {
-    expect(() =>
-      addContextRelation(
-        "const contextRelations = [\n  ['a', 'b'],\n  ...more,\n];\n",
-        'b',
-        'a',
-      ),
-    ).toThrow('contextRelations has an entry');
-  });
-
-  it('refuses a config without the list', () => {
-    expect(() => addContextRelation('export default [];', 'a', 'b')).toThrow(
-      'contextRelations',
-    );
-  });
-});
-
 describe('domain model tables', () => {
   const model = [
     '# M — domain model',
@@ -394,102 +263,5 @@ describe('parseRoute', () => {
   it('rejects what is not a route', () => {
     expect(parseRoute('FETCH /orders')).toBeUndefined();
     expect(parseRoute('GET orders')).toBeUndefined();
-  });
-});
-
-describe('source edits', () => {
-  it('adds imports after the last import and skips present ones', () => {
-    const out = withImports("import a from 'a';\n\nconst x = 1;\n", [
-      "import b from 'b';",
-      "import a from 'a';",
-    ]);
-
-    expect(out).toBe(
-      "import a from 'a';\nimport b from 'b';\n\nconst x = 1;\n",
-    );
-  });
-
-  it('adds imports right after a side-effect import', () => {
-    const out = withImports(
-      "import './polyfill';\n\nconst x = 1;\nexport { y } from './y';\n",
-      ["import b from 'b';"],
-    );
-
-    expect(out).toBe(
-      "import './polyfill';\nimport b from 'b';\n\nconst x = 1;\nexport { y } from './y';\n",
-    );
-  });
-
-  it('adds imports after a multi-line import', () => {
-    const out = withImports(
-      "import {\n  a,\n  b,\n} from 'ab';\n\nconst x = 1;\n",
-      ["import c from 'c';"],
-    );
-
-    expect(out).toBe(
-      "import {\n  a,\n  b,\n} from 'ab';\nimport c from 'c';\n\nconst x = 1;\n",
-    );
-  });
-
-  it('merges names into an existing import of the same module, sorted', () => {
-    const out = withNamedImports(
-      "import { Post, Controller } from '@nestjs/common';\nconst x = 1;\n",
-      '@nestjs/common',
-      ['Get', 'Post'],
-    );
-
-    expect(out).toBe(
-      "import { Controller, Get, Post } from '@nestjs/common';\nconst x = 1;\n",
-    );
-  });
-
-  it('creates the import of a module it does not have yet', () => {
-    expect(withNamedImports('const x = 1;\n', 'zod', ['z'])).toBe(
-      "import { z } from 'zod';\n\nconst x = 1;\n",
-    );
-  });
-
-  it('appends a statement once', () => {
-    const once = withStatement('const a = 1;\n', 'const b = 2;');
-
-    expect(once).toBe('const a = 1;\n\nconst b = 2;\n');
-    expect(withStatement(once, 'const b = 2;')).toBe(once);
-  });
-});
-
-describe('addModuleEntry', () => {
-  it('expands an empty module and renders the keys in a fixed order', () => {
-    const empty = '@Module({})\nexport class OrderingModule {}\n';
-    const out = addModuleEntry(
-      addModuleEntry(empty, 'providers', 'A'),
-      'controllers',
-      'C',
-    );
-
-    expect(out).toBe(
-      '@Module({\n  controllers: [C],\n  providers: [A],\n})\nexport class OrderingModule {}\n',
-    );
-  });
-
-  it('keeps entries, adds new ones and ignores duplicates, whatever the whitespace', () => {
-    const source =
-      '@Module({\n  providers: [\n    { provide: X, useFactory: f, inject: [Y] },\n  ],\n})\nexport class M {}\n';
-    const out = addModuleEntry(
-      source,
-      'providers',
-      '{ provide: Z, useClass: Zed }',
-    );
-
-    expect(out).toContain('{ provide: X, useFactory: f, inject: [Y] }');
-    expect(out).toContain('{ provide: Z, useClass: Zed }');
-    expect(addModuleEntry(out, 'providers', '{provide:Z,useClass:Zed}')).toBe(
-      out,
-    );
-  });
-
-  it('refuses a source without a Module decorator', () => {
-    expect(() =>
-      addModuleEntry('export class M {}\n', 'providers', 'A'),
-    ).toThrow('@Module');
   });
 });

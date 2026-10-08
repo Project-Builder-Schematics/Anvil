@@ -1,14 +1,13 @@
 import type { Input } from './schema.generated.ts';
 import { create } from '@pbuilder/sdk/commons';
-import { assertDashed, writeBuffer, type WriteBuffer } from '../_shared/lib.ts';
+import { assertDashed } from '../_shared/lib.ts';
 import {
   className,
   customTypes,
   parseInputs,
   parseOutputs,
   readNgLib,
-  withBarrelExport,
-  withTestTarget,
+  registerInLib,
 } from '../_shared/ng.ts';
 
 const KIND_OF_TYPE: Record<string, 'container' | 'presentational'> = {
@@ -23,10 +22,9 @@ const SAMPLE: Record<string, string> = {
 const sampleOf = (type: string): string | undefined =>
   type.endsWith('[]') ? '[]' : SAMPLE[type];
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
-  const lib = await readNgLib(buffer, input.lib.replace(/\/+$/, ''));
+  const lib = await readNgLib(input.lib.replace(/\/+$/, ''));
   const derived = KIND_OF_TYPE[lib.type];
   if (!derived)
     throw new Error(
@@ -113,14 +111,5 @@ ${inputs
     options: {},
   });
 
-  const barrelPath = `${lib.dir}/src/index.ts`;
-  await buffer.write(
-    barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
-  );
-  await buffer.write(
-    `${lib.dir}/project.json`,
-    withTestTarget(lib.project, lib.dir),
-  );
-  if (!shared) buffer.flush();
+  await registerInLib(lib, `./lib/${folder}/${name}`);
 };

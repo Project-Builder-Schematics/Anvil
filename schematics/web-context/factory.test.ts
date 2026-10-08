@@ -63,7 +63,9 @@ describe('web-context', () => {
     for (const layer of LAYERS)
       expect(base).toContain(`"@demo/web-shipping-${layer}": `);
     expect(base).toContain('"./libs/web/shipping/data-access/src/index.ts"');
-    expect(tree.get('eslint.config.mjs')).toContain("  'shipping',\n];");
+    expect(tree.get('eslint.config.mjs')).toContain(
+      "const contexts = ['ledger', 'catalog', 'shipping'];",
+    );
   });
 
   it('leaves a context that the api already registered in the lint list alone', async () => {

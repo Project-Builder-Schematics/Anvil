@@ -1,12 +1,7 @@
 import type { Input } from './schema.generated.ts';
 import { create } from '@pbuilder/sdk/commons';
-import { assertDashed, writeBuffer, type WriteBuffer } from '../_shared/lib.ts';
-import {
-  className,
-  readNgLib,
-  withBarrelExport,
-  withTestTarget,
-} from '../_shared/ng.ts';
+import { assertDashed } from '../_shared/lib.ts';
+import { className, readNgLib, registerInLib } from '../_shared/ng.ts';
 
 const INITIAL = { string: "''", number: '0', boolean: 'false' } as const;
 
@@ -31,10 +26,9 @@ const parseFields = (
       return { name, type: raw, initial: list ? '[]' : INITIAL[base], list };
     });
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
-  const lib = await readNgLib(buffer, input.lib.replace(/\/+$/, ''));
+  const lib = await readNgLib(input.lib.replace(/\/+$/, ''));
   const fields = parseFields(input.fields ?? '');
   const cls = className(name);
   const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
@@ -73,14 +67,5 @@ ${fields.length > 0 ? fields.map((f) => `    expect(service.${f.name}()).${f.lis
     options: {},
   });
 
-  const barrelPath = `${lib.dir}/src/index.ts`;
-  await buffer.write(
-    barrelPath,
-    withBarrelExport(await buffer.read(barrelPath), `./lib/${folder}/${name}`),
-  );
-  await buffer.write(
-    `${lib.dir}/project.json`,
-    withTestTarget(lib.project, lib.dir),
-  );
-  if (!shared) buffer.flush();
+  await registerInLib(lib, `./lib/${folder}/${name}`);
 };

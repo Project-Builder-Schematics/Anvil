@@ -1,24 +1,28 @@
 import type { Input } from './schema.generated.ts';
-import { find, replaceContent } from '@pbuilder/sdk/commons';
+import { find } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
   ESLINT_CONFIG,
   RELATIONSHIPS,
   TSCONFIG_BASE,
-  addContextRelation,
-  addLintContext,
   addTsPath,
   apiAlias,
   apiLibDir,
   assertDashed,
   createFile,
   docsDir,
+  readRequired,
+  rewrite,
   table,
   title,
-  writeBuffer,
-  type WriteBuffer,
 } from '../_shared/lib.ts';
 import { apiLibFiles } from '../_shared/libs.ts';
+import {
+  addContextRelation,
+  addLintContext,
+  startRun,
+  withAst,
+} from '../_shared/ts.ts';
 
 type Level = 'strict' | 'standard';
 
@@ -183,8 +187,8 @@ const withGlossaryLinks = (glossary: string, subdomains: string[]): string => {
   return `${body}${/^## Subdomains\s*$/m.test(body) ? '' : '\n## Subdomains\n\n'}${missing.join('\n')}\n`;
 };
 
-export default async (input: Input, shared?: WriteBuffer) => {
-  const buffer = shared ?? writeBuffer();
+export default async (input: Input) => {
+  const run = startRun();
   const context = assertDashed(input.context, 'context');
   const docs = docsDir(context);
   const assumed = input.classification_status === 'assumed';
@@ -229,7 +233,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
     ]),
   ];
 
-  const tsconfig = await buffer.readRequired(
+  const tsconfig = await readRequired(
     TSCONFIG_BASE,
     'the alias is registered in the workspace tsconfig',
   );
@@ -239,7 +243,7 @@ export default async (input: Input, shared?: WriteBuffer) => {
         `${provider} is not a registered context — create it first`,
       );
   }
-  const lint = await buffer.readRequired(
+  await readRequired(
     ESLINT_CONFIG,
     'the context is registered in the lint boundary list',
   );
@@ -250,20 +254,21 @@ export default async (input: Input, shared?: WriteBuffer) => {
   )) {
     createFile(path, template);
   }
-  await buffer.write(
+  rewrite(
     TSCONFIG_BASE,
+    tsconfig,
     addTsPath(
       tsconfig,
       apiAlias(context),
       `./${apiLibDir(context)}/src/index.ts`,
     ),
   );
-  await buffer.write(
-    ESLINT_CONFIG,
-    providers.reduce(
-      (config, provider) => addContextRelation(config, context, provider),
-      addLintContext(lint, context),
-    ),
+  run.edit(ESLINT_CONFIG, (file) =>
+    withAst(file, (ast) => {
+      addLintContext(ast, context);
+      for (const provider of providers)
+        addContextRelation(ast, context, provider);
+    }),
   );
 
   const subdomainsSection = `## Subdomains
@@ -300,8 +305,9 @@ ${
       /^## Subdomains\s*$/m.test(readme) ? '' : subdomainsSection,
     ].filter(Boolean);
     if (missing.length > 0)
-      replaceContent(
+      rewrite(
         `${docs}/README.md`,
+        readme,
         `${readme.replace(/\n*$/, '\n')}\n${missing.join('\n')}`,
       );
   }
@@ -325,8 +331,12 @@ ${linked.map(glossaryLink).join('\n')}`
       }
 `,
     );
-  } else if (withGlossaryLinks(glossary, linked) !== glossary) {
-    replaceContent(`${docs}/glossary.md`, withGlossaryLinks(glossary, linked));
+  } else {
+    rewrite(
+      `${docs}/glossary.md`,
+      glossary,
+      withGlossaryLinks(glossary, linked),
+    );
   }
 
   const createMissing = async (
@@ -352,5 +362,5 @@ ${linked.map(glossaryLink).join('\n')}`
           ]),
     ]),
   );
-  if (!shared) buffer.flush();
+  await run.flush();
 };

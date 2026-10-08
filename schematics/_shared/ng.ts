@@ -1,7 +1,10 @@
-// What the ng-* schematics share: reading the Angular lib they write into, the unit-test
-// target an Angular lib needs with its first spec, and the barrel export.
+// What the ng-* schematics share: reading the Angular lib they write into, and registering
+// the new file in it: its barrel export and the unit-test target an Angular lib needs with
+// its first spec.
 
-import { EMPTY_MODULE, pascal, type WriteBuffer } from './lib.ts';
+import { find } from '@pbuilder/sdk/typescript';
+import { pascal, readRequired, rewrite } from './lib.ts';
+import { addReExport, withAst } from './ts.ts';
 
 export interface NgLib {
   dir: string;
@@ -16,11 +19,8 @@ export interface NgLib {
 }
 
 /** Reads the lib's project.json; a lib without a selector prefix is not an Angular lib. */
-export const readNgLib = async (
-  buffer: WriteBuffer,
-  dir: string,
-): Promise<NgLib> => {
-  const project = await buffer.readRequired(
+export const readNgLib = async (dir: string): Promise<NgLib> => {
+  const project = await readRequired(
     `${dir}/project.json`,
     'create the lib first: web-context or web-shared-lib',
   );
@@ -88,18 +88,19 @@ export const withTestTarget = (project: string, dir: string): string => {
   return withTarget;
 };
 
-/** Appends `export * from` to the barrel, one line per lib file. */
-export const withBarrelExport = (
-  barrel: string | undefined,
+/** Exports a new file of the lib from its barrel and gives the lib its unit-test target. */
+export const registerInLib = async (
+  lib: NgLib,
   path: string,
-): string => {
-  const line = `export * from '${path}';`;
-  const body = (
-    barrel === undefined || barrel === EMPTY_MODULE ? '' : barrel
-  ).replace(/\n+$/, '');
-  return body.split('\n').includes(line)
-    ? `${body}\n`
-    : `${body}${body ? '\n' : ''}${line}\n`;
+): Promise<void> => {
+  await withAst(find(`${lib.dir}/src/index.ts`), (ast) => {
+    addReExport(ast, path);
+  });
+  rewrite(
+    `${lib.dir}/project.json`,
+    lib.project,
+    withTestTarget(lib.project, lib.dir),
+  );
 };
 
 const noDuplicates = <T extends { name: string }>(
