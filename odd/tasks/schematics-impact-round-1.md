@@ -90,6 +90,15 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - The `citedRules` defaults are hard to follow (lib.ts:176-186).
   - Minor: arrow depth in commandFields, the duplicated error-class name, the HTML splice edge cases, sibling-name validation in hex-use-case, an untested route-path error, and resolveSlice requiring a heading.
 
+- [ ] S10: create new files from SDK templates (user decision, 2026-10-08). The approach is a hybrid:
+  - Docs parsing, decisions and computed names and lists stay in TypeScript.
+  - Every NEW file is rendered from a package-local template with `create(path, { templateFile, options })`, or with `scaffold` for a folder. The template lives in each schematic's `files/` folder.
+  - Templates stay dumb: only `{= =}` interpolation and simple `range` over precomputed values. No arithmetic, no emptiness checks, no casing pipes on non-strings (the Go text/template pitfalls).
+  - Delete the `createFile` escape hack.
+  - Edits to existing files stay on the dialects (S7).
+  - Prove it: regenerating ordering and the web libs gives an empty diff, re-runs stay no-ops, and `one-write-per-path` and the compiles test stay green.
+  - Keep the skill, AGENTS.md and IMPACT in sync.
+
 ## Next step
 
 S5, S7 and S8 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 277 pass; `nx run-many -t lint test typecheck` green for 18 projects.
