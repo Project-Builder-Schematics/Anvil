@@ -42,16 +42,17 @@ export const phrases = (feature: string): Phrase[] => {
     if (!seen.has(expression))
       seen.set(expression, { keyword, text, expression, params });
   });
-  const all = [...seen.values()];
   // {float} also matches an integer; binding both would make quickpickle report an ambiguous step.
-  return all.filter(
-    (p) =>
-      !all.some(
-        (q) =>
-          q.expression.includes('{float}') &&
-          q.expression.replaceAll('{float}', '{int}') === p.expression,
-      ),
-  );
+  // Phrases that differ only in which numbers are decimals share one binding with every number a {float}.
+  const byShape = new Map<string, Phrase>();
+  for (const p of seen.values()) {
+    const shape = p.expression.replaceAll('{int}', '{float}');
+    const kept = byShape.get(shape);
+    if (!kept) byShape.set(shape, p);
+    else if (shape !== kept.expression)
+      byShape.set(shape, { ...kept, expression: shape });
+  }
+  return [...byShape.values()];
 };
 
 const quoted = (text: string): string =>

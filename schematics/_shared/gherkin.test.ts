@@ -56,6 +56,16 @@ describe('phrases', () => {
     ]);
   });
 
+  it('binds one {float} step for a phrase seen with a decimal in a different position', () => {
+    const list = phrases(
+      'Scenario: s\n  When it moves 1 to 2.5\n  When it moves 1.5 to 2\n',
+    );
+
+    expect(list.map((p) => p.expression)).toEqual([
+      'it moves {float} to {float}',
+    ]);
+  });
+
   it('ignores the text inside doc strings', () => {
     expect(
       phrases(
