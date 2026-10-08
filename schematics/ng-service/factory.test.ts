@@ -4,9 +4,9 @@ import factory from './factory.ts';
 
 const LIB = 'libs/web/catalog/data-access';
 const seed = (extra: Record<string, string> = {}) => ({
-  ...webLib(LIB, 'data-access'),
-  ...webLib('libs/web/catalog/ui', 'ui'),
-  ...webLib('libs/web/catalog/domain', 'domain'),
+  ...webLib(LIB),
+  ...webLib('libs/web/catalog/ui'),
+  ...webLib('libs/web/catalog/domain'),
   ...extra,
 });
 const go = (

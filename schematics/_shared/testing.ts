@@ -8,7 +8,8 @@ import { format } from 'prettier';
 import { defineFactory } from '../../node_modules/@pbuilder/sdk/dist/core/context.js';
 import { ContractFake } from '../../node_modules/@pbuilder/sdk/dist/testing/contract-fake.js';
 import hexBoundedContext from '../hex-bounded-context/factory.ts';
-import { webLibFiles } from './libs.ts';
+import webContext from '../web-context/factory.ts';
+import webSharedLib from '../web-shared-lib/factory.ts';
 import { render } from './render.ts';
 
 const tsconfigBase = `{
@@ -264,16 +265,29 @@ export const without = (
     Object.entries(seed).filter(([path]) => !paths.includes(path)),
   );
 
-/** Web libs as web-context leaves them, for the ng-* schematics. */
-export const webLib = (
-  dir: string,
-  layer: 'ui' | 'feature' | 'data-access' | 'domain',
-  context = 'catalog',
-): Record<string, string> =>
-  webLibFiles({
-    dir,
-    name: dir.replace(/^libs\//, '').replace(/\//g, '-'),
-    ...(layer === 'domain' ? {} : { prefix: context }),
-    tags: ['scope:web', `context:${context}`, `type:${layer}`],
-    layer,
-  });
+/** The web libs of a catalog context and of the shared design system, as the schematics write them. */
+const webLibs = await (async () => {
+  const runs = await Promise.all([
+    run(webContext, 'web-context', { context: 'catalog' }, workspace),
+    run(
+      webSharedLib,
+      'web-shared-lib',
+      { name: 'design-system', prefix: 'ds' },
+      workspace,
+    ),
+  ]);
+  const files = new Map<string, string>();
+  for (const { tree, error } of runs) {
+    throwIfFailed({ error });
+    for (const [path, content] of tree)
+      if (path.startsWith('libs/')) files.set(path, content);
+  }
+  return files;
+})();
+
+/** The files of one of those libs, for the ng-* schematics to write into. */
+export const webLib = (dir: string): Record<string, string> => {
+  const files = [...webLibs].filter(([path]) => path.startsWith(`${dir}/`));
+  if (files.length === 0) throw new Error(`no web lib fixture at ${dir}`);
+  return Object.fromEntries(files);
+};

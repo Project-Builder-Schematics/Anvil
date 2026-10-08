@@ -1,14 +1,13 @@
 import type { Input } from './schema.generated.ts';
+import { scaffold } from '@pbuilder/sdk/commons';
 import {
   SCOPE,
   TSCONFIG_BASE,
   addTsPath,
   assertDashed,
-  createFile,
   readRequired,
   rewrite,
 } from '../_shared/lib.ts';
-import { webLibFiles } from '../_shared/libs.ts';
 
 export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
@@ -23,15 +22,16 @@ export default async (input: Input) => {
   );
 
   // Deliberately fail-closed: a lib that exists is never regenerated over.
-  const files = webLibFiles({
-    dir,
-    name: `web-shared-${name}`,
-    prefix: input.prefix,
-    tags: ['scope:web', 'context:shared', 'type:ui'],
-    layer: 'ui',
+  scaffold({
+    from: 'files/angular-lib',
+    to: dir,
+    options: {
+      dir,
+      name: `web-shared-${name}`,
+      prefix: input.prefix,
+      tags: '"scope:web", "context:shared", "type:ui"',
+    },
   });
-  for (const [path, template] of Object.entries(files))
-    createFile(path, template);
   rewrite(
     TSCONFIG_BASE,
     tsconfig,

@@ -1,0 +1,8 @@
+{
+  "name": "{= .name =}",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "{= .dir =}/src",
+  "prefix": "{= .prefix =}",
+  "projectType": "library",
+  "tags": [{= .tags =}]
+}

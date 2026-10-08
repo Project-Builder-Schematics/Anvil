@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test';
+import { format } from 'prettier';
+import hexBoundedContext from '../hex-bounded-context/factory.ts';
 import { run, workspace } from '../_shared/testing.ts';
 import factory from './factory.ts';
 
@@ -88,5 +90,108 @@ describe('web-context', () => {
     expect(String((await go({ context: 'Shipping' })).error)).toContain(
       'dash-case',
     );
+  });
+
+  it.each(['ui', 'feature', 'data-access'])(
+    'lays out an Angular %s lib: the exact project, the strict template options and nothing else',
+    async (layer) => {
+      const { tree } = await go();
+      const dir = `libs/web/shipping/${layer}`;
+
+      expect(
+        [...tree.keys()].filter((path) => path.startsWith(`${dir}/`)).sort(),
+      ).toEqual(
+        [
+          'eslint.config.mjs',
+          'project.json',
+          'src/index.ts',
+          'tsconfig.json',
+          'tsconfig.lib.json',
+          'tsconfig.spec.json',
+        ].map((p) => `${dir}/${p}`),
+      );
+      expect(JSON.parse(tree.get(`${dir}/project.json`) ?? '')).toEqual({
+        name: `web-shipping-${layer}`,
+        $schema: '../../../../node_modules/nx/schemas/project-schema.json',
+        sourceRoot: `${dir}/src`,
+        prefix: 'shipping',
+        projectType: 'library',
+        tags: ['scope:web', 'context:shipping', `type:${layer}`],
+      });
+      expect(tree.get(`${dir}/tsconfig.json`)).toContain(
+        '"strictTemplates": true',
+      );
+    },
+  );
+
+  it('lays out the domain lib as plain TypeScript with its own vitest config', async () => {
+    const { tree } = await go();
+    const dir = 'libs/web/shipping/domain';
+
+    expect(
+      [...tree.keys()].filter((path) => path.startsWith(`${dir}/`)).sort(),
+    ).toEqual(
+      [
+        'eslint.config.mjs',
+        'project.json',
+        'src/index.ts',
+        'tsconfig.json',
+        'tsconfig.lib.json',
+        'tsconfig.spec.json',
+        'vitest.config.mts',
+      ].map((p) => `${dir}/${p}`),
+    );
+    expect(tree.get(`${dir}/vitest.config.mts`)).toContain(
+      "name: 'web-shipping-domain'",
+    );
+    expect(JSON.parse(tree.get(`${dir}/project.json`) ?? '')).toEqual({
+      name: 'web-shipping-domain',
+      $schema: '../../../../node_modules/nx/schemas/project-schema.json',
+      sourceRoot: `${dir}/src`,
+      projectType: 'library',
+      tags: ['scope:web', 'context:shipping', 'type:domain'],
+    });
+  });
+
+  it('writes files that prettier leaves alone', async () => {
+    const { tree } = await go();
+    const off: string[] = [];
+    for (const [path, content] of tree) {
+      if (!path.startsWith('libs/')) continue;
+      if (
+        (await format(content, { filepath: path, singleQuote: true })) !==
+        content
+      )
+        off.push(path);
+    }
+
+    expect(off).toEqual([]);
+  });
+
+  it('excludes from an Angular lib every test file an API lib excludes, and the test setup', async () => {
+    const api = await run(
+      hexBoundedContext,
+      'hex-bounded-context',
+      {
+        context: 'catalog',
+        purpose: 'x',
+        subdomain_class: 'core',
+        criticality: 'high',
+        volatility: 'low',
+      },
+      workspace,
+    );
+    const exclude = (tree: ReadonlyMap<string, string>, path: string) =>
+      (JSON.parse(tree.get(path) ?? '') as { exclude: string[] }).exclude;
+
+    const angular = exclude(
+      (await go()).tree,
+      'libs/web/shipping/ui/tsconfig.lib.json',
+    );
+    const shared = exclude(
+      api.tree,
+      'libs/api/catalog/tsconfig.lib.json',
+    ).filter((pattern) => !pattern.includes('steps'));
+    expect(angular.sort()).toEqual([...shared, 'src/test-setup.ts'].sort());
   });
 });

@@ -84,43 +84,37 @@ export default async (input: Input) => {
 
   // Deliberately fail-closed: a component that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
-    template: `import { ${angular.join(', ')} } from '@angular/core';
-${imported.length > 0 ? `import type { ${imported.join(', ')} } from '${input.type_import}';\n` : ''}
-@Component({
-  selector: '${lib.prefix}-${name}',
-  templateUrl: './${name}.html',
-  styleUrl: './${name}.css',
-})
-export class ${cls} ${members.length > 0 ? `{\n${members.join('\n')}\n}` : '{}'}
-`,
+    templateFile: 'files/component.ts.template',
+    options: {
+      angular: angular.join(', '),
+      typeImport:
+        imported.length > 0
+          ? `import type { ${imported.join(', ')} } from '${input.type_import}';\n`
+          : '',
+      selector: `${lib.prefix}-${name}`,
+      name,
+      cls,
+      members: members.length > 0 ? `\n${members.join('\n')}\n` : '',
+    },
+  });
+  create(`${dir}/${name}.html`, {
+    templateFile: 'files/component.html.template',
     options: {},
   });
-  create(`${dir}/${name}.html`, { template: '<ng-content />\n', options: {} });
   create(`${dir}/${name}.css`, {
-    template: ':host {\n  display: block;\n}\n',
+    templateFile: 'files/component.css.template',
     options: {},
   });
   create(`${dir}/${name}.spec.ts`, {
-    template: `import { TestBed } from '@angular/core/testing';
-import { ${cls} } from './${name}';
-
-describe('${cls}', () => {
-  it('renders', async () => {
-    const fixture = TestBed.createComponent(${cls});
-${inputs
-  .flatMap((i) => {
-    const sample = sampleOf(i.type);
-    return sample === undefined
-      ? []
-      : [`    fixture.componentRef.setInput('${i.name}', ${sample});\n`];
-  })
-  .join('')}    await fixture.whenStable();
-
-    expect(fixture.nativeElement as HTMLElement).toBeInstanceOf(HTMLElement);
-  });
-});
-`,
-    options: {},
+    templateFile: 'files/component.spec.ts.template',
+    options: {
+      cls,
+      name,
+      samples: inputs.flatMap((i) => {
+        const value = sampleOf(i.type);
+        return value === undefined ? [] : [{ name: i.name, value }];
+      }),
+    },
   });
 
   await registerInLib(lib, `./lib/${folder}/${name}`);

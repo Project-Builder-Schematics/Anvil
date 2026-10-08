@@ -36,35 +36,36 @@ export default async (input: Input) => {
 
   // Deliberately fail-closed: a service that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
-    template: `import { Service${fields.length > 0 ? ', signal' : ''} } from '@angular/core';
-
-@Service()
-export class ${cls} ${
-      fields.length > 0
-        ? `{\n${fields
-            .map(
-              (f) =>
-                `  private readonly _${f.name} = signal<${f.type}>(${f.initial});\n  readonly ${f.name} = this._${f.name}.asReadonly();`,
-            )
-            .join('\n')}\n}`
-        : '{}'
-    }
-`,
-    options: {},
+    templateFile: 'files/service.ts.template',
+    options: {
+      imports: fields.length > 0 ? 'Service, signal' : 'Service',
+      cls,
+      members:
+        fields.length > 0
+          ? `\n${fields
+              .map(
+                (f) =>
+                  `  private readonly _${f.name} = signal<${f.type}>(${f.initial});\n  readonly ${f.name} = this._${f.name}.asReadonly();`,
+              )
+              .join('\n')}\n`
+          : '',
+    },
   });
   create(`${dir}/${name}.spec.ts`, {
-    template: `import { TestBed } from '@angular/core/testing';
-import { ${cls} } from './${name}';
-
-describe('${cls}', () => {
-  it('starts with its initial state', () => {
-    const service = TestBed.inject(${cls});
-
-${fields.length > 0 ? fields.map((f) => `    expect(service.${f.name}()).${f.list ? 'toEqual' : 'toBe'}(${f.initial});`).join('\n') : '    expect(service).toBeInstanceOf(' + cls + ');'}
-  });
-});
-`,
-    options: {},
+    templateFile: 'files/service.spec.ts.template',
+    options: {
+      cls,
+      name,
+      expectations:
+        fields.length > 0
+          ? fields
+              .map(
+                (f) =>
+                  `    expect(service.${f.name}()).${f.list ? 'toEqual' : 'toBe'}(${f.initial});`,
+              )
+              .join('\n')
+          : `    expect(service).toBeInstanceOf(${cls});`,
+    },
   });
 
   await registerInLib(lib, `./lib/${folder}/${name}`);

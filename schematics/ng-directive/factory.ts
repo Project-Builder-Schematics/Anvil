@@ -17,37 +17,12 @@ export default async (input: Input) => {
 
   // Deliberately fail-closed: a directive that exists is never regenerated over.
   create(`${dir}/${name}.ts`, {
-    template: `import { Directive } from '@angular/core';
-
-@Directive({ selector: '[${selector}]' })
-export class ${cls} {}
-`,
-    options: {},
+    templateFile: 'files/directive.ts.template',
+    options: { selector, cls },
   });
   create(`${dir}/${name}.spec.ts`, {
-    template: `import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { ${cls} } from './${name}';
-
-@Component({
-  imports: [${cls}],
-  template: \`<div ${selector}></div>\`,
-})
-class Host {}
-
-describe('${cls}', () => {
-  it('applies to its host element', async () => {
-    const fixture = TestBed.createComponent(Host);
-    await fixture.whenStable();
-
-    const host = fixture.debugElement.query(By.directive(${cls}));
-
-    expect(host).not.toBeNull();
-  });
-});
-`,
-    options: {},
+    templateFile: 'files/directive.spec.ts.template',
+    options: { selector, cls, name },
   });
 
   await registerInLib(lib, `./lib/${folder}/${name}`);

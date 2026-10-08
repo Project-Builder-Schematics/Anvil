@@ -4,8 +4,8 @@ import factory from './factory.ts';
 
 const LIB = 'libs/web/catalog/ui';
 const seed = (extra: Record<string, string> = {}) => ({
-  ...webLib(LIB, 'ui'),
-  ...webLib('libs/web/catalog/feature', 'feature'),
+  ...webLib(LIB),
+  ...webLib('libs/web/catalog/feature'),
   ...extra,
 });
 const go = (
@@ -39,17 +39,9 @@ describe('ng-directive', () => {
   });
 
   it('names a directive of a prefix-only lib the way the design system does', async () => {
-    const files = {
-      ...webLib('libs/web/shared/design-system', 'ui', 'shared'),
-      'libs/web/shared/design-system/project.json': (
-        webLib('libs/web/shared/design-system', 'ui', 'shared')[
-          'libs/web/shared/design-system/project.json'
-        ] ?? ''
-      ).replace('"prefix": "shared"', '"prefix": "ds"'),
-    };
     const { tree } = await go(
       { lib: 'libs/web/shared/design-system', name: 'variant' },
-      files,
+      webLib('libs/web/shared/design-system'),
     );
 
     expect(

@@ -1,18 +1,17 @@
 import type { Input } from './schema.generated.ts';
+import { scaffold } from '@pbuilder/sdk/commons';
 import {
   ESLINT_CONFIG,
   SCOPE,
   TSCONFIG_BASE,
   addTsPath,
   assertDashed,
-  createFile,
   readRequired,
   rewrite,
 } from '../_shared/lib.ts';
-import { webLibFiles, type WebLayer } from '../_shared/libs.ts';
 import { addLintContext, startRun, withAst } from '../_shared/ts.ts';
 
-const LAYERS: WebLayer[] = ['ui', 'feature', 'data-access', 'domain'];
+const LAYERS = ['ui', 'feature', 'data-access', 'domain'] as const;
 
 export default async (input: Input) => {
   const run = startRun();
@@ -30,15 +29,18 @@ export default async (input: Input) => {
   // Deliberately fail-closed: a lib that exists is never regenerated over.
   for (const layer of LAYERS) {
     const dir = `libs/web/${context}/${layer}`;
-    const files = webLibFiles({
-      dir,
-      name: `web-${context}-${layer}`,
-      ...(layer === 'domain' ? {} : { prefix: context.replace(/-/g, '') }),
-      tags: ['scope:web', `context:${context}`, `type:${layer}`],
-      layer,
+    scaffold({
+      from: layer === 'domain' ? 'files/domain-lib' : 'files/angular-lib',
+      to: dir,
+      options: {
+        dir,
+        name: `web-${context}-${layer}`,
+        prefix: context.replace(/-/g, ''),
+        tags: ['scope:web', `context:${context}`, `type:${layer}`]
+          .map((tag) => `"${tag}"`)
+          .join(', '),
+      },
     });
-    for (const [path, template] of Object.entries(files))
-      createFile(path, template);
     tsconfig = addTsPath(
       tsconfig,
       `${SCOPE}/web-${context}-${layer}`,
