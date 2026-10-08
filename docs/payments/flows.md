@@ -22,10 +22,10 @@ sequenceDiagram
     P-->>U: the existing payment
     U-->>O: the existing payment (rule 2)
   end
-  Note over P: a Pending payment is kept and resolved (rule 13); a Failed one is replaced by a new payment (rules 7, 14)
-  U->>G: charge({ amount, currency, paymentMethodToken, idempotencyKey: payment id })
+  Note over P: a Pending payment is kept and resolved with its stored request (rule 13); a Failed one is replaced by a new payment (rules 7, 14)
+  U->>G: charge({ the payment's amount, currency and token, idempotencyKey: payment id })
   Note over G: the adapter translates the gateway's result (ACL); a repeated key replays the first outcome (rule 14)
-  alt the gateway gives no answer or refuses the request
+  alt the gateway gives no answer
     G--)U: error
     U-->>O: the error; the payment stays Pending (rule 12)
   end

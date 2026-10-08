@@ -2,17 +2,17 @@
 
 Terms of this bounded context. One meaning per term; the same word in another context is a different term.
 
-**Payment.** The money taken for one order: its id, its amount, its currency and its status. The aggregate root of the context. There is one per order.
+**Payment.** The money taken for one order: its id, its amount, its currency, its token and its status. The aggregate root of the context. There is one per order.
 
 **Order id.** The identity of the order a payment is for, as ordering names it. Payments only holds the id, to find the order's payment.
 
 **Amount.** What is charged, as a whole number of the currency's minor units, greater than 0.
 
-**Payment method token.** An opaque text that stands for a customer's means of payment. Payments never sees or keeps card data.
+**Payment method token.** An opaque text that stands for a customer's means of payment. Payments never sees card data; a payment keeps the token of its request so a `Pending` retry can resolve it.
 
 **Charge.** Ask the gateway to take the amount. A charge ends in `Captured`, or in `Failed` when the gateway declines, or stays `Pending` when the gateway gives no answer.
 
-**Pending.** The status of a payment stored before the gateway is called. It stays while the outcome is unknown, and the next charge of the order resolves that same payment.
+**Pending.** The status of a payment stored before the gateway is called. It stays while the outcome is unknown, and the next charge of the order resolves that same payment with its stored request.
 
 **Captured.** The status of a payment whose charge the gateway accepted. Only a captured payment can be refunded.
 
