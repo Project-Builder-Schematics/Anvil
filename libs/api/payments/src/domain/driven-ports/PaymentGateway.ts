@@ -1,4 +1,13 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface PaymentGateway {}
+export interface ChargeRequest {
+  readonly amount: number;
+  readonly currency: string;
+  readonly paymentMethodToken: string;
+}
+
+export type ChargeOutcome = 'Captured' | 'Declined';
+
+export interface PaymentGateway {
+  charge(request: ChargeRequest): Promise<ChargeOutcome>;
+}
 
 export const PAYMENT_GATEWAY = Symbol('PaymentGateway');

@@ -1,4 +1,8 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface Payments {}
+import type { Payment } from '../Payment';
+
+export interface Payments {
+  byOrderId(orderId: string): Promise<Payment | null>;
+  save(payment: Payment): Promise<void>;
+}
 
 export const PAYMENTS = Symbol('Payments');
