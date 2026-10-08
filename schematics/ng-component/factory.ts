@@ -1,8 +1,7 @@
 import type { Input } from './schema.generated.ts';
 import { create } from '@pbuilder/sdk/commons';
-import { assertDashed } from '../_shared/lib.ts';
+import { assertDashed, pascal } from '../_shared/lib.ts';
 import {
-  className,
   customTypes,
   parseInputs,
   parseOutputs,
@@ -14,6 +13,8 @@ const KIND_OF_TYPE: Record<string, 'container' | 'presentational'> = {
   feature: 'container',
   ui: 'presentational',
 };
+const MODULE =
+  /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[A-Za-z0-9._-]+)*$|^\.\.?(?:\/[A-Za-z0-9._-]+)*$/;
 const SAMPLE: Record<string, string> = {
   string: "'sample'",
   number: '1',
@@ -54,8 +55,24 @@ export default async (input: Input) => {
       `${imported.join(', ')} must be imported from a module: pass type_import`,
     );
   }
+  // The module goes into an import line as code, so only a package or a relative path passes.
+  if (input.type_import && !MODULE.test(input.type_import)) {
+    throw new Error(
+      `type_import "${input.type_import}" must be a package or a relative path, e.g. @demo/web-ordering-domain`,
+    );
+  }
 
-  const cls = className(name);
+  const cls = pascal(name);
+  for (const type of imported) {
+    if (type === cls)
+      throw new Error(
+        `${type} is the component class: rename the type or the component`,
+      );
+    if (type === 'Component')
+      throw new Error(
+        'Component is imported from @angular/core: rename the type',
+      );
+  }
   const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
   const dir = `${lib.dir}/src/lib/${folder}`;
   const angular = [

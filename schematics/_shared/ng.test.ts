@@ -23,6 +23,12 @@ describe('parseInputs', () => {
     );
   });
 
+  it('refuses an input with more than one colon instead of dropping the rest', () => {
+    expect(() => parseInputs('label:string:extra')).toThrow(
+      'input "label:string:extra" has more than one colon',
+    );
+  });
+
   it('refuses the same input twice', () => {
     expect(() => parseInputs('label:string,label:number')).toThrow(
       'label is listed twice',
@@ -46,6 +52,12 @@ describe('parseOutputs', () => {
       { name: 'added', type: 'AddLine' },
       { name: 'picked', type: 'number' },
     ]);
+  });
+
+  it('refuses an output with more than one colon instead of dropping the rest', () => {
+    expect(() => parseOutputs('added:AddLine:extra')).toThrow(
+      'output "added:AddLine:extra" has more than one colon',
+    );
   });
 
   it('refuses a name in the wrong case, a bad type and a repeated name', () => {

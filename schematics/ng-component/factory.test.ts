@@ -227,6 +227,57 @@ describe('ng-component', () => {
       expect(source).toContain('readonly picked = output<number>();');
     });
 
+    it('imports the types of outputs alone', async () => {
+      const source =
+        (
+          await go({
+            outputs: 'added:AddLine',
+            type_import: '@demo/web-catalog-domain',
+          })
+        ).tree.get(`${dir}/order-card.ts`) ?? '';
+
+      expect(source).toContain(
+        "import { Component, output } from '@angular/core';\nimport type { AddLine } from '@demo/web-catalog-domain';\n",
+      );
+      expect(source).toContain('readonly added = output<AddLine>();');
+    });
+
+    it.each([
+      "x'; process.exit(); '",
+      '@demo/x y',
+      '@demo/x\nimport',
+      '"@demo/x"',
+      '/abs/path',
+    ])(
+      'refuses a type_import that is not a module specifier: %s',
+      async (bad) => {
+        const { tree, error } = await go({ ...typed, type_import: bad });
+
+        expect(String(error)).toContain('type_import');
+        expect([...tree.keys()]).toEqual([]);
+      },
+    );
+
+    it('accepts a package, a scoped package and a relative path as the module', async () => {
+      for (const module of [
+        'rxjs',
+        '@demo/web-catalog-domain',
+        '../domain/src',
+      ])
+        expect(
+          (await go({ ...typed, type_import: module })).error,
+        ).toBeUndefined();
+    });
+
+    it('refuses a type named like the component class or an Angular import', async () => {
+      expect(
+        String((await go({ ...typed, inputs: 'a:OrderCard' })).error),
+      ).toContain('OrderCard is the component class');
+      expect(
+        String((await go({ ...typed, outputs: 'picked:Component' })).error),
+      ).toContain('Component is imported from @angular/core');
+    });
+
     it('refuses a custom type without a module to import it from', async () => {
       expect(String((await go({ ...typed, type_import: '' })).error)).toContain(
         'type_import',

@@ -1,7 +1,7 @@
 import type { Input } from './schema.generated.ts';
 import { create } from '@pbuilder/sdk/commons';
-import { assertDashed } from '../_shared/lib.ts';
-import { className, readNgLib, registerInLib } from '../_shared/ng.ts';
+import { assertDashed, pascal } from '../_shared/lib.ts';
+import { readNgLib, registerInLib } from '../_shared/ng.ts';
 
 const INITIAL = { string: "''", number: '0', boolean: 'false' } as const;
 
@@ -30,7 +30,7 @@ export default async (input: Input) => {
   const name = assertDashed(input.name, 'name');
   const lib = await readNgLib(input.lib.replace(/\/+$/, ''));
   const fields = parseFields(input.fields ?? '');
-  const cls = className(name);
+  const cls = pascal(name);
   const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
   const dir = `${lib.dir}/src/lib/${folder}`;
 

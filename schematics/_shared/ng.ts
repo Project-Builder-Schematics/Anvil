@@ -3,7 +3,7 @@
 // its first spec.
 
 import { find } from '@pbuilder/sdk/typescript';
-import { pascal, readRequired, rewrite } from './lib.ts';
+import { readRequired, rewrite } from './lib.ts';
 import { addReExport, withAst } from './ts.ts';
 
 export interface NgLib {
@@ -121,32 +121,9 @@ const TYPE = /^(string|number|boolean|[A-Z][A-Za-z0-9]*)(\[\])?$/;
 /** The element type of a `T` or `T[]` annotation. */
 const elementType = (type: string): string => type.replace(/\[\]$/, '');
 
-/** `label:string,lines:OrderLine[]` → [{ name, type }]; a PascalCase type needs the caller's `type_import`. */
-export const parseInputs = (
+const parseMembers = (
   spec: string,
-): Array<{ name: string; type: string }> =>
-  noDuplicates(
-    spec
-      .split(',')
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const [name = '', type = ''] = part.split(':').map((s) => s.trim());
-        if (!/^[a-z][A-Za-z0-9]*$/.test(name))
-          throw new Error(`input "${name}" must be camelCase`);
-        if (!TYPE.test(type)) {
-          throw new Error(
-            `input ${name} has type "${type}": use string, number, boolean or a PascalCase type (with type_import)`,
-          );
-        }
-        return { name, type };
-      }),
-    'input',
-  );
-
-/** `added:AddLine,placed` → [{ name, type? }]; a bare name is an output without payload. */
-export const parseOutputs = (
-  spec: string,
+  kind: 'input' | 'output',
 ): Array<{ name: string; type?: string }> =>
   noDuplicates(
     spec
@@ -154,24 +131,41 @@ export const parseOutputs = (
       .map((part) => part.trim())
       .filter(Boolean)
       .map((part) => {
-        const [name = '', type] = part.split(':').map((s) => s.trim());
+        const [name = '', type, ...rest] = part.split(':').map((s) => s.trim());
+        if (rest.length > 0)
+          throw new Error(`${kind} "${part}" has more than one colon`);
         if (!/^[a-z][A-Za-z0-9]*$/.test(name))
-          throw new Error(`output "${name}" must be camelCase`);
-        if (type !== undefined && !TYPE.test(type)) {
+          throw new Error(`${kind} "${name}" must be camelCase`);
+        if (
+          kind === 'input'
+            ? !TYPE.test(type ?? '')
+            : type !== undefined && !TYPE.test(type)
+        ) {
           throw new Error(
-            `output ${name} has type "${type}": use string, number, boolean or a PascalCase type (with type_import)`,
+            `${kind} ${name} has type "${type ?? ''}": use string, number, boolean or a PascalCase type (with type_import)`,
           );
         }
         return type === undefined ? { name } : { name, type };
       }),
-    'output',
+    kind,
   );
+
+/** `label:string,lines:OrderLine[]` → [{ name, type }]; a PascalCase type needs the caller's `type_import`. */
+export const parseInputs = (
+  spec: string,
+): Array<{ name: string; type: string }> =>
+  parseMembers(spec, 'input').map(({ name, type }) => ({
+    name,
+    type: type ?? '',
+  }));
+
+/** `added:AddLine,placed` → [{ name, type? }]; a bare name is an output without payload. */
+export const parseOutputs = (
+  spec: string,
+): Array<{ name: string; type?: string }> => parseMembers(spec, 'output');
 
 /** The PascalCase types a component imports, sorted and unique. */
 export const customTypes = (types: string[]): string[] =>
   [
     ...new Set(types.map(elementType).filter((type) => !PRIMITIVES.has(type))),
   ].sort();
-
-/** The class a name gives: order-card → OrderCard. */
-export const className = (name: string): string => pascal(name);
