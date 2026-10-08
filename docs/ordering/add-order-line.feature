@@ -64,9 +64,10 @@ Feature: Add order line
 
   Rule: Rule 4 - Only a Draft order may change its lines
 
-    Scenario: a placed order refuses new lines
+    Scenario: a paid order refuses new lines
       Given 1 of "keyboard" is added to the order
-      And the order has been placed
+      And the stock of "keyboard" is 5
+      And the order has been paid with the payment method "tok_visa"
       When 1 of "mouse" is added to the order
       Then it is refused with "ORDER_NOT_EDITABLE"
       And the order lines are
@@ -124,12 +125,14 @@ Feature: Add order line
 
     Scenario: the product is checked before the order state
       Given 1 of "keyboard" is added to the order
-      And the order has been placed
+      And the stock of "keyboard" is 5
+      And the order has been paid with the payment method "tok_visa"
       When 1 of "ghost" is added to the order
       Then it is refused with "PRODUCT_NOT_FOUND"
 
     Scenario: the order state is checked before the sum
       Given 1 of "keyboard" is added to the order
-      And the order has been placed
+      And the stock of "keyboard" is 5
+      And the order has been paid with the payment method "tok_visa"
       When 99 of "keyboard" is added to the order
       Then it is refused with "ORDER_NOT_EDITABLE"
