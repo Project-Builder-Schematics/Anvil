@@ -146,27 +146,35 @@ export default async (input: Input, shared?: Run) => {
     `${docs}/domain-model.md`,
     'the route is generated from its domain model',
   );
-  const candidates = table(model, 'Driving adapters')
-    .map(([route = '', useCase = '', answers = '']) => ({
+  const rows = table(model, 'Driving adapters').map(
+    ([route = '', useCase = '', answers = '']) => ({
+      text: route,
       route: parseRoute(route),
       useCase,
       answers,
-    }))
-    .filter(
-      ({ route }) =>
-        route?.method === input.method &&
-        route.resource === resource &&
-        (!input.path || route.path === input.path),
-    );
+    }),
+  );
+  const candidates = rows.filter(
+    ({ route }) =>
+      route?.method === input.method &&
+      route.resource === resource &&
+      (!input.path || route.path === input.path),
+  );
   if (candidates.length > 1)
     throw new Error(
       `${input.method} /${resource} has ${String(candidates.length)} rows in domain-model.md — pass --path`,
     );
   const documented = candidates[0];
-  if (!documented?.route)
+  if (!documented?.route) {
+    const unreadable = rows.filter(({ route }) => !route);
     throw new Error(
-      `${input.method} /${resource}${input.path && input.path !== '/' ? input.path : ''} is not in the Driving adapters table of domain-model.md — add the route to the docs first`,
+      `${input.method} /${resource}${input.path && input.path !== '/' ? input.path : ''} is not in the Driving adapters table of domain-model.md — add the route to the docs first${
+        unreadable.length > 0
+          ? ` (rows that are not METHOD /<resource>[/path]: ${unreadable.map(({ text }) => `"${text}"`).join(', ')})`
+          : ''
+      }`,
     );
+  }
   const { path } = documented.route;
   const useCase = assertPascal(documented.useCase, 'use case');
   const status = Number(

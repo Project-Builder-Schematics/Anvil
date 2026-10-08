@@ -2,9 +2,7 @@
 
 import type { Batch } from '@pbuilder/sdk/testing';
 import { format } from 'prettier';
-// The SDK's `runFactoryForTest` stores a created file's template as it is, so a factory that
-// edits a file it just created would edit the template. These two are what it is made of, and
-// they are exported from no public subpath (0.3.1), so they are imported by file.
+// No public subpath exports these two (sdk 0.3.1), and `runFactoryForTest` cannot render a created file.
 import { defineFactory } from '../../node_modules/@pbuilder/sdk/dist/core/context.js';
 import { ContractFake } from '../../node_modules/@pbuilder/sdk/dist/testing/contract-fake.js';
 import hexBoundedContext from '../hex-bounded-context/factory.ts';

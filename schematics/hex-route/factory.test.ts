@@ -224,6 +224,18 @@ describe('hex-route', () => {
     );
   });
 
+  it('names the rows of the table it could not read when the route is not found', async () => {
+    const model = invoicingModel.replace(
+      '`POST /invoices`',
+      '`POST /Invoices`',
+    );
+    const seed = { ...(await prepared()), [`${DOCS}/domain-model.md`]: model };
+
+    expect(String((await go({}, seed)).error)).toContain(
+      'rows that are not METHOD /<resource>[/path]: "POST /Invoices"',
+    );
+  });
+
   it('refuses a use case the barrel does not export, pointing at hex-use-case', async () => {
     const seed = await prepared();
     seed[`${LIB}/src/index.ts`] =
@@ -329,6 +341,26 @@ describe('hex-route', () => {
       expect(source).toContain('ALREADY_VOID: 409,');
       expect(source).not.toContain('NEVER_ANSWERED');
       expect(source).not.toContain('400');
+    });
+
+    it('writes an empty status map, which later runs fill, when no Answers cell cites a rule', async () => {
+      const seed = { ...(await prepared()), ...withAnswers('201', '204') };
+      const first = await go({}, seed);
+
+      expect(first.error).toBeUndefined();
+      expect(flat(first.tree.get(filter) ?? '')).toContain(
+        'Partial<Record<InvoicingErrorCode, number>> = { };',
+      );
+
+      const filled = await go(
+        {},
+        {
+          ...after(seed, first.tree),
+          ...withAnswers('201 · 422 rule 1', '204'),
+        },
+      );
+      expect(filled.error).toBeUndefined();
+      expect(filled.tree.get(filter)).toContain('LINES_REQUIRED: 422,');
     });
 
     it('catches only the slice error class, so global filters still see every other exception', async () => {
