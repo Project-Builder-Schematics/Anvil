@@ -148,6 +148,12 @@ describe('hex-bounded-context: the lib files', () => {
     );
   });
 
+  it('loads the hand-written world of the steps before the steps, even when they only import its type', async () => {
+    expect((await lib())('src/steps/index.ts')).toContain(
+      "['./world.ts', './*.steps.ts', '../*/steps/*.steps.ts']",
+    );
+  });
+
   it('keeps step files out of the lib project and in the spec project', async () => {
     const at = await lib();
 
