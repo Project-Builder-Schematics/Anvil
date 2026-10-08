@@ -58,6 +58,29 @@ describe('OrderNew', () => {
     expect(TestBed.inject(Router).url).toBe('/orders/o9');
   });
 
+  it('replaces the new-order entry in the history, so back does not create another order', async () => {
+    await open();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+
+    http.expectOne('/api/orders').flush({ orderId: 'o9' });
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith(['/orders', 'o9'], {
+      replaceUrl: true,
+    });
+  });
+
+  it('does not navigate when it was destroyed before the order was created', async () => {
+    await open();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+
+    harness.fixture.destroy();
+    http.expectOne('/api/orders').flush({ orderId: 'o9' });
+    await settle();
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('shows why it failed and offers to try again', async () => {
     await open();
     http.expectOne('/api/orders').error(new ProgressEvent('error'));
