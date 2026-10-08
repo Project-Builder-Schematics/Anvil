@@ -339,21 +339,6 @@ describe('hex-bounded-context: the docs', () => {
     });
   });
 
-  describe('tactical', () => {
-    it('keeps the Aggregates table and adds a Not applicable paragraph when deferred', async () => {
-      const model = (await go({ tactical: 'deferred' })).tree.get(MODEL) ?? '';
-
-      expect(model).toMatch(
-        /## Aggregates\n\n\| Aggregate \|.*\n\| --- .*\n\nNot applicable: .*Transaction Script/,
-      );
-      expect(model).toContain('TODO: why');
-    });
-
-    it('writes the same output when full as when omitted', async () => {
-      expect(await go({ tactical: 'full' })).toEqual(await go());
-    });
-  });
-
   it('classifies an existing README by appending, never overwriting it, and keeps an existing glossary', async () => {
     const existing = '# Tenancy\n\nThe tenant root.\n';
     const { tree, error } = await go(

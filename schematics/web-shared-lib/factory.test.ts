@@ -51,21 +51,6 @@ describe('web-shared-lib', () => {
     expect(tree.has('eslint.config.mjs')).toBe(false);
   });
 
-  it('takes the layer for the type tag, and a domain lib has no prefix', async () => {
-    const dataAccess = await go({ name: 'http', layer: 'data-access' });
-    const domain = await go({ name: 'money', layer: 'domain' });
-
-    expect(dataAccess.tree.get('libs/web/shared/http/project.json')).toContain(
-      '"type:data-access"',
-    );
-    expect(domain.tree.get('libs/web/shared/money/project.json')).toContain(
-      '"type:domain"',
-    );
-    expect(domain.tree.has('libs/web/shared/money/vitest.config.mts')).toBe(
-      true,
-    );
-  });
-
   it('refuses an existing lib, writing nothing', async () => {
     const { tree, error } = await go(
       {},

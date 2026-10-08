@@ -2,9 +2,9 @@ import type { Input } from './schema.generated.ts';
 import { find } from '@pbuilder/sdk/commons';
 import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
-  SCOPE,
   ESLINT_CONFIG,
   TSCONFIG_BASE,
+  apiAlias,
   assertDashed,
   assertPascal,
   camel,
@@ -24,8 +24,6 @@ import {
   withAst,
   type Run,
 } from '../_shared/ts.ts';
-
-type Kind = 'memory' | 'context';
 
 const portSource = (
   name: string,
@@ -48,7 +46,7 @@ const contextAdapter = (
   name: string,
   provider: string,
 ): string => `import { Injectable } from '@nestjs/common';
-import type * as ${camel(pascal(provider))} from '${SCOPE}/api-${provider}';
+import type * as ${camel(pascal(provider))} from '${apiAlias(provider)}';
 import type { ${name} } from '../domain/driven-ports/${name}';
 
 // Translates this port into ${provider}'s language: the only file of the slice that knows its barrel.
@@ -58,16 +56,12 @@ export type ${pascal(provider)}Api = typeof ${camel(pascal(provider))};
 export class ${pascal(provider)}${name} implements ${name} {}
 `;
 
-const DOC_CELL = /^(Memory)\b|^@([a-z][a-z0-9-]*)\b/;
+const DOC_CELL = /^(?:Memory\b|@([a-z][a-z0-9-]*)\b)/;
 
-/** The doc's Adapter today cell starts with what answers the port: `Memory …` or `@<context>`. */
-const kindFromDoc = (
-  cell: string | undefined,
-): { kind: Kind; provider: string } | undefined => {
-  const [, memory, context] = DOC_CELL.exec(cell ?? '') ?? [];
-  if (memory) return { kind: 'memory', provider: '' };
-  if (context) return { kind: 'context', provider: context };
-  return undefined;
+/** What the doc's Adapter today cell says answers the port: `@<context>` gives that provider, `Memory …` gives '', anything else undefined. */
+const providerFromDoc = (cell: string | undefined): string | undefined => {
+  const match = DOC_CELL.exec(cell ?? '');
+  return match ? (match[1] ?? '') : undefined;
 };
 
 export default async (input: Input, shared?: Run) => {
@@ -87,22 +81,16 @@ export default async (input: Input, shared?: Run) => {
     `${docs}/domain-model.md`,
     'the port is generated from its domain model',
   );
-  const documented = kindFromDoc(row(model, 'Driven ports', name)?.[2]);
-  if (!input.kind && !documented) {
+  const provider = providerFromDoc(row(model, 'Driven ports', name)?.[2]);
+  if (provider === undefined) {
     throw new Error(
-      `pass --kind, or start the Adapter today cell of ${name} in domain-model.md with Memory or @<context>`,
+      `start the Adapter today cell of ${name} in domain-model.md with Memory or @<context>`,
     );
   }
-  const kind = input.kind ?? documented?.kind ?? 'memory';
-  const provider = (input.provider || documented?.provider || '').trim();
-  if (kind === 'context') {
-    if (!provider)
-      throw new Error(
-        'kind=context needs provider (the context whose barrel the adapter calls, e.g. ledger)',
-      );
+  if (provider !== '') {
     if (provider === context)
       throw new Error(`${context} cannot be its own provider`);
-    const alias = `${SCOPE}/api-${provider}`;
+    const alias = apiAlias(provider);
     const tsconfig = await readRequired(
       TSCONFIG_BASE,
       'the provider alias is read from the workspace tsconfig',
@@ -121,20 +109,10 @@ export default async (input: Input, shared?: Run) => {
         `${provider} is not in the Context map of ${readmePath} — declare the relation there first`,
       );
   }
-  if (input.kind && documented) {
-    const given = input.kind === 'context' ? `@${provider}` : 'Memory';
-    const doc =
-      documented.kind === 'context' ? `@${documented.provider}` : 'Memory';
-    if (doc !== given)
-      throw new Error(
-        `${name} is ${doc} in domain-model.md, not ${given} — fix the doc or the flag`,
-      );
-  }
 
-  const adapter =
-    kind === 'context' ? `${pascal(provider)}${name}` : `Memory${name}`;
+  const adapter = provider ? `${pascal(provider)}${name}` : `Memory${name}`;
   const token = constant(dashed(name));
-  if (kind === 'context' && name === 'Api')
+  if (provider && name === 'Api')
     throw new Error(
       `${adapter} is the type that adapter exports for the provider barrel — rename the port`,
     );
@@ -152,9 +130,9 @@ export default async (input: Input, shared?: Run) => {
   if (existingAdapter === undefined)
     createFile(
       adapterPath,
-      kind === 'context' ? contextAdapter(name, provider) : memoryAdapter(name),
+      provider ? contextAdapter(name, provider) : memoryAdapter(name),
     );
-  if (kind === 'context') {
+  if (provider) {
     await readRequired(
       ESLINT_CONFIG,
       'the relation is declared in the lint boundaries',

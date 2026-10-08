@@ -4,7 +4,7 @@ import { runFactoryForTest } from '@pbuilder/sdk/testing';
 import { format } from 'prettier';
 import { apiLibFiles, webLibFiles } from './libs.ts';
 
-export const tsconfigBase = `{
+const tsconfigBase = `{
   "compilerOptions": {
     "strict": true,
     "paths": {
@@ -15,7 +15,7 @@ export const tsconfigBase = `{
 }
 `;
 
-export const eslintConfig = `const contexts = [
+const eslintConfig = `const contexts = [
   'ledger',
   'catalog',
 ];
@@ -23,7 +23,7 @@ const contextRelations = [];
 const layers = [];
 `;
 
-export const appModule = `import { Module } from '@nestjs/common';
+const appModule = `import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { envSchema } from '../config';
 import { HealthController } from './health.controller';
@@ -79,7 +79,7 @@ export const invoicingModel = `# Invoicing — domain model
 | \`DELETE /invoices/:invoiceId\` | \`VoidInvoice\` | 204 | token |
 `;
 
-export const issueFeature = `Feature: Issue invoice
+const issueFeature = `Feature: Issue invoice
 
   Rule: an invoice needs lines
 
@@ -120,7 +120,7 @@ export const billingSeed = (
 export const flat = (source: string): string =>
   source.replace(/\s+/g, ' ').replace(/, ([}\]])/g, ' $1');
 
-export const packageDir = (schematic: string): string =>
+const packageDir = (schematic: string): string =>
   `${import.meta.dir}/../${schematic}`;
 
 /**

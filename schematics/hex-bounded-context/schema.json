@@ -34,12 +34,6 @@
       "choices": ["confirmed", "assumed"],
       "required": false
     },
-    "tactical": {
-      "type": "enum",
-      "label": "Tactical model. Omitted means full. deferred: Aggregates carries a Not applicable paragraph (Transaction Script) instead of a model, with a follow-up to name its trigger",
-      "choices": ["full", "deferred"],
-      "required": false
-    },
     "context_map": {
       "type": "string",
       "label": "Contexts this one depends on, comma-separated <context>:<relationship> with relationship customer-supplier, conformist or acl (e.g. billing:conformist,shipping:acl). Each context must already exist. Written to the docs Context map and declared in the lint boundaries",

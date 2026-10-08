@@ -148,24 +148,13 @@ describe('ng-component', () => {
     const FEATURE = 'libs/web/catalog/feature';
 
     it('reads the kind from the lib type: feature is a container', async () => {
-      const { tree, error } = await go({ lib: FEATURE, kind: 'container' });
+      const { tree, error } = await go({ lib: FEATURE });
 
       expect(error).toBeUndefined();
       expect(tree.has(`${FEATURE}/src/lib/order-card/order-card.ts`)).toBe(
         true,
       );
       expect((await go({ lib: FEATURE })).error).toBeUndefined();
-    });
-
-    it('lets the flag only agree with the lib type', async () => {
-      expect(String((await go({ kind: 'container' })).error)).toContain(
-        'web-catalog-ui is a ui lib, so its components are presentational, not container — fix the flag or pick another lib',
-      );
-      expect(
-        String((await go({ lib: FEATURE, kind: 'presentational' })).error),
-      ).toContain(
-        'web-catalog-feature is a feature lib, so its components are container, not presentational',
-      );
     });
 
     it('gives a container no inputs or outputs', async () => {

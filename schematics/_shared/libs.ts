@@ -172,7 +172,7 @@ import.meta.glob(['./*.steps.ts', '../*/steps/*.steps.ts'], { eager: true });
 
 export type WebLayer = 'ui' | 'feature' | 'data-access' | 'domain';
 
-export interface WebLib {
+interface WebLib {
   /** Repo-relative lib directory, four levels deep: libs/web/<group>/<name>. */
   dir: string;
   /** Nx project name. */

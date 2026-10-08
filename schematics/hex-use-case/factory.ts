@@ -13,6 +13,7 @@ import {
   readRequired,
   resolveSlice,
   row,
+  subdomainNames,
   table,
 } from '../_shared/lib.ts';
 import { stepsSource } from '../_shared/gherkin.ts';
@@ -69,17 +70,10 @@ const siblingSteps = async (
   const slices =
     segment === ''
       ? [own]
-      : table(readme, 'Subdomains').flatMap((cells) => {
-          const sub = /^\[?([a-z][a-z0-9-]*)/.exec(cells[0] ?? '')?.[1];
-          return sub
-            ? [
-                {
-                  code: `${apiLibDir(context)}/src/${sub}`,
-                  docs: `${docsDir(context)}/${sub}`,
-                },
-              ]
-            : [];
-        });
+      : subdomainNames(readme).map((sub) => ({
+          code: `${apiLibDir(context)}/src/${sub}`,
+          docs: `${docsDir(context)}/${sub}`,
+        }));
   const files = await Promise.all(
     slices.map(async ({ code, docs }) =>
       table((await find(`${docs}/${DOMAIN_MODEL}`).read()) ?? '', 'Use cases')
@@ -117,19 +111,12 @@ export default async (input: Input, shared?: Run) => {
     `${docs}/${DOMAIN_MODEL}`,
     'the use case is generated from its domain model',
   );
-  // The doc's row decides the ports and the feature; a flag may only agree with it.
   const documented = row(model, 'Use cases', name);
   if (!documented)
     throw new Error(
       `${name} is not in the Use cases table of ${docs}/${DOMAIN_MODEL} — add its row to the docs first`,
     );
-  const docPorts = asPorts(documented[3] ?? '');
-  const ports = input.driven_ports ? asPorts(input.driven_ports) : docPorts;
-  if ([...ports].sort().join() !== [...docPorts].sort().join()) {
-    throw new Error(
-      `${name} lists ${docPorts.join(', ') || 'no ports'} in ${DOMAIN_MODEL}, not ${ports.join(', ')} — fix the doc or the flag`,
-    );
-  }
+  const ports = asPorts(documented[3] ?? '');
   for (const port of ports) {
     if (
       (await find(`${code}/domain/driven-ports/${port}.ts`).read()) ===

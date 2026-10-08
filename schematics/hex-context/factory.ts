@@ -1,5 +1,10 @@
 import type { Input } from './schema.generated.ts';
-import { assertDashed, docsDir, readRequired, table } from '../_shared/lib.ts';
+import {
+  assertDashed,
+  docsDir,
+  readRequired,
+  subdomainNames,
+} from '../_shared/lib.ts';
 import { startRun, type Run } from '../_shared/ts.ts';
 import hexSubdomain from '../hex-subdomain/factory.ts';
 
@@ -10,9 +15,7 @@ export default async (input: Input, shared?: Run) => {
     `${docsDir(context)}/README.md`,
     `create the context first: hex-bounded-context --context=${context}`,
   );
-  const subdomains = table(readme, 'Subdomains').map(
-    (r) => /\[([^\]]+)\]/.exec(r[0] ?? '')?.[1] ?? r[0] ?? '',
-  );
+  const subdomains = subdomainNames(readme);
   if (subdomains.length === 0)
     throw new Error(
       `${context}/README.md lists no subdomains under "## Subdomains"`,

@@ -216,20 +216,11 @@ describe('hex-route', () => {
     expect([...tree.keys()]).toEqual([]);
   });
 
-  it('lets flags only agree with the doc', async () => {
-    expect(String((await go({ use_case: 'VoidInvoice' })).error)).toContain(
-      'use_case is IssueInvoice in domain-model.md, not VoidInvoice — fix the doc or the flag',
-    );
-    expect(String((await go({ status: '200' })).error)).toContain(
-      'status is 201 in domain-model.md, not 200 — fix the doc or the flag',
-    );
-  });
-
-  it('needs the route in the doc or the flags to name it', async () => {
+  it('needs the route in the Driving adapters table: docs first', async () => {
     const error = String((await go({ resource: 'payments' })).error);
 
     expect(error).toContain(
-      'no use_case: pass --use_case or add the route to the Driving adapters table',
+      'POST /payments is not in the Driving adapters table of domain-model.md — add the route to the docs first',
     );
   });
 

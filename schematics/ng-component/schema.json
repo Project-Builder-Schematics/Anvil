@@ -10,12 +10,6 @@
       "label": "Component name, dash-case (e.g. order-card); the class is OrderCard and the selector <prefix>-order-card",
       "required": true
     },
-    "kind": {
-      "type": "enum",
-      "label": "container (owns data access, lives in a feature lib) or presentational (inputs and outputs only, lives in a ui lib). Omit to read it from the lib's type tag; a flag may only agree with it",
-      "choices": ["container", "presentational"],
-      "required": false
-    },
     "inputs": {
       "type": "string",
       "label": "Presentational only. Comma-separated required signal inputs as name:type, type string, number, boolean, a PascalCase type or any of them followed by [] (e.g. label:string,lines:OrderLine[]). A PascalCase type needs type_import",

@@ -9,13 +9,7 @@
       "type": "string",
       "label": "Angular selector prefix, lowercase letters (e.g. ds): components are <prefix>-name, directives [prefixName]",
       "required": true
-    },
-    "layer": {
-      "type": "enum",
-      "label": "DDD layer of the lib, becomes its type: tag. Omitted means ui",
-      "choices": ["ui", "data-access", "domain"],
-      "required": false
     }
   },
-  "description": "New web lib shared by every context: libs/web/shared/<name> (alias @demo/web-shared-<name>, tags scope:web, context:shared, type:<layer>) with the same project.json, eslint and tsconfig files as the context libs. Fails if the lib exists. Components, services and directives then come from ng-component, ng-service and ng-directive."
+  "description": "New web lib shared by every context: libs/web/shared/<name> (alias @demo/web-shared-<name>, tags scope:web, context:shared, type:ui) with the same project.json, eslint and tsconfig files as the context libs. Fails if the lib exists. Components, services and directives then come from ng-component, ng-service and ng-directive."
 }

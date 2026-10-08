@@ -1,10 +1,10 @@
 import type { Input } from './schema.generated.ts';
-import { create } from '@pbuilder/sdk/commons';
 import {
   SCOPE,
   TSCONFIG_BASE,
   addTsPath,
   assertDashed,
+  createFile,
   readRequired,
   rewrite,
 } from '../_shared/lib.ts';
@@ -16,7 +16,6 @@ export default async (input: Input) => {
     throw new Error(
       `prefix "${input.prefix}" must be lowercase letters (e.g. ds)`,
     );
-  const layer = input.layer ?? 'ui';
   const dir = `libs/web/shared/${name}`;
   const tsconfig = await readRequired(
     TSCONFIG_BASE,
@@ -27,12 +26,12 @@ export default async (input: Input) => {
   const files = webLibFiles({
     dir,
     name: `web-shared-${name}`,
-    ...(layer === 'domain' ? {} : { prefix: input.prefix }),
-    tags: ['scope:web', 'context:shared', `type:${layer}`],
-    layer,
+    prefix: input.prefix,
+    tags: ['scope:web', 'context:shared', 'type:ui'],
+    layer: 'ui',
   });
   for (const [path, template] of Object.entries(files))
-    create(path, { template, options: {} });
+    createFile(path, template);
   rewrite(
     TSCONFIG_BASE,
     tsconfig,

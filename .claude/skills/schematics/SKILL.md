@@ -54,7 +54,7 @@ A context depends on another only through its public barrel `@demo/api-<ctx>`, a
 
 ### `hex-bounded-context`
 
-`context`, `purpose`, `subdomain_class` (core|supporting|generic), `criticality` (low|medium|high), `volatility` (low|medium|high); _classification_status_ (confirmed|assumed), _tactical_ (full|deferred), _context_map_, _subdomains_ (comma-separated; empty means inline). An existing README gets the missing `## Subdomains` and `## Classification` sections appended. Fails if the lib exists.
+`context`, `purpose`, `subdomain_class` (core|supporting|generic), `criticality` (low|medium|high), `volatility` (low|medium|high); _classification_status_ (confirmed|assumed), _context_map_, _subdomains_ (comma-separated; empty means inline). An existing README gets the missing `## Subdomains` and `## Classification` sections appended. Fails if the lib exists.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-bounded-context --context=billing --purpose="Bills customers." --subdomain_class=supporting --criticality=high --volatility=low --subdomains=invoicing,payouts --context_map=ordering:conformist
@@ -70,7 +70,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-slice --
 
 ### `hex-driven-port`
 
-`context`, `slice`, `name` (PascalCase); _kind_ (memory|context), _provider_. Kind comes from the `Adapter today` cell (`Memory` or `@<context>`) when omitted; a flag may only agree with the doc. A re-run keeps existing files and refuses a real conflict: an adapter that implements another port, or a token another adapter already provides.
+`context`, `slice`, `name` (PascalCase). The adapter comes from the `Adapter today` cell of the port's row: `Memory` or `@<context>`. A re-run keeps existing files and refuses a real conflict: an adapter that implements another port, or a token another adapter already provides.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-driven-port --context=ordering --slice=ordering --name=StockReservation
@@ -78,7 +78,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-driven-p
 
 ### `hex-use-case`
 
-`context`, `slice`, `name` (PascalCase); _driven_ports_ (comma-separated, must exist). Reads the `Use cases` row and the `.feature`. Its steps file binds every phrase to a step that throws `step not implemented: <phrase>`, so the scenarios fail until you implement them.
+`context`, `slice`, `name` (PascalCase). Reads the `Use cases` row (its driven ports must exist) and the `.feature`. Its steps file binds every phrase to a step that throws `step not implemented: <phrase>`, so the scenarios fail until you implement them.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-use-case --context=billing --slice=invoicing --name=IssueInvoice
@@ -86,7 +86,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-use-case
 
 ### `hex-route`
 
-`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _use_case_, _path_, _status_ (200|201|202|204). The use case must already be in the barrel. A slice whose rules name error codes gets `<Slice>ErrorFilter` (`infrastructure/http/`), registered with `@UseFilters` on every controller of the slice. It catches only `<Slice>Error`, so global filters still see every other exception, and maps the code to a status through a map typed by the slice's codes. The map comes from the Answers cells that cite a rule (`422 rules 2–3`) and is refreshed from the docs on every re-run; a code no cell cites is logged and answers 500. The route refuses a slice whose `domain/errors.ts` has no `<Slice>Error` class. A body schema for a command whose fields are all path parameters is `z.object({}).default({})`, since Express leaves a missing body undefined.
+`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _path_ (needed only when the resource has several rows for the method). The route's `Driving adapters` row gives the use case, which must already be in the barrel, and the success status (its first 2xx). A slice whose rules name error codes gets `<Slice>ErrorFilter` (`infrastructure/http/`), registered with `@UseFilters` on every controller of the slice. It catches only `<Slice>Error`, so global filters still see every other exception, and maps the code to a status through a map typed by the slice's codes. The map comes from the Answers cells that cite a rule (`422 rules 2–3`) and is refreshed from the docs on every re-run; a code no cell cites is logged and answers 500. The route refuses a slice whose `domain/errors.ts` has no `<Slice>Error` class. A body schema for a command whose fields are all path parameters is `z.object({}).default({})`, since Express leaves a missing body undefined.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-route --context=billing --slice=invoicing --resource=invoices --method=POST
@@ -118,7 +118,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-context 
 
 ### `web-shared-lib`
 
-`name`, `prefix` (selector prefix); _layer_ (ui|data-access|domain, default ui). Fails if the lib exists.
+`name`, `prefix` (selector prefix). A ui lib. Fails if the lib exists.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-shared-lib --name=design-system --prefix=ds
@@ -126,7 +126,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-shared-l
 
 ### `ng-component`
 
-`lib` (repo-relative lib dir), `name` (dash-case); _kind_ (container|presentational, read from the lib's type tag), _inputs_ (`name:type`, required signal inputs; type is string, number, boolean, a PascalCase type or any of them with `[]`), _outputs_ (camelCase, optionally `name:type` for a payload), _type_import_ (the package or relative path the PascalCase types are imported from with `import type`, required when one is used; a type may not be named like the component class or `Component`), _folder_. Containers take no inputs or outputs.
+`lib` (repo-relative lib dir), `name` (dash-case); _inputs_ (`name:type`, required signal inputs; type is string, number, boolean, a PascalCase type or any of them with `[]`), _outputs_ (camelCase, optionally `name:type` for a payload), _type_import_ (the package or relative path the PascalCase types are imported from with `import type`, required when one is used; a type may not be named like the component class or `Component`), _folder_. The lib's type tag decides the kind: a `feature` lib holds containers, which take no inputs or outputs, a `ui` lib presentational components.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/catalog/ui --name=order-card --inputs=label:string,count:number --outputs=selected

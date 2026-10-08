@@ -174,15 +174,6 @@ describe('hex-use-case', () => {
     expect([...tree.keys()]).toEqual([]);
   });
 
-  it('lets a flag only agree with the doc', async () => {
-    expect(
-      (await go({ driven_ports: 'Clock, InvoiceRepository' })).error,
-    ).toBeUndefined();
-    expect(String((await go({ driven_ports: 'Clock' })).error)).toContain(
-      'lists InvoiceRepository, Clock in domain-model.md, not Clock',
-    );
-  });
-
   it('refuses a driven port that has no adapter yet, pointing at hex-driven-port', async () => {
     const model = invoicingModel.replace(
       '`InvoiceRepository`, `Clock` | [issue',

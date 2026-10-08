@@ -10,10 +10,9 @@ import {
   commandFields,
   errorCodes,
   errorStatuses,
-  numberedRules,
+  subdomainNames,
   parseRoute,
   pascal,
-  sentence,
   title,
   readRequired,
   resolveSlice,
@@ -29,10 +28,6 @@ describe('naming', () => {
     expect(camel('CreateOrder')).toBe('createOrder');
     expect(dashed('CreateOrder')).toBe('create-order');
     expect(constant('create-order')).toBe('CREATE_ORDER');
-  });
-
-  it('writes names as words', () => {
-    expect(sentence('CreateOrder')).toBe('Create order');
     expect(title('order-items')).toBe('Order items');
   });
 
@@ -107,7 +102,7 @@ describe('resolveSlice', () => {
     const seed = {
       'docs/growth/domain-model.md': '# m\n',
       'docs/growth/README.md':
-        '| Subdomain | R |\n| --- | --- |\n| [marketing](domain-model.md) | x |\n',
+        '## Subdomains\n\n| Subdomain | R |\n| --- | --- |\n| [marketing](domain-model.md) | x |\n',
     };
 
     expect(await resolved(seed)).toEqual({
@@ -121,7 +116,7 @@ describe('resolveSlice', () => {
     const seed = {
       'docs/growth/domain-model.md': '# m\n',
       'docs/growth/README.md':
-        '| Subdomain | R |\n| --- | --- |\n| [marketing-ops](domain-model.md) | x |\n',
+        '## Subdomains\n\n| Subdomain | R |\n| --- | --- |\n| [marketing-ops](domain-model.md) | x |\n',
     };
 
     expect(String((await run(seed)).error)).toContain('no domain model');
@@ -131,7 +126,7 @@ describe('resolveSlice', () => {
     const seed = {
       'docs/growth/domain-model.md': '# m\n',
       'docs/growth/README.md':
-        '| Subdomain | R |\n| --- | --- |\n| marketing | x |\n',
+        '## Subdomains\n\n| Subdomain | R |\n| --- | --- |\n| marketing | x |\n',
     };
 
     expect(await resolved(seed)).toMatchObject({ segment: '' });
@@ -234,8 +229,12 @@ describe('domain model tables', () => {
     expect(row(model, 'Use cases', 'Other')).toBeUndefined();
   });
 
-  it('reads numbered rules from the table', () => {
-    expect(numberedRules(model).get(1)).toContain('BUDGET_REQUIRED');
+  it('reads the subdomain names of a README, linked or bare', () => {
+    expect(
+      subdomainNames(
+        '## Subdomains\n\n| Subdomain | R |\n| --- | --- |\n| [marketing](domain-model.md) | x |\n| sales | y |\n',
+      ),
+    ).toEqual(['marketing', 'sales']);
   });
 
   it('lists the error codes the rules name, once each, in order', () => {

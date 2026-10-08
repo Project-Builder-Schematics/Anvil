@@ -31,11 +31,6 @@ export default async (input: Input) => {
     throw new Error(
       `${lib.name} is a ${lib.type || 'untyped'} lib, not an Angular lib that holds components (ui or feature)`,
     );
-  if (input.kind && input.kind !== derived) {
-    throw new Error(
-      `${lib.name} is a ${lib.type} lib, so its components are ${derived}, not ${input.kind} — fix the flag or pick another lib`,
-    );
-  }
   const inputs = parseInputs(input.inputs ?? '');
   const outputs = parseOutputs(input.outputs ?? '');
   const both = inputs.find((i) => outputs.some((o) => o.name === i.name));

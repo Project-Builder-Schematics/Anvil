@@ -101,14 +101,10 @@ ${contextMap(relations)}
 ${LEVEL_TEXT[level]}
 `;
 
-const DEFERRED_AGGREGATES =
-  '\nNot applicable: the tactical model is deliberately deferred; the rules run as procedures over the rows (Transaction Script). Why: TODO: why. Follow-up: TODO: follow-up ticket and its trigger (a rule spanning rows, an invariant living in storage, a move to core or high criticality).\n';
-
 const domainModel = (
   context: string,
   subdomain: string,
   inline: boolean,
-  deferred: boolean,
 ): string => `# ${title(subdomain)} — domain model
 
 ${
@@ -121,7 +117,7 @@ ${
 
 | Aggregate | Root entity | Invariants it protects | Changed by |
 | --- | --- | --- | --- |
-${deferred ? DEFERRED_AGGREGATES : ''}
+
 ## Entities
 
 | Entity | Identity | Attributes | Inside aggregate | Lifecycle |
@@ -349,7 +345,7 @@ ${linked.map(glossaryLink).join('\n')}`
     modelDirs.flatMap(({ subdomain, dir }) => [
       createMissing(
         `${dir}/${DOMAIN_MODEL}`,
-        domainModel(context, subdomain, inline, input.tactical === 'deferred'),
+        domainModel(context, subdomain, inline),
       ),
       createMissing(`${dir}/flows.md`, flows(subdomain)),
       ...(inline

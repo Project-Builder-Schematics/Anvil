@@ -2,7 +2,7 @@ import type { Input } from './schema.generated.ts';
 import { find } from '@pbuilder/sdk/commons';
 import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
-  SCOPE,
+  apiAlias,
   apiLibDir,
   assertDashed,
   assertPascal,
@@ -170,16 +170,15 @@ export default async (input: Input, shared?: Run) => {
   const resource = assertDashed(input.resource, 'resource');
   const { code, docs } = await resolveSlice(context, slice);
 
-  // The doc's Driving adapters row for this method + resource (+ path) decides what the flags may only confirm.
   const model = await readRequired(
     `${docs}/domain-model.md`,
     'the route is generated from its domain model',
   );
   const candidates = table(model, 'Driving adapters')
-    .map((r) => ({
-      route: parseRoute(r[0] ?? ''),
-      useCase: r[1],
-      answers: r[2] ?? '',
+    .map(([route = '', useCase = '', answers = '']) => ({
+      route: parseRoute(route),
+      useCase,
+      answers,
     }))
     .filter(
       ({ route }) =>
@@ -192,36 +191,14 @@ export default async (input: Input, shared?: Run) => {
       `${input.method} /${resource} has ${String(candidates.length)} rows in domain-model.md — pass --path`,
     );
   const documented = candidates[0];
-  const pick = (
-    flag: string | undefined,
-    doc: string | undefined,
-    label: string,
-    fallback?: string,
-  ): string => {
-    if (flag && doc && flag !== doc)
-      throw new Error(
-        `${label} is ${doc} in domain-model.md, not ${flag} — fix the doc or the flag`,
-      );
-    const value = flag || doc || fallback;
-    if (!value)
-      throw new Error(
-        `no ${label}: pass --${label} or add the route to the Driving adapters table of domain-model.md`,
-      );
-    return value;
-  };
-  const path = pick(input.path, documented?.route?.path, 'path', '/');
-  const useCase = assertPascal(
-    pick(input.use_case, documented?.useCase, 'use_case'),
-    'use_case',
-  );
-  const docStatus = /\b(2\d\d)\b/.exec(documented?.answers ?? '')?.[1];
+  if (!documented?.route)
+    throw new Error(
+      `${input.method} /${resource}${input.path && input.path !== '/' ? input.path : ''} is not in the Driving adapters table of domain-model.md — add the route to the docs first`,
+    );
+  const { path } = documented.route;
+  const useCase = assertPascal(documented.useCase, 'use case');
   const status = Number(
-    pick(
-      input.status,
-      docStatus,
-      'status',
-      String(defaultStatus(input.method)),
-    ),
+    /\b(2\d\d)\b/.exec(documented.answers)?.[1] ?? defaultStatus(input.method),
   );
   const command = row(model, 'Use cases', useCase)?.[1];
   const op = operation({
@@ -387,7 +364,7 @@ export default async (input: Input, shared?: Run) => {
   });
   const contextModule = `${pascal(context)}Module`;
   run.edit(APP_MODULE, (file) => {
-    file.addImport(contextModule, `${SCOPE}/api-${context}`);
+    file.addImport(contextModule, apiAlias(context));
     return withAst(file, (ast) => {
       addModuleEntry(ast, 'imports', contextModule);
     });

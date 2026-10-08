@@ -137,10 +137,18 @@ describe('hex-driven-port', () => {
   });
 
   it('refuses a port whose token another port of the slice already has', async () => {
-    const first = await go({ name: 'OrderId', kind: 'memory' });
-    const seed = after(await sliced(), first.tree);
+    const model = invoicingModel.replace(
+      '| `Clock` |',
+      '| `OrderId` | `next()` | Memory | unique |\n| `OrderID` | `next()` | Memory | unique |\n| `Clock` |',
+    );
+    const documented = {
+      ...(await sliced()),
+      [`${DOCS}/domain-model.md`]: model,
+    };
+    const first = await go({ name: 'OrderId' }, documented);
+    const seed = after(documented, first.tree);
 
-    const { tree, error } = await go({ name: 'OrderID', kind: 'memory' }, seed);
+    const { tree, error } = await go({ name: 'OrderID' }, seed);
 
     expect(String(error)).toContain(
       'ORDER_ID is already taken by another port',
@@ -219,20 +227,11 @@ describe('hex-driven-port', () => {
     );
   });
 
-  it('needs a kind when the doc has no row for the port', async () => {
+  it('needs the Adapter today cell of the port in the doc', async () => {
     const error = String((await go({ name: 'Mailer' })).error);
 
-    expect(error).toContain('pass --kind');
-  });
-
-  it('takes the kind from the flag when the doc has no row, and a flag may only agree with the doc', async () => {
-    expect(
-      (await go({ name: 'Mailer', kind: 'memory' })).error,
-    ).toBeUndefined();
-    expect(
-      String((await go({ kind: 'context', provider: 'ledger' })).error),
-    ).toContain(
-      'InvoiceRepository is Memory in domain-model.md, not @ledger — fix the doc or the flag',
+    expect(error).toContain(
+      'start the Adapter today cell of Mailer in domain-model.md with Memory or @<context>',
     );
   });
 

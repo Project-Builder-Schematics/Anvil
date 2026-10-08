@@ -55,12 +55,6 @@ export const constant = (dashedCase: string): string =>
 export const dashed = (pascalCase: string): string =>
   pascalCase.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
-/** "CreateOrder" → "Create order" */
-export const sentence = (pascalCase: string): string => {
-  const words = pascalCase.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
-  return (words[0] ?? '').toUpperCase() + words.slice(1);
-};
-
 /** "order-items" → "Order items" */
 export const title = (dashedCase: string): string => {
   const words = dashedCase.replace(/-/g, ' ');
@@ -79,7 +73,7 @@ export const apiLibDir = (context: string): string => `libs/api/${context}`;
 export const apiAlias = (context: string): string => `${SCOPE}/api-${context}`;
 export const docsDir = (context: string): string => `docs/${context}`;
 
-export interface SlicePaths {
+interface SlicePaths {
   /** Where the slice's code lives. */
   code: string;
   /** Where its domain model and features live. */
@@ -108,13 +102,8 @@ export const resolveSlice = async (
   }
   const readme = await find(`${docs}/README.md`).read();
   const inline = (await find(`${docs}/${DOMAIN_MODEL}`).read()) !== undefined;
-  if (
-    inline &&
-    readme !== undefined &&
-    new RegExp(`^\\|\\s*(\\[${slice}\\]\\(|${slice}\\s*\\|)`, 'm').test(readme)
-  ) {
+  if (inline && readme !== undefined && subdomainNames(readme).includes(slice))
     return { code: src, docs, segment: '' };
-  }
   throw new Error(
     `${slice} has no domain model under ${docs} — write the docs first: hex-bounded-context --context=${context} --subdomains=…,${slice}`,
   );
@@ -123,7 +112,7 @@ export const resolveSlice = async (
 // --- Reading the domain model: tables under a verbatim `## heading`, cells split
 // on unescaped pipes, backticks stripped; numbered rules; error codes as CAPS tokens.
 
-export const strip = (cell: string): string =>
+const strip = (cell: string): string =>
   cell.replace(/`/g, '').replace(/\\\|/g, '|').trim();
 
 const cells = (line: string): string[] =>
@@ -152,8 +141,14 @@ export const row = (
   first: string,
 ): string[] | undefined => table(model, heading).find((r) => r[0] === first);
 
+/** The subdomains of a README's Subdomains table: the name of a `[name](link)` or a bare `name`. */
+export const subdomainNames = (readme: string): string[] =>
+  table(readme, 'Subdomains').map(
+    ([cell = '']) => /^\[([^\]]+)\]/.exec(cell)?.[1] ?? cell,
+  );
+
 /** `| 1 | text | Source |` rows → rules[1] = "text", backticks intact for `errorCodes`. */
-export const numberedRules = (model: string): Map<number, string> =>
+const numberedRules = (model: string): Map<number, string> =>
   new Map(
     [
       ...section(model, 'Business rules').matchAll(

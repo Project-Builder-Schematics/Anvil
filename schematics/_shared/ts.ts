@@ -5,7 +5,7 @@ import { astLibrary, find } from '@pbuilder/sdk/typescript';
 const { Node, SyntaxKind } = astLibrary;
 
 type Ast = astLibrary.SourceFile;
-export type TsFile = ReturnType<typeof find>;
+type TsFile = ReturnType<typeof find>;
 
 export interface Run {
   /** Queues edits for a path; they apply on one handle at `flush`, in the order queued. */

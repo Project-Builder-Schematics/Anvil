@@ -6,7 +6,7 @@ import { find } from '@pbuilder/sdk/typescript';
 import { readRequired, rewrite } from './lib.ts';
 import { addReExport, withAst } from './ts.ts';
 
-export interface NgLib {
+interface NgLib {
   dir: string;
   /** Nx project name. */
   name: string;
