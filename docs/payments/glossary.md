@@ -2,7 +2,7 @@
 
 Terms of this bounded context. One meaning per term; the same word in another context is a different term.
 
-**Payment.** The money taken for one order: its id, its amount, its currency, its token and its status. The aggregate root of the context. There is one per order.
+**Payment.** The money taken for one order: its id, its amount, its currency, its token and its status. The aggregate root of the context. An order has one payment at a time; a failed payment is replaced by a new one.
 
 **Order id.** The identity of the order a payment is for, as ordering names it. Payments only holds the id, to find the order's payment.
 

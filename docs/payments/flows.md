@@ -31,6 +31,7 @@ sequenceDiagram
   end
   G-->>U: Captured or Declined
   U->>P: save(payment Captured or Failed)
+  Note over P: a save over a payment with another id is ignored (rule 15)
   alt declined
     U-->>O: PAYMENT_DECLINED (rule 3)
   end

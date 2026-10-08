@@ -111,6 +111,7 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
 
 - [ ] F3 (user decision, 2026-10-09): `ReserveStock` loads each stock item once, so two lines for the same product make the second save overwrite the first and reserve too little (ReserveStock.ts:28-31). F3 either merges or refuses duplicate lines in `ReserveStock`, or proves with a test that the process manager sends distinct lines.
 - [ ] `ReserveStock` reads, modifies and writes `StockItems` with no concurrency control, so a concurrent update can be lost (ReserveStock.ts:24-35). This joins the optimistic concurrency follow-up (out of scope), which must land before a real database adapter.
+- [ ] F3 (review-18ec78503f4dcda2, user decision, 2026-10-09): money captured with a lost answer leaves the payment `Pending`, which cannot be refunded (ChargePayment.ts:27-35). The process manager must not compensate (release the stock and return the order to `Draft`) while the charge outcome is unknown.
 - [ ] U5: a stale command result answers `false` and leaves no trace (order-store.ts:85-86). Verify that this is the intended "no error" assumption and that a test covers it.
 - [ ] U5: the `readonly lines` spec only checks types (`@ts-expect-error`) and asserts nothing at runtime (order.spec.ts:29-36). The web libs have no `typecheck` target, so CI never checks it. Add a typecheck target for the web libs, or drop the spec.
 
