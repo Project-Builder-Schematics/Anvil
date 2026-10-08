@@ -10,9 +10,9 @@ Terms of this bounded context. One meaning per term; the same word in another co
 
 **Payment method token.** An opaque text that stands for a customer's means of payment. Payments never sees or keeps card data.
 
-**Charge.** Ask the gateway to take the amount. A charge ends in `Captured`, or in `Failed` when the gateway declines.
+**Charge.** Ask the gateway to take the amount. A charge ends in `Captured`, or in `Failed` when the gateway declines, or stays `Pending` when the gateway gives no answer.
 
-**Pending.** The status of a payment while the gateway has not answered. It is never stored.
+**Pending.** The status of a payment stored before the gateway is called. It stays while the outcome is unknown, and the next charge of the order resolves it.
 
 **Captured.** The status of a payment whose charge the gateway accepted. Only a captured payment can be refunded.
 
@@ -22,7 +22,7 @@ Terms of this bounded context. One meaning per term; the same word in another co
 
 **Refunded.** The final status of a payment that was refunded.
 
-**Idempotency key.** The order id: charging the same order twice returns the first successful charge instead of taking the money twice.
+**Idempotency key.** The order id, sent to the gateway with every charge: the gateway returns the first successful charge for a key instead of taking the money twice, also for two charges at the same time.
 
 **Payment gateway.** The driven port that takes the money. The real one is a third party; payments sees only its two outcomes, captured and declined.
 

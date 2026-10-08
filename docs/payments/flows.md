@@ -17,12 +17,18 @@ sequenceDiagram
   alt not an integer greater than 0
     U-->>O: INVALID_AMOUNT (rules 1, 6, 10)
   end
-  U->>P: byOrderId(orderId)
+  U->>P: startCharge(payment Pending)
   alt a Captured or Refunded payment exists
+    P-->>U: the existing payment
     U-->>O: the existing payment (rule 2)
   end
-  U->>G: charge({ amount, currency, paymentMethodToken })
-  Note over G: the adapter translates the gateway's result (ACL)
+  Note over P: a Pending or Failed payment is replaced (rules 7, 13)
+  U->>G: charge({ amount, currency, paymentMethodToken, idempotencyKey: orderId })
+  Note over G: the adapter translates the gateway's result (ACL); a repeated key charges once (rule 14)
+  alt the gateway gives no answer
+    G--)U: error
+    U-->>O: the error; the payment stays Pending (rule 12)
+  end
   G-->>U: Captured or Declined
   U->>P: save(payment Captured or Failed)
   alt declined
