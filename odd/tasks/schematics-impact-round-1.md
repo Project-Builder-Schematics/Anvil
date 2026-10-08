@@ -50,6 +50,7 @@ The IMPACT row for the missing tsconfig paths in the api vitest config is alread
 - 2026-10-08: document created. The user approved doing the improvements, then the next slice.
 - 2026-10-08: S1 to S4 done, each with its IMPACT row.
 - 2026-10-08: S5, S7 and S8 done by one writer in 7 commits on `feat/workspace-scaffold` (753ad06 tasks, c0429c2, eae2898, 74a8746, 6470ca2, 3899a9b, and this record).
+- 2026-10-08: S9 and S10 done by one writer in 6 commits (84cc480, f7970fb, db0b468, 90e5ba9, ad5afe6, aba8bd6).
 
 ## Follow-ups
 
@@ -72,7 +73,7 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Kept, with no real use yet: the multi-subdomain layout and `subdomains`. Decision for the user.
 - [x] S6 (fa851e4): `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice: the factory emits `@Service()` (RED: 2 factory tests failed first), the design-system `ExperimentService` was regenerated, and the IMPACT row is recorded.
 
-- [ ] S9: findings from the S5/S7/S8 reviews. Six slices, all approved and acknowledged on 2026-10-08:
+- [x] S9 (84cc480, f7970fb): findings from the S5/S7/S8 reviews. Six slices, all approved and acknowledged on 2026-10-08:
   - review-6453b589801853e1
   - review-0a12e97a0c89d5ae
   - review-c7e10a99a380a3cd
@@ -90,7 +91,17 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - The `citedRules` defaults are hard to follow (lib.ts:176-186).
   - Minor: arrow depth in commandFields, the duplicated error-class name, the HTML splice edge cases, sibling-name validation in hex-use-case, an untested route-path error, and resolveSlice requiring a heading.
 
-- [ ] S10: create new files from SDK templates (user decision, 2026-10-08). The approach is a hybrid:
+  Done (route: single writer, strict TDD; trigger evidence: 25+ files across `schematics/`):
+  - RED, first run of each new test: `lib.test.ts` 2 failed (a citation of a rule with no code, a reversed range) and 1 failed (the arrow of a function type in `commandFields`); `hex-route` 2 failed (a stale status kept, the `type` and alias of a Nest import dropped); `ng.test.ts` 1 failed (a missing barrel gave the engine's "does not exist" message); `resolveSlice` 1 failed (the README does not list the slice); `hex-use-case` 1 failed (a README subdomain name that is not dash-case). The untested hex-subdomain route-path error and the new ordering HTTP cases passed at once, so they are coverage gaps, not defects.
+  - Status map: a re-run now drops the codes the docs no longer cite. A strict citation of a rule with no code refuses ("422 cites rule 5, which names no error code"), and so does a reversed range or an unreadable list; `citedRules` is one regex per part instead of the defaulted destructuring.
+  - Nest imports: `sortNamedImports` (`_shared/ts.ts`) re-adds the structures of the named imports, so alias and `type` survive.
+  - Missing barrel: intended, since `web-context` and `web-shared-lib` always write one. `registerInLib` now refuses with "src/index.ts not found — create the lib first" and writes nothing (test).
+  - Ordering refusals: every refusal in domain and application throws `OrderingError`; none throws a bare `Error` or `RangeError`, so there is no 500 bug. The only `RangeError`s are in `Money`, `OrderId` and `ProductId`.
+  - Decision: those `RangeError`s are internal invariants, not user-facing refusals. The docs already say a `Money` violation is a bug of the adapter, and the zod schemas at the HTTP edge (`z.string().trim().min(1)`) refuse a blank id with 400 before a value object sees it, so a 500 there is the right answer to a real bug. Mapping them to 4xx would hide an adapter bug behind a client error. New HTTP cases: add a line to an unknown order (404), a repeated product past 99 (422), a blank order id (400). `CURRENCY_MISMATCH` cannot be reached over HTTP with the memory prices adapter (all USD, and the provider token is not in the barrel); the domain spec covers it.
+  - Minor, done: the arrow depth in `commandFields`, the duplicated error-class name (`errorClass`), sibling-name validation in `hex-use-case`, the untested route-path error, the `resolveSlice` message when the README has no Subdomains heading. Not done: the HTML splice edge cases (no concrete failing case in the review, and the dialect has no caller yet), and `defineDialect` (upstream PB-16).
+  - Checks: `bun test schematics` 288 pass; `nx run-many -t lint test typecheck` green for 18 projects; `prettier --check .` clean.
+
+- [x] S10 (db0b468, 90e5ba9, ad5afe6, aba8bd6): create new files from SDK templates (user decision, 2026-10-08). The approach is a hybrid:
   - Docs parsing, decisions and computed names and lists stay in TypeScript.
   - Every NEW file is rendered from a package-local template with `create(path, { templateFile, options })`, or with `scaffold` for a folder. The template lives in each schematic's `files/` folder.
   - Templates stay dumb: only `{= =}` interpolation and simple `range` over precomputed values. No arithmetic, no emptiness checks, no casing pipes on non-strings (the Go text/template pitfalls).
@@ -99,6 +110,17 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Prove it: regenerating ordering and the web libs gives an empty diff, re-runs stay no-ops, and `one-write-per-path` and the compiles test stay green.
   - Keep the skill, AGENTS.md and IMPACT in sync.
 
+  Done (route: single writer, strict TDD; trigger evidence: 40+ files across `schematics/`):
+  - Templates: 54 `files/**/*.template` files. hex-bounded-context 19 (the lib folder, the ring `.gitkeep` files, the README, two glossaries, the domain model, the flows), hex-slice 6, hex-driven-port 3, hex-use-case 3, hex-route 2, web-context 13 (the Angular and the domain lib), ng-component 4, ng-service 2, ng-directive 2.
+  - `_shared` cannot hold templates: the engine reads them from the package that runs, and `hex-subdomain` and `hex-context` run the leaf factories in their own process, so a leaf's `files/` is unreachable from them. The SDK checks the path lexically (no `..`) and follows symlinks, so those two link the template folders of the leaves, and `web-shared-lib` links `web-context/files`. `scaffold` refuses a symlinked `from`, so the link sits above it.
+  - Stays in TypeScript: docs parsing and the decisions they drive, computed names, the Classification, Subdomains and Context map sections (they are also appended to an existing README), the prejoined lists (imports, bindings, the members of a class). The templates only interpolate and `range` over lists the factory prepared; `templates.fitness.test.ts` keeps them to that.
+  - The tests cannot see a rendered template: `runFactoryForTest` stores it as written, so a file created and edited in one run (the controller, the nested slice module) was an edit of the template. `_shared/testing.ts` has `runFactory`, which renders a created file the way the engine does before the next read, with `_shared/render.ts` for the Go text/template subset we allow. It imports `defineFactory` and `ContractFake` from the SDK by file.
+  - Engine facts found by running it: a text option that reads as a JSON list or object is decoded (`'{}'` prints `map[]`), so factories never pass one (the `{{= .members =}}` trick keeps `{}` in the template); arrays of objects iterate with `.field`; trim markers and `{= "{=" =}` work; an empty template file writes an empty file.
+  - RED: `render.test.ts` and `testing.test.ts` failed on the missing modules, `gherkin.test.ts` on `stepsOptions`, `templates.fitness.test.ts` on `createFile`. The conversion commits are pure refactors: the 288 existing tests stayed green on each (303 at each commit, 328 at the end with the new ones).
+  - Proof, builder v0.9.11 in a scratch workspace (the old tree at f7970fb against the new one): `hex-bounded-context` then `hex-context` for ordering, a nested context with its docs and a `@catalog` adapter (`hex-bounded-context` then `hex-subdomain`), an inline context, `web-context`, `web-shared-lib`, `ng-component` (typed inputs and outputs, and a container), `ng-service` (with and without fields) and `ng-directive`: every generated file is byte-identical. Against the repo: the files of ordering nobody edited (project, tsconfigs, vitest config, steps index, errors, filter, `.gitkeep`) are identical; the rest differs only by hand edits, import order and prettier. `hex-context --context=ordering` on the repo re-runs as "no changes" and `git status` stays clean. The Angular `tsconfig.lib.json` of `web-ordering` differs in exclude order from the template: it did before this change too.
+  - Stryker on ordering 100.00 (123 mutants, 0 survived). The sandbox could not copy the symlinks (`ENOTSUP`), so `stryker.config.json` now ignores `schematics` (aba8bd6).
+  - Checks at the last commit: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects; `prettier --check .` clean; `eslint schematics` and `tsc -p schematics` clean.
+
 ## Next step
 
-S5, S7 and S8 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 277 pass; `nx run-many -t lint test typecheck` green for 18 projects.
+S5 to S10 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 328 pass; `nx run-many -t lint test typecheck` green for 18 projects.
