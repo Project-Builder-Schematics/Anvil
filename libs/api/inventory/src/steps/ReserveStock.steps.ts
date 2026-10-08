@@ -1,57 +1,66 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- pending bindings keep their arguments until the scenarios are implemented */
 import { Given, Then, When, type DataTable } from 'quickpickle';
+import { expect } from 'vitest';
+import type { InventoryWorld } from './world';
 
 Given(
   'the stock level of {string} is set to {int}',
-  (_world, arg0: string, arg1: number) => {
-    throw new Error(
-      'step not implemented: the stock level of "keyboard" is set to 10',
-    );
+  async (world: InventoryWorld, productId: string, onHand: number) => {
+    await world.attempt(() => world.setStockLevel({ productId, onHand }));
   },
 );
 
 When(
   'the lines of order {string} are reserved',
-  (_world, arg0: string, table: DataTable) => {
-    throw new Error(
-      'step not implemented: the lines of order "o1" are reserved',
+  async (world: InventoryWorld, orderId: string, table: DataTable) => {
+    const lines = table.hashes().map((row) => ({
+      productId: row['product'] ?? '',
+      quantity: Number(row['quantity']),
+    }));
+    world.reservation = await world.attempt(() =>
+      world.reserveStock({ orderId, lines }),
     );
   },
 );
 
 Then(
   'the stock of {string} is {int} on hand and {int} reserved',
-  (_world, arg0: string, arg1: number, arg2: number) => {
-    throw new Error(
-      'step not implemented: the stock of "keyboard" is 10 on hand and 4 reserved',
-    );
+  async (
+    world: InventoryWorld,
+    productId: string,
+    onHand: number,
+    reserved: number,
+  ) => {
+    expect(await world.getStockLevel({ productId })).toEqual({
+      productId,
+      onHand,
+      reserved,
+    });
   },
 );
 
-Then('it is refused with {string}', (_world, arg0: string) => {
-  throw new Error(
-    'step not implemented: it is refused with "INSUFFICIENT_STOCK"',
-  );
+Then('it is refused with {string}', (world: InventoryWorld, code: string) => {
+  expect(world.refusals.pop()?.code).toBe(code);
 });
 
-Then('the reservation lists', (_world, table: DataTable) => {
-  throw new Error('step not implemented: the reservation lists');
+Then('the reservation lists', (world: InventoryWorld, table: DataTable) => {
+  expect(
+    world.reservation?.lines.map((line) => ({
+      product: line.productId,
+      quantity: String(line.quantity),
+    })),
+  ).toEqual(table.hashes());
 });
 
 Given(
   'the reservation of order {string} is committed',
-  (_world, arg0: string) => {
-    throw new Error(
-      'step not implemented: the reservation of order "o1" is committed',
-    );
+  async (world: InventoryWorld, orderId: string) => {
+    await world.commitStock({ orderId });
   },
 );
 
 Given(
   'the reservation of order {string} is released',
-  (_world, arg0: string) => {
-    throw new Error(
-      'step not implemented: the reservation of order "o1" is released',
-    );
+  async (world: InventoryWorld, orderId: string) => {
+    await world.releaseStock({ orderId });
   },
 );

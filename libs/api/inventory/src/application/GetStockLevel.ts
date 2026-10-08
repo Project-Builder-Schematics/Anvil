@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
 import type { StockItems } from '../domain/driven-ports/StockItems';
+import { findItem } from './findItem';
+import { toView, type StockLevelView } from './StockLevelView';
 
-export interface GetStockLevelCommand {}
+export interface GetStockLevelCommand {
+  readonly productId: string;
+}
 
-export interface GetStockLevelResult {}
+export type GetStockLevelResult = StockLevelView;
 
 export type GetStockLevel = (
   command: GetStockLevelCommand,
@@ -13,5 +16,5 @@ export const GET_STOCK_LEVEL = Symbol('GetStockLevel');
 
 export const makeGetStockLevel =
   (stockItems: StockItems): GetStockLevel =>
-  () =>
-    Promise.reject(new Error('GetStockLevel is not implemented'));
+  async ({ productId }) =>
+    toView(await findItem(stockItems, productId));

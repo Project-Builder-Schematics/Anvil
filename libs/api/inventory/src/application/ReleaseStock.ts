@@ -1,10 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+/* eslint-disable @typescript-eslint/no-unused-vars -- stub until the use case is implemented */
 import type { Reservations } from '../domain/driven-ports/Reservations';
 import type { StockItems } from '../domain/driven-ports/StockItems';
 
-export interface ReleaseStockCommand {}
+export interface ReleaseStockCommand {
+  readonly orderId: string;
+}
 
-export interface ReleaseStockResult {}
+export type ReleaseStockResult = Record<string, never>;
 
 export type ReleaseStock = (
   command: ReleaseStockCommand,

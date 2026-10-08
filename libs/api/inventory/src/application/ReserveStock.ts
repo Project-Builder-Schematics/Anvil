@@ -1,10 +1,17 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+/* eslint-disable @typescript-eslint/no-unused-vars -- stub until the use case is implemented */
+import type { ReservationLine } from '../domain/Reservation';
 import type { Reservations } from '../domain/driven-ports/Reservations';
 import type { StockItems } from '../domain/driven-ports/StockItems';
 
-export interface ReserveStockCommand {}
+export interface ReserveStockCommand {
+  readonly orderId: string;
+  readonly lines: readonly ReservationLine[];
+}
 
-export interface ReserveStockResult {}
+export interface ReserveStockResult {
+  readonly orderId: string;
+  readonly lines: readonly ReservationLine[];
+}
 
 export type ReserveStock = (
   command: ReserveStockCommand,

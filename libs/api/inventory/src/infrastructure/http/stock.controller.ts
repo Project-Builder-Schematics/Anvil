@@ -21,9 +21,9 @@ import {
   type GetStockLevelResult,
 } from '../../application/GetStockLevel';
 
-const setStockLevelParams = z.object({ productId: z.string() });
-const setStockLevelBody = z.object({});
-const getStockLevelParams = z.object({ productId: z.string() });
+const setStockLevelParams = z.object({ productId: z.string().trim().min(1) });
+const setStockLevelBody = z.object({ onHand: z.number() });
+const getStockLevelParams = z.object({ productId: z.string().trim().min(1) });
 const getStockLevelQuery = z.object({});
 
 @Controller('stock')

@@ -1,15 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- pending bindings keep their arguments until the scenarios are implemented */
 import { Then, When } from 'quickpickle';
+import { expect } from 'vitest';
+import type { InventoryWorld } from './world';
 
-When('the stock of {string} is requested', (_world, arg0: string) => {
-  throw new Error('step not implemented: the stock of "keyboard" is requested');
-});
+When(
+  'the stock of {string} is requested',
+  async (world: InventoryWorld, productId: string) => {
+    world.shown = await world.attempt(() => world.getStockLevel({ productId }));
+  },
+);
 
 Then(
   'the stock shown is {int} on hand and {int} reserved',
-  (_world, arg0: number, arg1: number) => {
-    throw new Error(
-      'step not implemented: the stock shown is 10 on hand and 4 reserved',
-    );
+  (world: InventoryWorld, onHand: number, reserved: number) => {
+    expect(world.shown).toMatchObject({ onHand, reserved });
   },
 );
