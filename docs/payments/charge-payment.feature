@@ -1,0 +1,83 @@
+Feature: Charge payment
+
+  Rule: Rule 1 - The amount is greater than 0
+
+    Scenario: a positive amount is captured
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+
+    Scenario: the smallest amount is accepted
+      When order "o1" is charged 1 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 1 "USD"
+
+    Scenario: zero is refused and nothing is stored
+      When order "o1" is charged 0 "USD" with token "tok_visa"
+      Then it is refused with "INVALID_AMOUNT"
+      And order "o1" has no payment
+
+    Scenario: a negative amount is refused
+      When order "o1" is charged -5 "USD" with token "tok_visa"
+      Then it is refused with "INVALID_AMOUNT"
+      And order "o1" has no payment
+
+  Rule: Rule 2 - There is one successful charge per order
+
+    Scenario: charging again returns the existing charge
+      Given order "o1" has been charged 4500 "USD" with token "tok_visa"
+      When order "o1" is charged 9000 "USD" with token "tok_other"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the gateway has been asked to charge 1 time
+
+    Scenario: another order is charged on its own
+      Given order "o1" has been charged 4500 "USD" with token "tok_visa"
+      When order "o2" is charged 100 "USD" with token "tok_visa"
+      Then the payment of order "o2" is "Captured" for 100 "USD"
+      And the gateway has been asked to charge 2 times
+
+  Rule: Rule 3 - A gateway decline leaves the payment Failed
+
+    Scenario: a declined token fails the payment
+      When order "o1" is charged 4500 "USD" with token "tok_decline"
+      Then it is refused with "PAYMENT_DECLINED"
+      And the payment of order "o1" is "Failed" for 4500 "USD"
+
+  Rule: Rule 5 - A charge takes an opaque token and never card data
+
+    Scenario: the gateway is given the token
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the gateway was asked to charge 4500 "USD" with token "tok_visa"
+
+    Scenario: any token but the declined one is captured
+      When order "o1" is charged 4500 "USD" with token "tok_anything"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+
+  Rule: Rule 6 - The amount is an integer
+
+    @draft
+    Scenario: a fractional amount is refused
+      When order "o1" is charged 10.5 "USD" with token "tok_visa"
+      Then it is refused with "INVALID_AMOUNT"
+      And order "o1" has no payment
+
+  Rule: Rule 7 - A failed payment does not count as the order's charge
+
+    @draft
+    Scenario: charging again after a decline charges again
+      Given order "o1" has been declined with token "tok_decline"
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+
+    @draft
+    Scenario: a refunded payment is still the order's charge
+      Given order "o1" has been charged 4500 "USD" with token "tok_visa"
+      And order "o1" has been refunded
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Refunded" for 4500 "USD"
+
+  Rule: Rule 10 - INVALID_AMOUNT wins over an existing charge
+
+    @draft
+    Scenario: an invalid amount is refused even when the order is already charged
+      Given order "o1" has been charged 4500 "USD" with token "tok_visa"
+      When order "o1" is charged 0 "USD" with token "tok_visa"
+      Then it is refused with "INVALID_AMOUNT"
