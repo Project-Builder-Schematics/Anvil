@@ -57,7 +57,7 @@ Aggregate `Payment`: Pending → Captured, Failed or Refunded. A fake `PaymentGa
 
 ## Assumptions
 
-Product decisions the approved rules leave open, taken as the simplest reading and not yet confirmed by the user. Inventory records them as `assumed` rules 7 to 11 with `@draft` scenarios (`docs/inventory/domain-model.md`).
+Product decisions the approved rules leave open, taken as the simplest reading. Inventory rules 7 to 11 (`docs/inventory/domain-model.md`) were confirmed by the user on 2026-10-09 and are now `decided`, with their `@draft` tags removed.
 
 - **Reservation is a second small aggregate** (orderId, lines, status `Held`, `Released` or `Committed`) behind a `Reservations` port, because a reservation spans several `StockItem`s and release and commit must move exactly what was reserved.
 - **Reserving again for an order** returns the existing reservation when it is held or committed (I2). A released one no longer counts, so the retry after a compensation reserves again (rule 8). Without this the F3 retry would reserve nothing.

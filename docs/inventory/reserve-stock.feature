@@ -75,7 +75,6 @@ Feature: Reserve stock
 
   Rule: Rule 8 - A released reservation no longer counts as the order's reservation
 
-    @draft
     Scenario: reserving again after the release reserves again
       Given the lines of order "o1" are reserved
         | product  | quantity |
@@ -91,7 +90,6 @@ Feature: Reserve stock
 
   Rule: Rule 10 - PRODUCT_NOT_STOCKED wins over INSUFFICIENT_STOCK
 
-    @draft
     Scenario: an unstocked product is reported before a shortage
       When the lines of order "o1" are reserved
         | product  | quantity |

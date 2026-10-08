@@ -26,7 +26,6 @@ Feature: Release stock
 
   Rule: Rule 9 - Only a held reservation can be released
 
-    @draft
     Scenario: a committed reservation cannot be released
       Given the reservation of order "o1" is committed
       When the reservation of order "o1" is released

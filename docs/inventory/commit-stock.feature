@@ -24,18 +24,15 @@ Feature: Commit stock
 
   Rule: Rule 9 - Only a held reservation can be committed
 
-    @draft
     Scenario: committing twice decrements once
       When the reservation of order "o1" is committed
       And the reservation of order "o1" is committed
       Then the stock of "keyboard" is 6 on hand and 0 reserved
 
-    @draft
     Scenario: committing an unknown reservation changes nothing
       When the reservation of order "ghost" is committed
       Then the stock of "keyboard" is 10 on hand and 4 reserved
 
-    @draft
     Scenario: committing a released reservation changes nothing
       Given the reservation of order "o1" is released
       When the reservation of order "o1" is committed

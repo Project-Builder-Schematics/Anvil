@@ -36,11 +36,11 @@ Rules 1 to 6 were approved by the user on 2026-10-08. Rules 7 to 11 fill gaps th
 | 4   | Committing a reservation decrements both `onHand` and `reserved` by its quantities.                                                                                                                                             | decided |
 | 5   | A product with no stock record is refused with `PRODUCT_NOT_STOCKED`, whether it is reserved or read.                                                                                                                           | decided |
 | 6   | The stock level is an integer of 0 or more; any other value is refused with `STOCK_LEVEL_INVALID`. Setting it leaves `reserved` as it is.                                                                                       | decided |
-| 7   | Setting the level of a product with no stock record creates the record, with nothing reserved.                                                                                                                                  | assumed |
-| 8   | A released reservation no longer counts as the order's reservation: reserving again for that order creates a new one.                                                                                                           | assumed |
-| 9   | Only a held reservation can be released or committed. Committing an unknown, released or already committed reservation changes nothing and is not an error, and neither is releasing a committed one.                           | assumed |
-| 10  | When a reservation has several refusals, `PRODUCT_NOT_STOCKED` for any of its lines wins over `INSUFFICIENT_STOCK`.                                                                                                             | assumed |
-| 11  | A level below the reserved count is refused with `STOCK_LEVEL_INVALID`, so `reserved <= onHand` always holds and `available` is never negative.                                                                                 | assumed |
+| 7   | Setting the level of a product with no stock record creates the record, with nothing reserved.                                                                                                                                  | decided |
+| 8   | A released reservation no longer counts as the order's reservation: reserving again for that order creates a new one.                                                                                                           | decided |
+| 9   | Only a held reservation can be released or committed. Committing an unknown, released or already committed reservation changes nothing and is not an error, and neither is releasing a committed one.                           | decided |
+| 10  | When a reservation has several refusals, `PRODUCT_NOT_STOCKED` for any of its lines wins over `INSUFFICIENT_STOCK`.                                                                                                             | decided |
+| 11  | A level below the reserved count is refused with `STOCK_LEVEL_INVALID`, so `reserved <= onHand` always holds and `available` is never negative.                                                                                 | decided |
 
 ## Use cases
 

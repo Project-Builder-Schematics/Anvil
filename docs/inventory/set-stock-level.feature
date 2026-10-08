@@ -27,14 +27,12 @@ Feature: Set stock level
 
   Rule: Rule 7 - Setting the level of an unstocked product creates its record
 
-    @draft
     Scenario: a product with no record gets one
       When the stock level of "lamp" is set to 3
       Then the stock of "lamp" is 3 on hand and 0 reserved
 
   Rule: Rule 11 - A level below the reserved count is refused
 
-    @draft
     Scenario: the level may not fall below the reserved count
       Given the lines of order "o1" are reserved
         | product  | quantity |
@@ -43,7 +41,6 @@ Feature: Set stock level
       Then it is refused with "STOCK_LEVEL_INVALID"
       And the stock of "keyboard" is 10 on hand and 8 reserved
 
-    @draft
     Scenario: the level may equal the reserved count
       Given the lines of order "o1" are reserved
         | product  | quantity |
