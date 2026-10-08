@@ -101,6 +101,16 @@ Product decisions the approved rules leave open, taken as the simplest reading. 
 - [x] F2c: fix the F2b review findings (review-18ec78503f4dcda2; user decision, 2026-10-09). Route: delegated writer. Commits 0fd56a1, dce1c7a and 929a00e. RED: the compare-by-id save failed 2 tests (a `MemoryPayments` spec and the three-charge interleave, which left `P1 Failed` over `P2 Pending`). Checks: `nx run-many -t lint test typecheck` green for 18 projects, prettier clean, Stryker payments 100.00.
 - [ ] F3: ordering. Update the docs, add the cross-context ports with `kind=context`, the `DomainEvents` port, and the PlaceOrder process manager with compensation, all with TDD. Route: delegated writer.
 - [ ] F4: Stryker on inventory, payments and ordering. Record the IMPACT rows. Route: delegated writer.
+  - Docs consistency check (user decision, 2026-10-09). Add a fitness test over `docs/*/domain-model.md` that fails when any of these holds:
+    - a rule's text changed since the commit that recorded its Source, unless the Source names a newer `decided — <date>` or `amended <date>`;
+    - an `assumed` rule backs a feature scenario not tagged `@draft`, or a `@draft` tag has no `assumed` rule behind it;
+    - a status sentence about confirmations disagrees with the Source column (for example, "the user has not confirmed them" while every rule is `decided`).
+
+    Why: during F2 a writer added "the payment keeps none" to an approved rule, and stale "not confirmed" sentences outlived their confirmations three times.
+
+  - External ground truth in the docs phase (user decision, 2026-10-09). A driven port to a system we do not own (for example a payment gateway) must cite that system's official docs in its row of the ports table, written when the docs are, before the code. Add it to the schematics skill's docs-first workflow and to AGENTS.md, and make the docs consistency check refuse a non-Memory, non-`@<context>` adapter whose row has no source link.
+
+    Why: the order id as the idempotency key contradicted Stripe's documented replay of declines, and only a review after the code caught it.
 - [ ] F5: UI. Slices are vertical (user decision, 2026-10-08), so this slice ships its UI. Route: delegated writer.
   - Add a payment-token field to Place, which shows `PAYMENT_DECLINED` or `INSUFFICIENT_STOCK` and leaves the order back in Draft.
   - Show the `Paid` status.
