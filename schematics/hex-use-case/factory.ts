@@ -71,7 +71,7 @@ const siblingSteps = async (
     segment === ''
       ? [own]
       : subdomainNames(readme).map((sub) => ({
-          code: `${apiLibDir(context)}/src/${sub}`,
+          code: `${apiLibDir(context)}/src/${assertDashed(sub, 'subdomain')}`,
           docs: `${docsDir(context)}/${sub}`,
         }));
   const files = await Promise.all(

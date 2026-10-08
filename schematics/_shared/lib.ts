@@ -51,6 +51,9 @@ export const pascal = (dashedCase: string): string =>
 export const constant = (dashedCase: string): string =>
   dashedCase.replace(/-/g, '_').toUpperCase();
 
+/** The class a slice throws for its refusals: hex-slice writes it and hex-route's filter catches it. */
+export const errorClass = (slice: string): string => `${pascal(slice)}Error`;
+
 /** "CreateOrder" → "create-order" */
 export const dashed = (pascalCase: string): string =>
   pascalCase.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -105,7 +108,7 @@ export const resolveSlice = async (
   if (inline && readme !== undefined && subdomainNames(readme).includes(slice))
     return { code: src, docs, segment: '' };
   throw new Error(
-    `${slice} has no domain model under ${docs} — write the docs first: hex-bounded-context --context=${context} --subdomains=…,${slice}`,
+    `${slice} has no domain model under ${docs}${inline ? ` (${docs}/README.md does not list ${slice} under "## Subdomains")` : ''} — write the docs first: hex-bounded-context --context=${context} --subdomains=…,${slice}`,
   );
 };
 
@@ -171,13 +174,16 @@ export const errorCodes = (model: string): string[] => {
 /** Rule numbers of a citation: "2–3, 5" → [2, 3, 5]. */
 const citedRules = (list: string): number[] =>
   list.split(',').flatMap((part) => {
-    const [from = 0, to = from] = part
-      .split(/[–-]/)
-      .map((n) => Number(n.trim()));
-    return Array.from(
-      { length: Math.max(to - from + 1, 0) },
-      (_, i) => from + i,
-    );
+    const range = /^\s*(\d+)(?:\s*[–-]\s*(\d+))?\s*$/.exec(part);
+    if (!range)
+      throw new Error(
+        `"${part.trim()}" is not a rule number or a range such as 2–3`,
+      );
+    const from = Number(range[1]);
+    const to = Number(range[2] ?? from);
+    if (to < from)
+      throw new Error(`"${part.trim()}" is a range that ends before it starts`);
+    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
   });
 
 /**
@@ -199,7 +205,12 @@ export const errorStatuses = (model: string): Map<string, number> => {
           throw new Error(
             `${String(status)} cites rule ${String(n)}, which is not in the Business rules table`,
           );
-        for (const [, code = ''] of rule.matchAll(CODE)) {
+        const codes = [...rule.matchAll(CODE)];
+        if (codes.length === 0)
+          throw new Error(
+            `${String(status)} cites rule ${String(n)}, which names no error code`,
+          );
+        for (const [, code = ''] of codes) {
           const known = statuses.get(code);
           if (known !== undefined && known !== status)
             throw new Error(
@@ -226,7 +237,7 @@ export const commandFields = (command: string): string[] => {
   for (let i = 0; i < inner.length; i += 1) {
     const c = inner[i] ?? '';
     if ('{[(<'.includes(c)) depth += 1;
-    else if ('}])>'.includes(c)) depth -= 1;
+    else if ('}])>'.includes(c) && inner[i - 1] !== '=') depth -= 1;
     else if (c === ',' && depth === 0) {
       take(start, i);
       start = i + 1;

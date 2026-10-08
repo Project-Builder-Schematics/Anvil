@@ -217,4 +217,18 @@ describe('hex-use-case', () => {
       'PascalCase',
     );
   });
+
+  it('refuses a README subdomain name that is not dash-case, since it becomes a path', async () => {
+    const seed = await prepared();
+    seed['docs/billing/README.md'] = (
+      seed['docs/billing/README.md'] ?? ''
+    ).replace(
+      '| [invoicing](invoicing/domain-model.md) | invoices |',
+      '| [invoicing](invoicing/domain-model.md) | invoices |\n| [Bad_Name](x) | |',
+    );
+    const { tree, error } = await go({}, seed);
+
+    expect(String(error)).toContain('subdomain "Bad_Name" must be dash-case');
+    expect([...tree.keys()]).toEqual([]);
+  });
 });

@@ -122,6 +122,17 @@ describe('resolveSlice', () => {
     expect(String((await run(seed)).error)).toContain('no domain model');
   });
 
+  it('says the README does not list the slice when only an inline domain model exists', async () => {
+    const seed = {
+      'docs/growth/domain-model.md': '# m\n',
+      'docs/growth/README.md': '# Growth\n',
+    };
+
+    expect(String((await run(seed)).error)).toContain(
+      'docs/growth/README.md does not list marketing under "## Subdomains"',
+    );
+  });
+
   it('reads an unlinked subdomain name from the README table', async () => {
     const seed = {
       'docs/growth/domain-model.md': '# m\n',
@@ -258,6 +269,7 @@ describe('errorStatuses', () => {
       '| 2 | Two: `TWO_FAILED`. | decided |',
       '| 3 | Three: `THREE_FAILED`. | decided |',
       '| 4 | Four: `FOUR_FAILED`. | decided |',
+      '| 5 | Five names no code. | decided |',
       '',
       '## Driving adapters',
       '',
@@ -289,6 +301,20 @@ describe('errorStatuses', () => {
     expect(statuses('200 · 400 · 404')).toEqual([]);
   });
 
+  it('refuses a citation of a rule that names no error code, alone or inside a range', () => {
+    expect(() => statuses('422 rule 5')).toThrow(
+      '422 cites rule 5, which names no error code',
+    );
+    expect(() => statuses('422 rules 3–5')).toThrow(
+      '422 cites rule 5, which names no error code',
+    );
+  });
+
+  it('refuses a citation that is not a rule number or a range', () => {
+    expect(() => statuses('422 rules 3–2')).toThrow('3–2');
+    expect(() => statuses('422 rules 1,, 2')).toThrow('"" is not a rule');
+  });
+
   it('refuses a rule the model does not have and a code answered two ways', () => {
     expect(() => statuses('422 rule 9')).toThrow('rule 9');
     expect(() => statuses('422 rule 1 · 409 rule 1')).toThrow(
@@ -314,6 +340,12 @@ describe('commandFields', () => {
       'pair',
       'last',
     ]);
+  });
+
+  it('does not take the arrow of a function type for a closing bracket', () => {
+    expect(
+      commandFields('{ done: (id: string) => void, last: string }'),
+    ).toEqual(['done', 'last']);
   });
 });
 

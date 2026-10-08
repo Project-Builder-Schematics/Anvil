@@ -156,4 +156,19 @@ describe('hex-subdomain', () => {
       expect([...again.tree.keys()]).toEqual([]);
     });
   });
+
+  it('refuses a Driving adapters row that is not METHOD /<resource>[/path], naming it', async () => {
+    const seed = billingSeed({
+      [`${DOCS}/domain-model.md`]: invoicingModel.replace(
+        '`POST /invoices`',
+        '`FETCH /invoices`',
+      ),
+    });
+    const { tree, error } = await go({}, seed);
+
+    expect(String(error)).toContain(
+      'route "FETCH /invoices": expected METHOD /<resource>[/path]',
+    );
+    expect([...tree.keys()]).toEqual([]);
+  });
 });

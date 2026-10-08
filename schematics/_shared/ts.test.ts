@@ -6,6 +6,7 @@ import {
   addLintContext,
   addModuleEntry,
   addReExport,
+  sortNamedImports,
   startRun,
   withAst,
 } from './ts.ts';
@@ -206,6 +207,24 @@ describe('addReExport', () => {
     expect(out.match(/A_TOKEN/g)).toHaveLength(1);
     expect(out.match(/export type/g)).toHaveLength(1);
     expect(out).toContain('export type { A, AResult } from "./application/A"');
+  });
+});
+
+describe('sortNamedImports', () => {
+  it('orders the names and keeps each one alias and type modifier', async () => {
+    const source =
+      "import { Post, type Zed, Get as Fetch, Body } from '@nestjs/common';\n";
+    const { tree } = await edit({ 'a.ts': source }, (run) => {
+      run.edit('a.ts', (file) =>
+        withAst(file, (ast) => {
+          sortNamedImports(ast, '@nestjs/common');
+        }),
+      );
+    });
+
+    expect(tree.get('a.ts')).toContain(
+      "import { Body, Get as Fetch, Post, type Zed } from '@nestjs/common'",
+    );
   });
 });
 

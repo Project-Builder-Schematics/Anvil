@@ -6,6 +6,7 @@ import {
   assertDashed,
   constant,
   createFile,
+  errorClass,
   errorCodes,
   pascal,
   readRequired,
@@ -21,7 +22,7 @@ const errorsSource = (
   if (codes.length === 0)
     return `export const ${constant(slice)}_ERROR = {} as const;\n`;
   const errors = `${constant(slice)}_ERROR`;
-  const cls = `${pascal(slice)}Error`;
+  const cls = errorClass(slice);
   return `export const ${errors} = {\n${codes.map((code) => `  ${code}: '${context}.${code.toLowerCase()}',`).join('\n')}\n} as const;
 
 export type ${cls}Code = keyof typeof ${errors};

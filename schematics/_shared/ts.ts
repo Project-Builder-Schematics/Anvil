@@ -166,6 +166,17 @@ export const addReExport = (
   });
 };
 
+/** Orders the named imports of `from` by name; each keeps its alias and `type` modifier. */
+export const sortNamedImports = (ast: Ast, from: string): void => {
+  const declaration = ast.getImportDeclarationOrThrow(from);
+  const sorted = declaration
+    .getNamedImports()
+    .map((named) => named.getStructure())
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  declaration.removeNamedImports();
+  declaration.addNamedImports(sorted);
+};
+
 /** Registers a bounded context in the root lint config's `contexts` list, which feeds the module-boundary constraints. */
 export const addLintContext = (ast: Ast, context: string): void => {
   const list = arrayOf(ast, 'contexts');

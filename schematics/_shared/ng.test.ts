@@ -5,6 +5,7 @@ import {
   parseInputs,
   parseOutputs,
   readNgLib,
+  registerInLib,
   withTestTarget,
 } from './ng.ts';
 
@@ -134,5 +135,39 @@ describe('readNgLib', () => {
     expect(String((await read('{"name":"web-x-domain"}')).error)).toContain(
       'not an Angular lib',
     );
+  });
+});
+
+describe('registerInLib', () => {
+  const project =
+    '{\n  "name": "web-x-ui",\n  "prefix": "x",\n  "tags": ["type:ui"]\n}\n';
+  const register = (seed: Record<string, string>) =>
+    runFactoryForTest(
+      async () => {
+        await registerInLib(await readNgLib('libs/web/x/ui'), './lib/a/a');
+      },
+      {} as never,
+      { seed: { 'libs/web/x/ui/project.json': project, ...seed } },
+    );
+
+  it('exports the new file from the barrel and gives the lib its test target', async () => {
+    const { error, tree } = await register({
+      'libs/web/x/ui/src/index.ts': 'export {};\n',
+    });
+
+    expect(error).toBeUndefined();
+    expect(tree.get('libs/web/x/ui/src/index.ts')).toContain('./lib/a/a');
+    expect(tree.get('libs/web/x/ui/project.json')).toContain(
+      '@angular/build:unit-test',
+    );
+  });
+
+  it('refuses a lib with no barrel, since web-context and web-shared-lib always write one, and writes nothing', async () => {
+    const { error, tree } = await register({});
+
+    expect(String(error)).toContain(
+      'libs/web/x/ui/src/index.ts not found — create the lib first',
+    );
+    expect([...tree.keys()]).toEqual([]);
   });
 });

@@ -93,7 +93,13 @@ export const registerInLib = async (
   lib: NgLib,
   path: string,
 ): Promise<void> => {
-  await withAst(find(`${lib.dir}/src/index.ts`), (ast) => {
+  const barrel = `${lib.dir}/src/index.ts`;
+  // web-context and web-shared-lib always write the barrel, so a lib without one is not theirs.
+  await readRequired(
+    barrel,
+    'create the lib first: web-context or web-shared-lib',
+  );
+  await withAst(find(barrel), (ast) => {
     addReExport(ast, path);
   });
   rewrite(

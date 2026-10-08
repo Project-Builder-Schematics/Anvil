@@ -376,6 +376,25 @@ describe('hex-route', () => {
       expect([...tree.keys()]).toEqual([filter]);
     });
 
+    it('drops the statuses the docs no longer cite on a re-run', async () => {
+      const seed = await prepared();
+      const first = await go(
+        {},
+        { ...seed, ...withAnswers('201 · 422 rules 1–2', '204') },
+      );
+      const changed = {
+        ...after(seed, first.tree),
+        ...withAnswers('201 · 409 rule 1', '204'),
+      };
+
+      const { tree, error } = await go({}, changed);
+
+      expect(error).toBeUndefined();
+      const source = tree.get(filter) ?? '';
+      expect(source).toContain('LINES_REQUIRED: 409,');
+      expect(source).not.toContain('CUSTOMER_UNKNOWN');
+    });
+
     it('registers the filter on every controller of the slice, not only the first', async () => {
       const seed = await prepared();
       const first = await go({}, seed);
@@ -470,6 +489,24 @@ describe('hex-route', () => {
       expect(tree.has(filter)).toBe(false);
       expect(tree.get(controller)).not.toContain('UseFilters');
     });
+  });
+
+  it('keeps the type modifier of the @nestjs/common imports it sorts', async () => {
+    const seed = await prepared();
+    const first = await go({}, seed);
+    const withType = after(seed, first.tree);
+    withType[controller] = (withType[controller] ?? '').replace(
+      /import \{([^}]*)\} from '@nestjs\/common'/,
+      "import {$1, type ExecutionContext as Ctx } from '@nestjs/common'",
+    );
+
+    const { tree, error } = await go(
+      { method: 'DELETE', path: '/:invoiceId' },
+      withType,
+    );
+
+    expect(error).toBeUndefined();
+    expect(tree.get(controller)).toContain('type ExecutionContext as Ctx');
   });
 
   it('asks for the path when the resource has several rows for the method', async () => {

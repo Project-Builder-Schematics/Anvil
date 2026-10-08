@@ -11,6 +11,7 @@ import {
   constant,
   createFile,
   dashed,
+  errorClass,
   errorCodes,
   errorStatuses,
   parseRoute,
@@ -20,7 +21,13 @@ import {
   row,
   table,
 } from '../_shared/lib.ts';
-import { addModuleEntry, startRun, withAst, type Run } from '../_shared/ts.ts';
+import {
+  addModuleEntry,
+  sortNamedImports,
+  startRun,
+  withAst,
+  type Run,
+} from '../_shared/ts.ts';
 
 const APP_MODULE = 'apps/api/src/app/app.module.ts';
 
@@ -96,7 +103,7 @@ const errorFilterSource = (
   slice: string,
   statuses: Map<string, number>,
 ): string => {
-  const error = `${pascal(slice)}Error`;
+  const error = errorClass(slice);
   const filter = `${error}Filter`;
   return `import { Catch, Logger, type ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
@@ -132,7 +139,7 @@ export class ${filter} extends BaseExceptionFilter<${error}> {
 `;
 };
 
-/** Sets the status of every code the docs map, adding the codes a re-run finds new. */
+/** Makes the status map say what the docs say now: new codes are added, changed ones updated, codes no Answers cell cites any more dropped. */
 const refreshStatuses = (
   ast: astLibrary.SourceFile,
   statuses: Map<string, number>,
@@ -140,6 +147,13 @@ const refreshStatuses = (
   const map = ast
     .getVariableDeclarationOrThrow('STATUS')
     .getInitializerIfKindOrThrow(astLibrary.SyntaxKind.ObjectLiteralExpression);
+  for (const property of map.getProperties()) {
+    if (
+      astLibrary.Node.isPropertyAssignment(property) &&
+      !statuses.has(property.getName())
+    )
+      property.remove();
+  }
   for (const [code, status] of statuses) {
     const property = map.getProperty(code);
     if (property === undefined)
@@ -244,12 +258,12 @@ export default async (input: Input, shared?: Run) => {
   if (filtered) {
     const errors = `${code}/domain/errors.ts`;
     if (
-      !new RegExp(`export class ${pascal(slice)}Error\\b`).test(
+      !new RegExp(`export class ${errorClass(slice)}\\b`).test(
         await readRequired(errors, `create the slice first: hex-slice`),
       )
     )
       throw new Error(
-        `${errors} defines no ${pascal(slice)}Error class, which the error filter catches — add it next to the codes`,
+        `${errors} defines no ${errorClass(slice)} class, which the error filter catches — add it next to the codes`,
       );
     const filterPath = `${code}/infrastructure/http/${filter}.ts`;
     const statuses = errorStatuses(model);
@@ -349,10 +363,7 @@ export default async (input: Input, shared?: Run) => {
           statements: `return this.${op.name}UseCase(${op.spread});`,
         });
       }
-      const common = ast.getImportDeclarationOrThrow('@nestjs/common');
-      const names = common.getNamedImports().map((n) => n.getName());
-      common.removeNamedImports();
-      common.addNamedImports(names.sort());
+      sortNamedImports(ast, '@nestjs/common');
     });
   });
 
