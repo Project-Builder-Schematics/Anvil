@@ -101,7 +101,7 @@ sequenceDiagram
   alt no such order
     U-->>C: ORDER_NOT_FOUND (rule 9, 404)
   end
-  Note over U: Order.cancel: rule 8 Draft or Placed
+  Note over U: Order.cancel: rule 8 Draft only, a Placed order is refused too (rule 19)
   alt refused by the order
     U-->>C: ORDER_NOT_CANCELLABLE (409)
   end

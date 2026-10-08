@@ -16,11 +16,11 @@ Terms of this bounded context. One meaning per term; the same word in another co
 
 **Paid.** The status of an order whose payment was captured and whose stock was committed. It cannot be cancelled.
 
-**Cancelled.** The status of an order that was withdrawn from Draft or Placed. It is final.
+**Cancelled.** The status of an order that was withdrawn from Draft. It is final.
 
 **Place.** Reserve the stock of a draft order that has at least one line, charge it, commit the stock and move it to Paid. If the stock or the payment is refused, the order goes back to Draft.
 
-**Cancel.** Move a Draft or Placed order to Cancelled.
+**Cancel.** Move a Draft order to Cancelled. A Placed order is not cancelled.
 
 **Payment method token.** An opaque text that stands for the customer's payment method. Ordering never sees card data and passes the token to payments untouched.
 

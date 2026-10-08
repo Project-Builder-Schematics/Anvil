@@ -5,18 +5,12 @@ Feature: Cancel order
     And the stock of "keyboard" is 5
     And a draft order
 
-  Rule: Rule 8 - An order may be cancelled from Draft or Placed
+  Rule: Rule 8 - An order may be cancelled from Draft
 
     Scenario: a draft order is cancelled
       When the order is cancelled
       Then the order is "Cancelled"
 
-    @draft
-    Scenario: a placed order is cancelled
-      Given 1 of "keyboard" is added to the order
-      And the order has been placed while payments gives no answer
-      When the order is cancelled
-      Then the order is "Cancelled"
 
     Scenario: a paid order cannot be cancelled
       Given 1 of "keyboard" is added to the order
@@ -24,12 +18,25 @@ Feature: Cancel order
       When the order is cancelled
       Then it is refused with "ORDER_NOT_CANCELLABLE"
       And the order is "Paid"
+      And no event is published
 
     Scenario: a cancelled order cannot be cancelled again
       Given the order has been cancelled
       When the order is cancelled
       Then it is refused with "ORDER_NOT_CANCELLABLE"
       And the order is "Cancelled"
+
+  Rule: Rule 19 - A Placed order is not cancellable
+
+    @draft
+    Scenario: a placed order is refused and keeps its stock
+      Given 1 of "keyboard" is added to the order
+      And the order has been placed while payments gives no answer
+      When the order is cancelled
+      Then it is refused with "ORDER_NOT_CANCELLABLE"
+      And the order is "Placed"
+      And the stock of "keyboard" is 5 on hand and 1 reserved
+      And no event is published
 
   Rule: Rule 9 - A command that names an order that does not exist is refused
 
@@ -50,6 +57,7 @@ Feature: Cancel order
       Given the order has been cancelled
       When the order is cancelled
       Then it is refused with "ORDER_NOT_CANCELLABLE"
+      And the order is "Cancelled"
       And the events published are
         | event          |
         | OrderCancelled |

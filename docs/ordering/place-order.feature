@@ -29,7 +29,7 @@ Feature: Place order
       When the order is placed with the payment method "tok_visa"
       Then it is refused with "ORDER_NOT_FOUND"
 
-  Rule: Rule 10 - Only a Draft order may be placed, and a Placed one only to retry it
+  Rule: Rule 10 - Only a Draft order may be placed
 
     Scenario: a paid order cannot be placed again
       Given 1 of "keyboard" is added to the order
@@ -153,7 +153,7 @@ Feature: Place order
       When the order is placed with the payment method "tok_any-opaque_value"
       Then payments was asked to charge 4500 "USD" with the payment method "tok_any-opaque_value"
 
-  Rule: Rule 17 - An unknown charge outcome is not compensated and placing again retries it
+  Rule: Rule 17 - An unknown charge outcome is not compensated and placing a Placed order retries it
 
     @draft
     Scenario: no answer from payments leaves the order placed with its stock reserved
