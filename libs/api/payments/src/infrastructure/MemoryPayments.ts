@@ -14,4 +14,11 @@ export class MemoryPayments implements Payments {
     this.payments.set(payment.orderId, payment);
     return Promise.resolve();
   }
+
+  startCharge(pending: Payment): Promise<Payment> {
+    const existing = this.payments.get(pending.orderId);
+    if (existing?.isCharged) return Promise.resolve(existing);
+    this.payments.set(pending.orderId, pending);
+    return Promise.resolve(pending);
+  }
 }

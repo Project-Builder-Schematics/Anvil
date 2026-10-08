@@ -14,16 +14,24 @@ export class PaymentsWorld extends QuickPickleWorld {
   readonly refundPayment = makeRefundPayment(this.payments);
 
   /** Refusals no step has claimed yet; the After hook fails the scenario if any is left. */
-  readonly refusals: PaymentsError[] = [];
+  readonly refusals: Error[] = [];
 
-  /** Runs a command; a business refusal is kept for "it is refused with", anything else fails the step. */
+  /** What a gateway that gives no answer throws. */
+  readonly timeout = new Error('gateway timeout');
+
+  /** Runs a command; a business refusal or a gateway timeout is kept for "it is refused with", anything else fails the step. */
   async attempt<T>(run: () => Promise<T>): Promise<T | undefined> {
     try {
       return await run();
     } catch (error) {
-      if (!(error instanceof PaymentsError)) throw error;
-      this.refusals.push(error);
-      return undefined;
+      if (
+        error instanceof Error &&
+        (error === this.timeout || error instanceof PaymentsError)
+      ) {
+        this.refusals.push(error);
+        return undefined;
+      }
+      throw error;
     }
   }
 }
@@ -35,7 +43,7 @@ After((world: PaymentsWorld) =>
     ? Promise.resolve()
     : Promise.reject(
         new Error(
-          `unclaimed refusals: ${world.refusals.map((r) => r.code).join(', ')}`,
+          `unclaimed refusals: ${world.refusals.map((r) => r.message).join(', ')}`,
         ),
       ),
 );

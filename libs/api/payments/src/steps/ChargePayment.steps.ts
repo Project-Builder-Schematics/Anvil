@@ -34,11 +34,36 @@ Given(
   },
 );
 
+Given('the gateway gives no answer', (world: PaymentsWorld) => {
+  world.charge.mockRejectedValueOnce(world.timeout);
+});
+
+Given(
+  'the gateway gave no answer to the charge of order {string} at {int} {string} with token {string}',
+  async (world: PaymentsWorld, ...args: [string, number, string, string]) => {
+    world.charge.mockRejectedValueOnce(world.timeout);
+    await charged(world, ...args);
+    expect(world.refusals.pop()).toBe(world.timeout);
+  },
+);
+
+Given(
+  'the gateway took the money of order {string} at {int} {string} with token {string} but its answer was lost',
+  async (world: PaymentsWorld, ...args: [string, number, string, string]) => {
+    world.charge.mockImplementationOnce(async (request) => {
+      await world.gateway.charge(request);
+      throw world.timeout;
+    });
+    await charged(world, ...args);
+    expect(world.refusals.pop()).toBe(world.timeout);
+  },
+);
+
 Given(
   'order {string} has been declined with token {string}',
   async (world: PaymentsWorld, orderId: string, token: string) => {
     await charged(world, orderId, 4500, 'USD', token);
-    expect(world.refusals.pop()?.code).toBe('PAYMENT_DECLINED');
+    expect(world.refusals.pop()).toMatchObject({ code: 'PAYMENT_DECLINED' });
   },
 );
 
@@ -67,8 +92,15 @@ Then(
 );
 
 Then('it is refused with {string}', (world: PaymentsWorld, code: string) => {
-  expect(world.refusals.pop()?.code).toBe(code);
+  expect(world.refusals.pop()).toMatchObject({ code });
 });
+
+Then(
+  'the charge fails with {string}',
+  (world: PaymentsWorld, message: string) => {
+    expect(world.refusals.pop()?.message).toBe(message);
+  },
+);
 
 Then(
   'the gateway has been charged {int} in total',

@@ -23,9 +23,10 @@ export const CHARGE_PAYMENT = Symbol('ChargePayment');
 export const makeChargePayment =
   (payments: Payments, paymentGateway: PaymentGateway): ChargePayment =>
   async ({ orderId, amount, currency, paymentMethodToken }) => {
-    const pending = Payment.pending(orderId, Amount.of(amount), currency);
-    const existing = await payments.byOrderId(orderId);
-    if (existing?.isCharged) return toView(existing);
+    const started = await payments.startCharge(
+      Payment.pending(orderId, Amount.of(amount), currency),
+    );
+    if (started.isCharged) return toView(started);
 
     const outcome = await paymentGateway.charge({
       amount,
@@ -34,10 +35,10 @@ export const makeChargePayment =
       idempotencyKey: orderId,
     });
     if (outcome === 'Declined') {
-      await payments.save(pending.fail());
+      await payments.save(started.fail());
       throw new PaymentsError('PAYMENT_DECLINED');
     }
-    const captured = pending.capture();
+    const captured = started.capture();
     await payments.save(captured);
     return toView(captured);
   };

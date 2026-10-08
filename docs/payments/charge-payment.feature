@@ -78,6 +78,34 @@ Feature: Charge payment
       When order "o1" is charged 0 "USD" with token "tok_visa"
       Then it is refused with "INVALID_AMOUNT"
 
+  Rule: Rule 12 - A charge is stored Pending before the gateway is called
+
+    Scenario: a gateway that gives no answer leaves the payment Pending
+      Given the gateway gives no answer
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the charge fails with "gateway timeout"
+      And the payment of order "o1" is "Pending" for 4500 "USD"
+
+  Rule: Rule 13 - A Pending payment is resolved by charging the order again
+
+    Scenario: charging again captures the pending payment
+      Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_visa"
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the gateway has been charged 1 in total
+
+    Scenario: charging again when the answer was lost takes the money once
+      Given the gateway took the money of order "o1" at 4500 "USD" with token "tok_visa" but its answer was lost
+      When order "o1" is charged 4500 "USD" with token "tok_visa"
+      Then the payment of order "o1" is "Captured" for 4500 "USD"
+      And the gateway has been charged 1 in total
+
+    Scenario: charging again with a declined token fails the pending payment
+      Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_visa"
+      When order "o1" is charged 4500 "USD" with token "tok_decline"
+      Then it is refused with "PAYMENT_DECLINED"
+      And the payment of order "o1" is "Failed" for 4500 "USD"
+
   Rule: Rule 14 - The gateway is given the order id as the idempotency key
 
     Scenario: the gateway is given the order id as its key

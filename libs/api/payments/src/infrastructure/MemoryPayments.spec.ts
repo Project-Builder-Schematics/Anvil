@@ -30,4 +30,28 @@ describe('MemoryPayments (Payments contract)', () => {
     await payments.save(retried);
     expect(await payments.byOrderId('o1')).toBe(retried);
   });
+
+  describe('startCharge', () => {
+    it.each([
+      ['captured', pending('o1').capture()],
+      ['refunded', pending('o1').capture().refund()],
+    ])('answers the %s payment and keeps it', async (_status, charged) => {
+      const payments = new MemoryPayments();
+      await payments.save(charged);
+      expect(await payments.startCharge(pending('o1'))).toBe(charged);
+      expect(await payments.byOrderId('o1')).toBe(charged);
+    });
+
+    it.each([
+      ['nothing', undefined],
+      ['a failed payment', pending('o1').fail()],
+      ['a pending payment', pending('o1')],
+    ])('stores the pending payment over %s', async (_status, before) => {
+      const payments = new MemoryPayments();
+      if (before) await payments.save(before);
+      const started = pending('o1');
+      expect(await payments.startCharge(started)).toBe(started);
+      expect(await payments.byOrderId('o1')).toBe(started);
+    });
+  });
 });
