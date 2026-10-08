@@ -1,1 +1,8 @@
-/* You can add global styles to this file, and also import other style files */
+body {
+  margin: 0;
+  background: var(--ds-color-canvas);
+  color: var(--ds-color-body);
+  font-family: var(--ds-type-body-family);
+  font-size: var(--ds-type-body-size);
+  line-height: var(--ds-type-body-line-height);
+}

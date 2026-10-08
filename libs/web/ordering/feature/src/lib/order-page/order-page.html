@@ -1,0 +1,30 @@
+@if (store.order(); as order) {
+<ordering-order-summary [orderId]="order.orderId" [status]="order.status" />
+<ordering-line-list [lines]="order.lines" />
+<section aria-labelledby="add-line-heading">
+  <h2 id="add-line-heading">Add a line</h2>
+  <ordering-add-line-form
+    [disabled]="!canEdit(order)"
+    (lineAdded)="addLine($event)"
+  />
+</section>
+<ordering-order-actions
+  [canPlace]="canPlace(order)"
+  [canCancel]="canCancel(order)"
+  [busy]="store.busy()"
+  (placeOrder)="place()"
+  (cancelOrder)="cancel()"
+/>
+} @else {
+<h1>Order</h1>
+@if (!store.loading()) {
+<a routerLink="/orders/new">Start a new order</a>
+} }
+<div role="status">
+  @if (store.loading()) { Loading order… } @else { {{ notice() }} }
+</div>
+<div role="alert">
+  @if (problem(); as message) {
+  <p class="error">{{ message }}</p>
+  }
+</div>

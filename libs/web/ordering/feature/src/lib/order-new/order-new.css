@@ -1,0 +1,20 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-md);
+}
+
+[role='status'],
+.error {
+  margin: 0;
+  color: var(--ds-color-ink);
+  font-family: var(--ds-type-body-family);
+  font-size: var(--ds-type-body-size);
+  line-height: var(--ds-type-body-line-height);
+}
+
+.error {
+  padding-inline-start: var(--ds-space-sm);
+  border-inline-start: 4px solid var(--ds-color-danger);
+}

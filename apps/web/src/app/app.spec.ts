@@ -1,41 +1,65 @@
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import {
   EXPERIMENT_OVERRIDES,
   ExposureSink,
   SUBJECT_ID,
 } from '@demo/web-shared-design-system';
+import { axeViolations } from '@demo/web-shared-design-system/testing';
 import { App } from './app';
+import { appRoutes } from './app.routes';
 
 describe('App', () => {
-  async function render(variant: string) {
-    await TestBed.configureTestingModule({
-      imports: [App],
+  let http: HttpTestingController;
+  let page: HTMLElement;
+
+  const visit = async (url: string) => {
+    TestBed.configureTestingModule({
       providers: [
+        provideRouter(appRoutes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: SUBJECT_ID, useValue: 'test' },
-        {
-          provide: EXPERIMENT_OVERRIDES,
-          useValue: { 'checkout-cta': variant },
-        },
+        { provide: EXPERIMENT_OVERRIDES, useValue: {} },
         { provide: ExposureSink, useValue: () => undefined },
       ],
-    }).compileComponents();
+    });
+    http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    return fixture.nativeElement as HTMLElement;
-  }
+    await TestBed.inject(Router).navigateByUrl(url);
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    page = fixture.nativeElement as HTMLElement;
+  };
 
-  it('should render title', async () => {
-    expect(
-      (await render('control')).querySelector('h1')?.textContent,
-    ).toContain('Welcome web');
+  afterEach(() => {
+    http.verify();
   });
 
-  it.each([
-    ['control', 'Pay now'],
-    ['b', 'Pay securely'],
-  ])('renders the %s checkout CTA', async (variant, label) => {
-    const compiled = await render(variant);
-    expect(compiled.querySelector('ds-button')?.textContent).toContain(label);
-    expect(compiled.querySelectorAll('ds-button')).toHaveLength(1);
+  it('sends the root to a new order', async () => {
+    await visit('/');
+
+    expect(TestBed.inject(Router).url).toBe('/orders/new');
+    expect(page.querySelector('main ordering-order-new')).not.toBeNull();
+    http.expectOne('/api/orders');
+  });
+
+  it('loads the order page for an order id', async () => {
+    await visit('/orders/o1');
+
+    expect(page.querySelector('main ordering-order-page')).not.toBeNull();
+    http.expectOne('/api/orders/o1');
+  });
+
+  it('has no accessibility violations', async () => {
+    await visit('/orders/o1');
+    http.expectOne('/api/orders/o1');
+
+    expect(await axeViolations(page)).toEqual([]);
   });
 });

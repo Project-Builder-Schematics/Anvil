@@ -1,0 +1,10 @@
+<h1>New order</h1>
+<div role="status">@if (!problem()) { Creating your order… }</div>
+<div role="alert">
+  @if (problem(); as message) {
+  <p class="error">{{ message }}</p>
+  }
+</div>
+@if (problem()) {
+<ds-button (click)="start()">Try again</ds-button>
+}
