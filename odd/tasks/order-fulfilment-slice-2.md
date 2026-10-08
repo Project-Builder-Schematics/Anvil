@@ -115,6 +115,12 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
 - [ ] F3 (review-18ec78503f4dcda2, user decision, 2026-10-09): money captured with a lost answer leaves the payment `Pending`, which cannot be refunded (ChargePayment.ts:27-35). The process manager must not compensate (release the stock and return the order to `Draft`) while the charge outcome is unknown.
 - [ ] U5: a stale command result answers `false` and leaves no trace (order-store.ts:85-86). Verify that this is the intended "no error" assumption and that a test covers it.
 - [ ] U5: the `readonly lines` spec only checks types (`@ts-expect-error`) and asserts nothing at runtime (order.spec.ts:29-36). The web libs have no `typecheck` target, so CI never checks it. Add a typecheck target for the web libs, or drop the spec.
+- [ ] The F2c review (d8726c5..f5b7bb5, review-8c23bd832873c375) was approved and acknowledged on 2026-10-09. It found only test-quality and wording issues, so they wait for F4, the payments Stryker and hardening pass:
+  - `ChargePaymentOverlap.spec.ts`: it is coupled to microtask order (42-43), it settles on any rejection (28-32), and a release can go unnoticed (17).
+  - `world.ts:29-34` still swallows the guard path.
+  - `MemoryPaymentGateway`: the `GatewayError` doc is missing (23-24), and its spec mixes assertions and checks the error type only partly (43-45).
+  - `Payments.ts:5`: the atomicity of `save` is not stated in the port contract.
+  - `MemoryPayments.spec.ts:34`: the describe name.
 
 ## Acceptance criteria
 
