@@ -72,6 +72,24 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - Kept, with no real use yet: the multi-subdomain layout and `subdomains`. Decision for the user.
 - [x] S6 (fa851e4): `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice: the factory emits `@Service()` (RED: 2 factory tests failed first), the design-system `ExperimentService` was regenerated, and the IMPACT row is recorded.
 
+- [ ] S9: findings from the S5/S7/S8 reviews. Six slices, all approved and acknowledged on 2026-10-08:
+  - review-6453b589801853e1
+  - review-0a12e97a0c89d5ae
+  - review-c7e10a99a380a3cd
+  - review-b30e11999de4b644
+  - review-e26b47248a8404c9
+  - review-5a6032ed4946ee1b
+
+  Fix these before slice 2 generates the inventory and payments filters:
+  - The filter refresh keeps statuses that the docs no longer cite (hex-route:135-150).
+  - A strict citation to a rule without a code is skipped silently (lib.ts:197-199).
+  - `@Catch(OrderingError)` narrows the filter to `instanceof`. Confirm every refusal in domain and application throws `OrderingError`, not a bare `Error` or `RangeError`, or rejected requests return 500.
+  - Rewriting a Nest import drops its modifiers (hex-route:302-305).
+  - A missing barrel now fails `ng.ts` (96-98). Decide whether that is intended, and document it.
+  - `defineDialect` is a deep import, because the SDK exports no public subpath (html.ts:5).
+  - The `citedRules` defaults are hard to follow (lib.ts:176-186).
+  - Minor: arrow depth in commandFields, the duplicated error-class name, the HTML splice edge cases, sibling-name validation in hex-use-case, an untested route-path error, and resolveSlice requiring a heading.
+
 ## Next step
 
 S5, S7 and S8 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 277 pass; `nx run-many -t lint test typecheck` green for 18 projects.
