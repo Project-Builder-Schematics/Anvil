@@ -280,7 +280,7 @@ describe('ng-component', () => {
       seed({ [`${dir}/order-card.ts`]: 'export {};\n' }),
     );
 
-    expect(String(error)).toContain('order-card.ts');
+    expect(String(error)).toContain('src/lib/order-card/');
     expect([...tree.keys()]).toEqual([]);
   });
 

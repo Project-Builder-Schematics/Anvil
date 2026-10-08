@@ -95,7 +95,7 @@ describe('ng-service', () => {
         (await go({}, seed({ [`${dir}/order-store.ts`]: 'export {};\n' })))
           .error,
       ),
-    ).toContain('order-store.ts');
+    ).toContain('src/lib/order-store/');
     expect(
       String((await go({ lib: 'libs/web/nope/data-access' })).error),
     ).toContain('project.json not found');

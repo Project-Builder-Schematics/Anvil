@@ -80,7 +80,7 @@ describe('ng-directive', () => {
       String(
         (await go({}, seed({ [`${dir}/highlight.ts`]: 'export {};\n' }))).error,
       ),
-    ).toContain('highlight.ts');
+    ).toContain('src/lib/highlight/');
     expect(String((await go({ lib: 'libs/web/nope/ui' })).error)).toContain(
       'project.json not found',
     );

@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { create } from '@pbuilder/sdk/commons';
+import { scaffold } from '@pbuilder/sdk/commons';
 import { assertDashed, pascal } from '../_shared/lib.ts';
 import { readNgLib, registerInLib } from '../_shared/ng.ts';
 
@@ -16,12 +16,9 @@ export default async (input: Input) => {
   const dir = `${lib.dir}/src/lib/${folder}`;
 
   // Deliberately fail-closed: a directive that exists is never regenerated over.
-  create(`${dir}/${name}.ts`, {
-    templateFile: 'files/directive.ts.template',
-    options: { selector, cls },
-  });
-  create(`${dir}/${name}.spec.ts`, {
-    templateFile: 'files/directive.spec.ts.template',
+  scaffold({
+    from: 'files/directive',
+    to: dir,
     options: { selector, cls, name },
   });
 

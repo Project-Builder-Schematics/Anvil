@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { create } from '@pbuilder/sdk/commons';
+import { scaffold } from '@pbuilder/sdk/commons';
 import { assertDashed, pascal } from '../_shared/lib.ts';
 import {
   customTypes,
@@ -83,33 +83,19 @@ export default async (input: Input) => {
   ];
 
   // Deliberately fail-closed: a component that exists is never regenerated over.
-  create(`${dir}/${name}.ts`, {
-    templateFile: 'files/component.ts.template',
+  scaffold({
+    from: 'files/component',
+    to: dir,
     options: {
+      name,
+      cls,
       angular: angular.join(', '),
       typeImport:
         imported.length > 0
           ? `import type { ${imported.join(', ')} } from '${input.type_import}';\n`
           : '',
       selector: `${lib.prefix}-${name}`,
-      name,
-      cls,
       members: members.length > 0 ? `\n${members.join('\n')}\n` : '',
-    },
-  });
-  create(`${dir}/${name}.html`, {
-    templateFile: 'files/component.html.template',
-    options: {},
-  });
-  create(`${dir}/${name}.css`, {
-    templateFile: 'files/component.css.template',
-    options: {},
-  });
-  create(`${dir}/${name}.spec.ts`, {
-    templateFile: 'files/component.spec.ts.template',
-    options: {
-      cls,
-      name,
       samples: inputs.flatMap((i) => {
         const value = sampleOf(i.type);
         return value === undefined ? [] : [{ name: i.name, value }];

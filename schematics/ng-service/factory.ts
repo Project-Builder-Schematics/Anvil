@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { create } from '@pbuilder/sdk/commons';
+import { scaffold } from '@pbuilder/sdk/commons';
 import { assertDashed, pascal } from '../_shared/lib.ts';
 import { readNgLib, registerInLib } from '../_shared/ng.ts';
 
@@ -35,11 +35,13 @@ export default async (input: Input) => {
   const dir = `${lib.dir}/src/lib/${folder}`;
 
   // Deliberately fail-closed: a service that exists is never regenerated over.
-  create(`${dir}/${name}.ts`, {
-    templateFile: 'files/service.ts.template',
+  scaffold({
+    from: 'files/service',
+    to: dir,
     options: {
-      imports: fields.length > 0 ? 'Service, signal' : 'Service',
+      name,
       cls,
+      imports: fields.length > 0 ? 'Service, signal' : 'Service',
       members:
         fields.length > 0
           ? `\n${fields
@@ -49,13 +51,6 @@ export default async (input: Input) => {
               )
               .join('\n')}\n`
           : '',
-    },
-  });
-  create(`${dir}/${name}.spec.ts`, {
-    templateFile: 'files/service.spec.ts.template',
-    options: {
-      cls,
-      name,
       expectations:
         fields.length > 0
           ? fields
