@@ -33,6 +33,21 @@ describe('LineList', () => {
     ]);
   });
 
+  it('shows every line without a duplicate-key warning when a product repeats', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const fixture = TestBed.createComponent(LineList);
+    fixture.componentRef.setInput('lines', [keyboard, mouse]);
+    await fixture.whenStable();
+    fixture.componentRef.setInput('lines', [mouse, { ...mouse }]);
+    await fixture.whenStable();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr'),
+    ).toHaveLength(2);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('shows the order total', async () => {
     const element = await render([keyboard, mouse]);
 

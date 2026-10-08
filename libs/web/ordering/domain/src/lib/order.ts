@@ -11,7 +11,7 @@ export interface OrderLine {
 export interface Order {
   readonly orderId: string;
   readonly status: OrderStatus;
-  readonly lines: OrderLine[];
+  readonly lines: readonly OrderLine[];
 }
 
 export interface OrderStatusChange {

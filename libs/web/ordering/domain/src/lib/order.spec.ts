@@ -26,6 +26,15 @@ const order = (status: Order['status'], lines: OrderLine[] = []): Order => ({
   lines,
 });
 
+describe('Order', () => {
+  it('cannot have its lines changed in place', () => {
+    const { lines } = order('Draft');
+
+    // @ts-expect-error the lines are read-only
+    lines[0] = keyboard;
+  });
+});
+
 describe('totals', () => {
   it('multiplies the unit price by the quantity', () => {
     expect(lineTotal(keyboard)).toEqual({ amount: 9000, currency: 'USD' });

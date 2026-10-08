@@ -12,7 +12,7 @@ import {
   styleUrl: './line-list.css',
 })
 export class LineList {
-  readonly lines = input.required<OrderLine[]>();
+  readonly lines = input.required<readonly OrderLine[]>();
 
   protected readonly format = formatMoney;
   protected readonly lineTotal = lineTotal;
