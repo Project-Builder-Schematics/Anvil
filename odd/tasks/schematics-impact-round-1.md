@@ -66,6 +66,13 @@ The review of 3d8c341..(the vscode settings commit) was approved and acknowledge
   - errorStatuses nesting (lib.ts:219-250).
   - Old IMPACT rows were reflowed by prettier.
   - `.mcp.json` runs `bunx ng`; pin it to the local binary.
+- [ ] S7: edit existing files through dialects (route: single writer, strict TDD; trigger evidence: 25+ files across `schematics/`).
+  - TypeScript and JavaScript files go through `@pbuilder/sdk/typescript`: named ops where they fit, `.modify` with `astLibrary` otherwise. No ts-morph dependency, no op pack.
+  - One handle per path. The engine rejects a second write directive per path, and every read flushes all open handles, so edits are queued and applied after the run's reads.
+  - HTML and CSS dialects under `schematics/_shared/dialects/`, with round-trip tests; only the ops a schematic needs.
+  - New files and JSON stay whole-string generation; IMPACT gets the `miss` row for the missing HTML, CSS and JSON dialects.
+  - Proof: existing tests green, ordering and one web lib regenerated with an empty `git diff` apart from documented formatting, and a real-engine no-op re-run.
+- [ ] S8: YAGNI cleanup of `schematics/` (unused inputs, helpers, wrappers, single-caller abstractions) plus the ordering-ui "Schematics" follow-ups (`type_import` validation, type-name collision, extra colon in an output, outputs-only test).
 - [x] S6 (fa851e4): `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice: the factory emits `@Service()` (RED: 2 factory tests failed first), the design-system `ExperimentService` was regenerated, and the IMPACT row is recorded.
 
 ## Next step
