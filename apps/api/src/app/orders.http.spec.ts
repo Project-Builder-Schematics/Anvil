@@ -106,6 +106,15 @@ describe('orders over HTTP', () => {
     });
     expect((await call('POST', '/orders/nope/place')).status).toBe(404);
     expect((await call('POST', '/orders/nope/cancel')).status).toBe(404);
+    expect(
+      await call('POST', '/orders/nope/lines', {
+        productId: 'keyboard',
+        quantity: 1,
+      }),
+    ).toEqual({
+      status: 404,
+      body: { statusCode: 404, code: 'ORDER_NOT_FOUND' },
+    });
   });
 
   it('answers 422 for a refused value', async () => {
@@ -123,6 +132,20 @@ describe('orders over HTTP', () => {
     expect(await call('POST', `/orders/${orderId}/place`)).toEqual({
       status: 422,
       body: { statusCode: 422, code: 'ORDER_EMPTY' },
+    });
+  });
+
+  it('answers 422 when a repeated product pushes the quantity past the limit', async () => {
+    const orderId = await newOrder();
+    const add = (quantity: number) =>
+      call('POST', `/orders/${orderId}/lines`, {
+        productId: 'mouse',
+        quantity,
+      });
+    expect((await add(99)).status).toBe(200);
+    expect(await add(1)).toEqual({
+      status: 422,
+      body: { statusCode: 422, code: 'QUANTITY_OUT_OF_RANGE' },
     });
   });
 
@@ -160,6 +183,11 @@ describe('orders over HTTP', () => {
     expect((await add({ productId: '  ', quantity: 1 })).status).toBe(400);
     expect((await add({ quantity: 1 })).status).toBe(400);
     expect((await add({ productId: 'keyboard' })).status).toBe(400);
+  });
+
+  it('answers 400 for a blank order id, which the schema refuses before the value object can', async () => {
+    expect((await call('GET', '/orders/%20')).status).toBe(400);
+    expect((await call('POST', '/orders/%20/place')).status).toBe(400);
   });
 
   it('ignores a customer or actor id in the body', async () => {
