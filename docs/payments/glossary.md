@@ -2,9 +2,9 @@
 
 Terms of this bounded context. One meaning per term; the same word in another context is a different term.
 
-**Payment.** The money taken for one order: its amount, its currency and its status. The aggregate root of the context. There is one per order.
+**Payment.** The money taken for one order: its id, its amount, its currency and its status. The aggregate root of the context. There is one per order.
 
-**Order id.** The identity of the order a payment is for, as ordering names it. Payments only holds the id, and uses it as the idempotency key.
+**Order id.** The identity of the order a payment is for, as ordering names it. Payments only holds the id, to find the order's payment.
 
 **Amount.** What is charged, as a whole number of the currency's minor units, greater than 0.
 
@@ -12,7 +12,7 @@ Terms of this bounded context. One meaning per term; the same word in another co
 
 **Charge.** Ask the gateway to take the amount. A charge ends in `Captured`, or in `Failed` when the gateway declines, or stays `Pending` when the gateway gives no answer.
 
-**Pending.** The status of a payment stored before the gateway is called. It stays while the outcome is unknown, and the next charge of the order resolves it.
+**Pending.** The status of a payment stored before the gateway is called. It stays while the outcome is unknown, and the next charge of the order resolves that same payment.
 
 **Captured.** The status of a payment whose charge the gateway accepted. Only a captured payment can be refunded.
 
@@ -22,7 +22,7 @@ Terms of this bounded context. One meaning per term; the same word in another co
 
 **Refunded.** The final status of a payment that was refunded.
 
-**Idempotency key.** The order id, sent to the gateway with every charge: the gateway returns the first successful charge for a key instead of taking the money twice, also for two charges at the same time.
+**Idempotency key.** The id of a payment, sent to the gateway with its charge. The gateway saves the outcome of the first request made with a key, captured or declined, and replays it instead of taking the money twice; it refuses the same key with other parameters. A new payment has a new key.
 
 **Payment gateway.** The driven port that takes the money. The real one is a third party; payments sees only its two outcomes, captured and declined.
 
