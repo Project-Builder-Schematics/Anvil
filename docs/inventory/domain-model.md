@@ -26,7 +26,7 @@ The single subdomain of [Inventory](README.md). Terms are in the [glossary](glos
 
 Numbered; every validation cites one; state precedence when several can hold; `<` vs `<=` spelled. `Source` is `decided[ — <reason>]` or `assumed`, and an `assumed` rule may only back a `@draft` feature. Error codes are CAPS tokens in backticks.
 
-Rules 1 to 6 were approved by the user on 2026-10-08. Rules 7 to 11 fill gaps the approved rules leave open; the simplest reading was taken and the user has not confirmed them.
+Rules 1 to 6 were approved by the user on 2026-10-08. Rules 7 to 11 fill gaps the approved rules leave open; the simplest reading was taken and the user confirmed them on 2026-10-09.
 
 | #   | Rule                                                                                                                                                                                                                            | Source  |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
