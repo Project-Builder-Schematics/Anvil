@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+import { PaymentsError } from '../domain/errors';
 import type { Payments } from '../domain/driven-ports/Payments';
+import { toView, type PaymentView } from './PaymentView';
 
-export interface RefundPaymentCommand {}
+export interface RefundPaymentCommand {
+  readonly orderId: string;
+}
 
-export interface RefundPaymentResult {}
+export type RefundPaymentResult = PaymentView;
 
 export type RefundPayment = (
   command: RefundPaymentCommand,
@@ -13,5 +16,10 @@ export const REFUND_PAYMENT = Symbol('RefundPayment');
 
 export const makeRefundPayment =
   (payments: Payments): RefundPayment =>
-  () =>
-    Promise.reject(new Error('RefundPayment is not implemented'));
+  async ({ orderId }) => {
+    const payment = await payments.byOrderId(orderId);
+    if (!payment) throw new PaymentsError('PAYMENT_NOT_REFUNDABLE');
+    const refunded = payment.refund();
+    await payments.save(refunded);
+    return toView(refunded);
+  };
