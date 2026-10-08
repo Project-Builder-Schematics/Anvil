@@ -19,7 +19,6 @@ import {
   rewrite,
   row,
   table,
-  createFile,
 } from './lib.ts';
 
 describe('naming', () => {
@@ -38,17 +37,6 @@ describe('naming', () => {
 });
 
 describe('file helpers', () => {
-  it('keeps the template delimiter in a new file literal, as in a replaced one', async () => {
-    const result = await runFactoryForTest(() => {
-      createFile('new.md', 'use {= as is, then {= again');
-    }, {} as never);
-
-    const [instruction] = result.emitted.flatMap((batch) => batch.instructions);
-    expect(JSON.stringify(instruction)).toContain(
-      '"template":"use {= \\"{=\\" =} as is, then {= \\"{=\\" =} again"',
-    );
-  });
-
   it('fails closed on a missing required file, naming the way to create it', async () => {
     const result = await runFactoryForTest(async () => {
       await readRequired('missing.txt', 'create it first');

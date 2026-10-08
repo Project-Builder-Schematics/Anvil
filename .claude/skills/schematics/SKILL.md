@@ -161,4 +161,5 @@ Do not fall back to a generator. If the situation is a repeatable pattern, write
 ## Duties
 
 - Every use of a schematic, and every time one was skipped or did not fit, gets a row in `schematics/IMPACT.md` in the same session.
+- A schematic writes every new file from a template in its own `files/` folder, never from an inline string: `{= .name =}` interpolation and `{= range .list =}` over lists the factory prepared, nothing else (`schematics/_shared/templates.fitness.test.ts`). `hex-subdomain`, `hex-context` and `web-shared-lib` reach the templates of the schematics they run through symlinks in their own `files/`; a string option that reads as a JSON list or object is decoded by the engine, so the factory never passes one.
 - Adding or changing a schematic updates the routing table in `AGENTS.md`, this skill and `schematics/IMPACT.md` in the same commit. `schematics/_shared/catalog.test.ts` fails when the table or this skill drift from `project-builder.json`.

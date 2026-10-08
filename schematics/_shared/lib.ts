@@ -1,15 +1,7 @@
 // Shared by the hex-* and web/ng-* schematics: naming, workspace layout, the
 // domain-model.md readers, and the JSON edits generators make to existing files.
 
-import { create, find, replaceContent } from '@pbuilder/sdk/commons';
-
-/** `create` renders its content as a template; the opening delimiter is written as a literal so the file holds what it was given, as `replaceContent` does. */
-export const createFile = (path: string, content: string): void => {
-  create(path, {
-    template: content.replaceAll('{=', '{= "{=" =}'),
-    options: {},
-  });
-};
+import { find, replaceContent } from '@pbuilder/sdk/commons';
 
 /** Replaces a file's content, unless the edit left it as it was. */
 export const rewrite = (path: string, before: string, after: string): void => {
