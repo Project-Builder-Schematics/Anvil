@@ -9,6 +9,12 @@ import { PLACE_ORDER, makePlaceOrder } from './application/PlaceOrder';
 import { CANCEL_ORDER, makeCancelOrder } from './application/CancelOrder';
 import { GET_ORDER, makeGetOrder } from './application/GetOrder';
 import { OrdersController } from './infrastructure/http/orders.controller';
+import { STOCK_RESERVATION } from './domain/driven-ports/StockReservation';
+import { InventoryStockReservation } from './infrastructure/InventoryStockReservation';
+import { CHARGES } from './domain/driven-ports/Charges';
+import { PaymentsCharges } from './infrastructure/PaymentsCharges';
+import { DOMAIN_EVENTS } from './domain/driven-ports/DomainEvents';
+import { MemoryDomainEvents } from './infrastructure/MemoryDomainEvents';
 
 @Module({
   controllers: [OrdersController],
@@ -40,6 +46,9 @@ import { OrdersController } from './infrastructure/http/orders.controller';
       useFactory: makeGetOrder,
       inject: [ORDER_REPOSITORY],
     },
+    { provide: STOCK_RESERVATION, useClass: InventoryStockReservation },
+    { provide: CHARGES, useClass: PaymentsCharges },
+    { provide: DOMAIN_EVENTS, useClass: MemoryDomainEvents },
   ],
   exports: [CREATE_ORDER, ADD_ORDER_LINE, PLACE_ORDER, CANCEL_ORDER, GET_ORDER],
 })
