@@ -1,8 +1,6 @@
 // The files of a new Nx lib, written to match what the repo already has so that
 // every lib looks the same whoever made it. Pure: no engine calls.
 
-import { apiLibDir, pascal } from './lib.ts';
-
 const tagList = (tags: string[]): string =>
   `[${tags.map((tag) => `"${tag}"`).join(', ')}]`;
 
@@ -63,112 +61,6 @@ const NODE_SPEC_TYPES = `    "types": [
       "node",
       "vitest"
     ]`;
-
-export const RINGS = ['domain/driven-ports', 'application', 'infrastructure'];
-
-/**
- * The lib for one bounded context of the API: `libs/api/<context>`, alias `@demo/api-<context>`.
- * A single-subdomain context keeps its three rings at the lib root, with a placeholder while empty.
- */
-export const apiLibFiles = (
-  context: string,
-  purpose: string,
-  inline: boolean,
-): Record<string, string> => {
-  const dir = apiLibDir(context);
-  const files: Record<string, string> = {
-    'project.json': `{
-  "name": "api-${context}",
-  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "${dir}/src",
-  "projectType": "library",
-  "tags": ${tagList(['scope:api', `context:${context}`, 'type:domain'])}
-}
-`,
-    'eslint.config.mjs': `import baseConfig from '../../../eslint.config.mjs';
-
-export default [...baseConfig];
-`,
-    'tsconfig.json': `{
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "experimentalDecorators": true
-  },
-${SOLUTION_REFERENCES}
-}
-`,
-    'tsconfig.lib.json': `{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": [
-${EXCLUDE_TESTS(['src/**/steps/*.ts'])}
-  ]
-}
-`,
-    'tsconfig.spec.json': `{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-${NODE_SPEC_TYPES}
-  },
-  "include": [
-${SPEC_INCLUDE(['src/**/steps/*.ts'])}
-  ]
-}
-`,
-    'vitest.config.mts': `import { defineConfig } from 'vitest/config';
-import { quickpickle } from 'quickpickle';
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
-
-export default defineConfig(() => ({
-  root: import.meta.dirname,
-  cacheDir: '../../../node_modules/.vite/${dir}',
-  plugins: [nxViteTsPaths(), nxCopyAssetsPlugin(['*.md']), quickpickle()],
-  test: {
-    name: 'api-${context}',
-    watch: false,
-    passWithNoTests: true,
-    globals: true,
-    environment: 'node',
-    include: [
-      '{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      '../../../docs/${context}/**/*.feature',
-    ],
-    setupFiles: ['./src/steps/index.ts'],
-    reporters: ['default'],
-    coverage: {
-      reportsDirectory: '../../../coverage/${dir}',
-      provider: 'v8' as const,
-      enabled: true,
-      // Adapters, controllers and wiring hold no domain logic; the gate is on the inner rings.
-      include: ['src/**/{domain,application}/**/*.ts'],
-      exclude: ['src/**/*.spec.ts'],
-      thresholds: { lines: 90, branches: 90, functions: 90, statements: 90 },
-    },
-  },
-}));
-`,
-    'COD100.md': `${purpose}\n`,
-    'src/composition.ts': `import { Module } from '@nestjs/common';
-
-@Module({})
-export class ${pascal(context)}Module {}
-`,
-    'src/index.ts': `export { ${pascal(context)}Module } from './composition';\n`,
-    ...(inline
-      ? Object.fromEntries(RINGS.map((ring) => [`src/${ring}/.gitkeep`, '']))
-      : {}),
-    'src/steps/index.ts': `// quickpickle reads step definitions from setupFiles; this loads every *.steps.ts of the lib.
-import.meta.glob(['./*.steps.ts', '../*/steps/*.steps.ts'], { eager: true });
-`,
-  };
-  return Object.fromEntries(
-    Object.entries(files).map(([path, content]) => [`${dir}/${path}`, content]),
-  );
-};
 
 export type WebLayer = 'ui' | 'feature' | 'data-access' | 'domain';
 

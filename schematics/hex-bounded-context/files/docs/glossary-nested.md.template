@@ -1,0 +1,9 @@
+# {= .title =} — glossary
+
+Terms of this bounded context. One meaning per term; the same word in another context is a different term. A term used by two or more subdomains lives here; every other term lives in its own subdomain's glossary, linked below.
+
+## Global terms
+
+## Subdomains
+
+{= .links =}

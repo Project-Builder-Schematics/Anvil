@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { find } from '@pbuilder/sdk/commons';
+import { create, find } from '@pbuilder/sdk/commons';
 import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
   ESLINT_CONFIG,
@@ -9,7 +9,6 @@ import {
   assertPascal,
   camel,
   constant,
-  createFile,
   dashed,
   pascal,
   docsDir,
@@ -24,37 +23,6 @@ import {
   withAst,
   type Run,
 } from '../_shared/ts.ts';
-
-const portSource = (
-  name: string,
-): string => `/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface -- placeholder until the Answers column of the domain model is declared here */
-export interface ${name} {}
-
-export const ${constant(dashed(name))} = Symbol('${name}');
-`;
-
-const memoryAdapter = (
-  name: string,
-): string => `import { Injectable } from '@nestjs/common';
-import type { ${name} } from '../domain/driven-ports/${name}';
-
-@Injectable()
-export class Memory${name} implements ${name} {}
-`;
-
-const contextAdapter = (
-  name: string,
-  provider: string,
-): string => `import { Injectable } from '@nestjs/common';
-import type * as ${camel(pascal(provider))} from '${apiAlias(provider)}';
-import type { ${name} } from '../domain/driven-ports/${name}';
-
-// Translates this port into ${provider}'s language: the only file of the slice that knows its barrel.
-export type ${pascal(provider)}Api = typeof ${camel(pascal(provider))};
-
-@Injectable()
-export class ${pascal(provider)}${name} implements ${name} {}
-`;
 
 const DOC_CELL = /^(?:Memory\b|@([a-z][a-z0-9-]*)\b)/;
 
@@ -126,12 +94,25 @@ export default async (input: Input, shared?: Run) => {
   )
     throw new Error(`${adapterPath} already exists for another port`);
   if ((await find(portPath).read()) === undefined)
-    createFile(portPath, portSource(name));
+    create(portPath, {
+      templateFile: 'files/port/port.ts.template',
+      options: { name, token },
+    });
   if (existingAdapter === undefined)
-    createFile(
-      adapterPath,
-      provider ? contextAdapter(name, provider) : memoryAdapter(name),
-    );
+    create(adapterPath, {
+      templateFile: provider
+        ? 'files/port/context-adapter.ts.template'
+        : 'files/port/memory-adapter.ts.template',
+      options: provider
+        ? {
+            name,
+            provider,
+            providerClass: pascal(provider),
+            api: camel(pascal(provider)),
+            alias: apiAlias(provider),
+          }
+        : { name },
+    });
   if (provider) {
     await readRequired(
       ESLINT_CONFIG,

@@ -218,6 +218,15 @@ describe('hex-use-case', () => {
     );
   });
 
+  it('says why the unused-variable rule is off for the pending bindings', async () => {
+    const steps =
+      (await go()).tree.get(`${slice}/steps/IssueInvoice.steps.ts`) ?? '';
+
+    expect(steps.split('\n')[0]).toMatch(
+      /^\/\* eslint-disable @typescript-eslint\/no-unused-vars -- .+ \*\/$/,
+    );
+  });
+
   it('refuses a README subdomain name that is not dash-case, since it becomes a path', async () => {
     const seed = await prepared();
     seed['docs/billing/README.md'] = (

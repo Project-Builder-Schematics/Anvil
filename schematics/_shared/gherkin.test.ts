@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { binding, phrases, stepsSource } from './gherkin.ts';
+import { binding, phrases, stepsOptions } from './gherkin.ts';
 
 const feature = `Feature: Issue invoice
 
@@ -69,9 +69,9 @@ describe('cucumber expressions', () => {
     const [p] = phrases('Scenario: s\n  Given a (draft)\n');
     const sibling = binding(p as never);
 
-    expect(stepsSource('Scenario: s\n  Given a (draft)\n', [sibling])).toBe(
-      'export {};\n',
-    );
+    expect(
+      stepsOptions('Scenario: s\n  Given a (draft)\n', [sibling]),
+    ).toBeUndefined();
   });
 });
 
@@ -98,29 +98,29 @@ describe('binding', () => {
   });
 });
 
-describe('stepsSource', () => {
+describe('stepsOptions', () => {
   it('imports only the keywords it uses, and DataTable only when a step takes a table', () => {
-    const source = stepsSource(feature, []);
-
-    expect(source).toContain(
-      "import { Given, Then, When, type DataTable } from 'quickpickle';",
+    expect(stepsOptions(feature, [])?.imports).toBe(
+      'Given, Then, When, type DataTable',
     );
-    expect(stepsSource('Scenario: s\n  Then done\n', [])).toContain(
-      "import { Then } from 'quickpickle';",
+    expect(stepsOptions('Scenario: s\n  Then done\n', [])?.imports).toBe(
+      'Then',
+    );
+  });
+
+  it('binds each phrase once, in order, separated by a blank line', () => {
+    const [first, second] = phrases(feature);
+
+    expect(stepsOptions(feature, [])?.bindings).toStartWith(
+      `${binding(first as never)}\n\n${binding(second as never)}\n\n`,
     );
   });
 
   it('skips a phrase a sibling steps file already binds', () => {
     const sibling = "Then('the failure is {string}', () => 'skipped');";
-    const source = stepsSource(feature, [sibling]);
+    const bindings = stepsOptions(feature, [sibling])?.bindings;
 
-    expect(source).not.toContain('the failure is {string}');
-    expect(source).toContain('nothing is stored');
-  });
-
-  it('says why the unused-variable rule is off for generated bindings', () => {
-    expect(stepsSource(feature, []).split('\n')[0]).toMatch(
-      /^\/\* eslint-disable @typescript-eslint\/no-unused-vars -- .+ \*\/$/,
-    );
+    expect(bindings).not.toContain('the failure is {string}');
+    expect(bindings).toContain('nothing is stored');
   });
 });

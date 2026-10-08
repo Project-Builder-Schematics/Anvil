@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { format } from 'prettier';
 import { table } from '../_shared/lib.ts';
 import { run, workspace } from '../_shared/testing.ts';
 import factory from './factory.ts';
@@ -116,6 +117,93 @@ describe('hex-bounded-context: the lib', () => {
     expect(String((await go({ context: 'Tenancy' })).error)).toContain(
       'dash-case',
     );
+  });
+});
+
+describe('hex-bounded-context: the lib files', () => {
+  const lib = async (over: Record<string, unknown> = {}) => {
+    const { tree } = await go(over);
+    return (path: string) => tree.get(`libs/api/tenancy/${path}`) ?? '';
+  };
+  const json = (text: string) =>
+    JSON.parse(text) as { exclude: string[]; include: string[] };
+
+  it('runs the context features through quickpickle, with no jest mapper anywhere', async () => {
+    const config = (await lib())('vitest.config.mts');
+
+    expect(config).toContain("import { quickpickle } from 'quickpickle';");
+    expect(config).toContain('quickpickle()');
+    expect(config).toContain("'../../../docs/tenancy/**/*.feature'");
+    expect(config).toContain("setupFiles: ['./src/steps/index.ts']");
+    expect(config).toContain("name: 'api-tenancy'");
+    expect(config).toContain(
+      "cacheDir: '../../../node_modules/.vite/libs/api/tenancy'",
+    );
+    expect(config).not.toContain('moduleNameMapper');
+  });
+
+  it('gates only domain and application coverage, never steps or adapters', async () => {
+    expect((await lib())('vitest.config.mts')).toContain(
+      "include: ['src/**/{domain,application}/**/*.ts']",
+    );
+  });
+
+  it('keeps step files out of the lib project and in the spec project', async () => {
+    const at = await lib();
+
+    expect(json(at('tsconfig.lib.json')).exclude).toContain(
+      'src/**/steps/*.ts',
+    );
+    expect(json(at('tsconfig.spec.json')).include).toContain(
+      'src/**/steps/*.ts',
+    );
+  });
+
+  it('exposes the context as a Nest module through the barrel', async () => {
+    const at = await lib();
+
+    expect(at('src/composition.ts')).toBe(
+      "import { Module } from '@nestjs/common';\n\n@Module({})\nexport class TenancyModule {}\n",
+    );
+    expect(at('src/index.ts')).toBe(
+      "export { TenancyModule } from './composition';\n",
+    );
+  });
+
+  it('writes a purpose that holds the template delimiter as it is', async () => {
+    const { tree } = await go({ purpose: 'Uses {= as is, then {= again.' });
+
+    expect(tree.get('libs/api/tenancy/COD100.md')).toBe(
+      'Uses {= as is, then {= again.\n',
+    );
+    expect(tree.get('docs/tenancy/README.md')).toContain(
+      'Uses {= as is, then {= again.',
+    );
+  });
+
+  it('names the project and its source root after the lib', async () => {
+    expect(JSON.parse((await lib())('project.json'))).toEqual({
+      name: 'api-tenancy',
+      $schema: '../../../node_modules/nx/schemas/project-schema.json',
+      sourceRoot: 'libs/api/tenancy/src',
+      projectType: 'library',
+      tags: ['scope:api', 'context:tenancy', 'type:domain'],
+    });
+  });
+
+  it('writes files that prettier leaves alone', async () => {
+    const { tree } = await go({ subdomains: '' });
+    const off: string[] = [];
+    for (const [path, content] of tree) {
+      if (!path.startsWith('libs/') || /\.(md|gitkeep)$/.test(path)) continue;
+      if (
+        (await format(content, { filepath: path, singleQuote: true })) !==
+        content
+      )
+        off.push(path);
+    }
+
+    expect(off).toEqual([]);
   });
 });
 

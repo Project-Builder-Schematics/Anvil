@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { format } from 'prettier';
-import { apiLibFiles, webLibFiles } from './libs.ts';
+import hexBoundedContext from '../hex-bounded-context/factory.ts';
+import { webLibFiles } from './libs.ts';
+import { run, workspace } from './testing.ts';
 
 const formatted = async (files: Record<string, string>) => {
   const off: string[] = [];
@@ -16,84 +18,6 @@ const formatted = async (files: Record<string, string>) => {
 
 const parse = (text: string) =>
   JSON.parse(text) as { exclude: string[]; include: string[] };
-
-describe('apiLibFiles', () => {
-  const files = apiLibFiles('catalog', 'Owns the product catalog.', true);
-  const at = (path: string) => files[`libs/api/catalog/${path}`] ?? '';
-
-  it('lays out one Nx lib per context with the context tags', () => {
-    expect(Object.keys(files).sort()).toEqual(
-      [
-        'COD100.md',
-        'eslint.config.mjs',
-        'project.json',
-        'src/application/.gitkeep',
-        'src/composition.ts',
-        'src/domain/driven-ports/.gitkeep',
-        'src/index.ts',
-        'src/infrastructure/.gitkeep',
-        'src/steps/index.ts',
-        'tsconfig.json',
-        'tsconfig.lib.json',
-        'tsconfig.spec.json',
-        'vitest.config.mts',
-      ].map((p) => `libs/api/catalog/${p}`),
-    );
-    expect(JSON.parse(at('project.json'))).toMatchObject({
-      name: 'api-catalog',
-      sourceRoot: 'libs/api/catalog/src',
-      tags: ['scope:api', 'context:catalog', 'type:domain'],
-    });
-    expect(at('COD100.md')).toBe('Owns the product catalog.\n');
-  });
-
-  it('keeps the ring folders of an empty single-subdomain context, and none for a nested one', () => {
-    const nested = Object.keys(
-      apiLibFiles('catalog', 'Owns the product catalog.', false),
-    );
-
-    expect(nested.filter((path) => path.endsWith('.gitkeep'))).toEqual([]);
-  });
-
-  it('runs the context features through quickpickle, with no jest mapper anywhere', () => {
-    const config = at('vitest.config.mts');
-
-    expect(config).toContain("import { quickpickle } from 'quickpickle';");
-    expect(config).toContain('quickpickle()');
-    expect(config).toContain("'../../../docs/catalog/**/*.feature'");
-    expect(config).toContain("setupFiles: ['./src/steps/index.ts']");
-    expect(config).toContain("name: 'api-catalog'");
-    expect(Object.values(files).join('')).not.toContain('moduleNameMapper');
-  });
-
-  it('gates only domain and application coverage, never steps or adapters', () => {
-    expect(at('vitest.config.mts')).toContain(
-      "include: ['src/**/{domain,application}/**/*.ts']",
-    );
-  });
-
-  it('keeps step files out of the lib project and in the spec project', () => {
-    expect(parse(at('tsconfig.lib.json')).exclude).toContain(
-      'src/**/steps/*.ts',
-    );
-    expect(parse(at('tsconfig.spec.json')).include).toContain(
-      'src/**/steps/*.ts',
-    );
-  });
-
-  it('exposes the context as a Nest module through the barrel', () => {
-    expect(at('src/composition.ts')).toBe(
-      "import { Module } from '@nestjs/common';\n\n@Module({})\nexport class CatalogModule {}\n",
-    );
-    expect(at('src/index.ts')).toBe(
-      "export { CatalogModule } from './composition';\n",
-    );
-  });
-
-  it('writes files that prettier leaves alone', async () => {
-    expect(await formatted(files)).toEqual([]);
-  });
-});
 
 describe('webLibFiles', () => {
   it.each(['ui', 'feature', 'data-access'] as const)(
@@ -133,7 +57,7 @@ describe('webLibFiles', () => {
     },
   );
 
-  it('excludes from an Angular lib every test file an API lib excludes, and the test setup', () => {
+  it('excludes from an Angular lib every test file an API lib excludes, and the test setup', async () => {
     const angular = webLibFiles({
       dir: 'libs/web/catalog/ui',
       name: 'web-catalog-ui',
@@ -141,7 +65,19 @@ describe('webLibFiles', () => {
       tags: ['scope:web', 'context:catalog', 'type:ui'],
       layer: 'ui',
     });
-    const api = apiLibFiles('catalog', 'x', false);
+    const { tree } = await run(
+      hexBoundedContext,
+      'hex-bounded-context',
+      {
+        context: 'catalog',
+        purpose: 'x',
+        subdomain_class: 'core',
+        criticality: 'high',
+        volatility: 'low',
+      },
+      workspace,
+    );
+    const api = Object.fromEntries(tree);
     const exclude = (files: Record<string, string>, path: string) =>
       parse(files[path] ?? '').exclude;
 

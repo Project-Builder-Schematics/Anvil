@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { find } from '@pbuilder/sdk/commons';
+import { create, find } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
   apiLibDir,
@@ -7,7 +7,6 @@ import {
   assertPascal,
   camel,
   constant,
-  createFile,
   dashed,
   docsDir,
   readRequired,
@@ -16,7 +15,7 @@ import {
   subdomainNames,
   table,
 } from '../_shared/lib.ts';
-import { stepsSource } from '../_shared/gherkin.ts';
+import { stepsOptions } from '../_shared/gherkin.ts';
 import {
   addModuleEntry,
   addReExport,
@@ -31,31 +30,6 @@ const asPorts = (spec: string): string[] =>
     .map((port) => port.trim())
     .filter(Boolean)
     .map((port) => assertPascal(port, 'driven port'));
-
-const useCaseSource = (name: string, ports: string[]): string => {
-  const imports = [...ports]
-    .sort()
-    .map(
-      (port) =>
-        `import type { ${port} } from '../domain/driven-ports/${port}';`,
-    )
-    .join('\n');
-  const params = ports.map((port) => `${camel(port)}: ${port}`).join(', ');
-  return `/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
-${imports}${imports ? '\n\n' : ''}export interface ${name}Command {}
-
-export interface ${name}Result {}
-
-export type ${name} = (command: ${name}Command) => Promise<${name}Result>;
-
-export const ${constant(dashed(name))} = Symbol('${name}');
-
-export const make${name} =
-  (${params}): ${name} =>
-  () =>
-    Promise.reject(new Error('${name} is not implemented'));
-`;
-};
 
 /**
  * The steps files of every other use case of the context. The lib loads them all, so a
@@ -145,10 +119,31 @@ export default async (input: Input, shared?: Run) => {
     stepsFile: `${code}/steps/${name}.steps.ts`,
   });
 
-  createFile(`${code}/application/${name}.ts`, useCaseSource(name, ports));
-  createFile(`${code}/steps/${name}.steps.ts`, stepsSource(feature, siblings));
-
   const token = constant(dashed(name));
+  const imports = [...ports]
+    .sort()
+    .map(
+      (port) =>
+        `import type { ${port} } from '../domain/driven-ports/${port}';`,
+    )
+    .join('\n');
+  create(`${code}/application/${name}.ts`, {
+    templateFile: 'files/use-case/use-case.ts.template',
+    options: {
+      name,
+      token,
+      imports: imports === '' ? '' : `${imports}\n\n`,
+      params: ports.map((port) => `${camel(port)}: ${port}`).join(', '),
+    },
+  });
+  const steps = stepsOptions(feature, siblings);
+  create(`${code}/steps/${name}.steps.ts`, {
+    templateFile: steps
+      ? 'files/use-case/steps.ts.template'
+      : 'files/use-case/steps-empty.ts.template',
+    options: steps ?? {},
+  });
+
   const tokens = ports.map((port) => constant(dashed(port)));
   run.edit(compositionPath, (file) => {
     file.addImport(token, `./application/${name}`);

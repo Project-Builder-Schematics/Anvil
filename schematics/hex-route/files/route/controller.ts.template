@@ -1,0 +1,2 @@
+@Controller('{= .resource =}')
+export class {= .className =} {}

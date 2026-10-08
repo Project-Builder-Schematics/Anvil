@@ -1,0 +1,12 @@
+export const {= .errors =} = {
+{= range .codes =}  {= .code =}: '{= .message =}',
+{= end =}} as const;
+
+export type {= .cls =}Code = keyof typeof {= .errors =};
+
+export class {= .cls =} extends Error {
+  constructor(readonly code: {= .cls =}Code) {
+    super({= .errors =}[code]);
+    this.name = '{= .cls =}';
+  }
+}

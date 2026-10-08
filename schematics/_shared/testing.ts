@@ -1,8 +1,15 @@
 // Fixtures shared by the schematic tests: a miniature workspace and a hand-written domain model.
 
-import { runFactoryForTest } from '@pbuilder/sdk/testing';
+import type { Batch } from '@pbuilder/sdk/testing';
 import { format } from 'prettier';
-import { apiLibFiles, webLibFiles } from './libs.ts';
+// The SDK's `runFactoryForTest` stores a created file's template as it is, so a factory that
+// edits a file it just created would edit the template. These two are what it is made of, and
+// they are exported from no public subpath (0.3.1), so they are imported by file.
+import { defineFactory } from '../../node_modules/@pbuilder/sdk/dist/core/context.js';
+import { ContractFake } from '../../node_modules/@pbuilder/sdk/dist/testing/contract-fake.js';
+import hexBoundedContext from '../hex-bounded-context/factory.ts';
+import { webLibFiles } from './libs.ts';
+import { render } from './render.ts';
 
 const tsconfigBase = `{
   "compilerOptions": {
@@ -106,22 +113,66 @@ export const invoicingDocs: Record<string, string> = {
   [`${DOCS}/void-invoice.feature`]: voidFeature,
 };
 
-/** The billing lib as hex-bounded-context leaves it, plus the hand-written docs. */
-export const billingSeed = (
-  over: Record<string, string> = {},
-): Record<string, string> => ({
-  ...workspace,
-  ...apiLibFiles('billing', 'Bills customers.', false),
-  ...invoicingDocs,
-  ...over,
-});
-
 /** A source on one line, trailing commas in braces and brackets dropped, so an assertion does not depend on where prettier wrapped it. */
 export const flat = (source: string): string =>
   source.replace(/\s+/g, ' ').replace(/, ([}\]])/g, ' $1');
 
 const packageDir = (schematic: string): string =>
   `${import.meta.dir}/../${schematic}`;
+
+/** The batch as the engine applies it: every created file and path rendered from its options. */
+const rendered = (batch: Batch): Batch => ({
+  ...batch,
+  instructions: batch.instructions.map((directive) => {
+    if (directive.op !== 'create') return directive;
+    const { pathTemplate, template, options } = directive.create;
+    const values = (options ?? {}) as Record<string, unknown>;
+    return {
+      ...directive,
+      create: {
+        ...directive.create,
+        pathTemplate: render(pathTemplate, values),
+        template: render(template, values),
+      },
+    };
+  }),
+});
+
+/**
+ * `runFactoryForTest` with the engine's rendering: a created file holds what its template renders
+ * to, for the tree and for every later read of the same run. `emitted` keeps the directives as
+ * the factory wrote them. `packageDir` anchors `templateFile`.
+ */
+export const runFactory = async (
+  factory: (input: never) => unknown,
+  input: Record<string, unknown>,
+  options: { seed?: Record<string, string>; packageDir?: string },
+) => {
+  const fake = new ContractFake({ seed: options.seed ?? {} });
+  const emitted: Batch[] = [];
+  const client = {
+    emit: (batch: Batch) => {
+      emitted.push(batch);
+      return fake.emit(rendered(batch));
+    },
+    read: (path: string) => fake.read(path),
+    commit: () => fake.commit(),
+    discard: () => fake.discard(),
+  };
+  const wrapped = defineFactory(
+    factory as (input: unknown) => void | Promise<void>,
+    options.packageDir === undefined
+      ? undefined
+      : { packageDir: options.packageDir },
+  );
+  let error: unknown;
+  try {
+    await wrapped(input, { client });
+  } catch (caught) {
+    error = caught;
+  }
+  return { tree: fake.committedTree(), emitted, error };
+};
 
 /**
  * Runs a factory on a seeded tree; the result's tree holds only what the run committed. The
@@ -134,7 +185,7 @@ export const run = async (
   input: Record<string, unknown>,
   seed: Record<string, string>,
 ) => {
-  const result = await runFactoryForTest(factory as never, input as never, {
+  const result = await runFactory(factory, input, {
     packageDir: packageDir(schematic),
     seed,
   });
@@ -158,6 +209,44 @@ export const run = async (
   return { ...result, tree };
 };
 
+export const throwIfFailed = (result: { error?: unknown }): void => {
+  if (result.error)
+    throw result.error instanceof Error
+      ? result.error
+      : new Error('the run failed');
+};
+
+/** The billing lib, a context of several subdomains, as hex-bounded-context writes it. */
+const billingLib = await (async () => {
+  const { tree, error } = await run(
+    hexBoundedContext,
+    'hex-bounded-context',
+    {
+      context: 'billing',
+      purpose: 'Bills customers.',
+      subdomain_class: 'core',
+      criticality: 'high',
+      volatility: 'low',
+      subdomains: 'invoicing,payouts',
+    },
+    workspace,
+  );
+  throwIfFailed({ error });
+  return Object.fromEntries(
+    [...tree].filter(([path]) => path.startsWith(`${LIB}/`)),
+  );
+})();
+
+/** The billing lib plus the hand-written docs. */
+export const billingSeed = (
+  over: Record<string, string> = {},
+): Record<string, string> => ({
+  ...workspace,
+  ...billingLib,
+  ...invoicingDocs,
+  ...over,
+});
+
 /** The workspace after a run: the seed with the committed writes laid over it. */
 export const after = (
   seed: Record<string, string>,
@@ -174,13 +263,6 @@ export const without = (
   Object.fromEntries(
     Object.entries(seed).filter(([path]) => !paths.includes(path)),
   );
-
-export const throwIfFailed = (result: { error?: unknown }): void => {
-  if (result.error)
-    throw result.error instanceof Error
-      ? result.error
-      : new Error('the run failed');
-};
 
 /** Web libs as web-context leaves them, for the ng-* schematics. */
 export const webLib = (

@@ -58,17 +58,22 @@ export const binding = (p: Phrase): string =>
 const bound = (siblings: string[], p: Phrase): boolean =>
   siblings.some((source) => source.includes(literal(p)));
 
-/** The steps file of one use case: a pending binding per phrase no sibling file binds yet. */
-export const stepsSource = (feature: string, siblings: string[]): string => {
+/**
+ * What the steps file of one use case holds: the quickpickle names it imports and a pending
+ * binding per phrase no sibling file binds yet; undefined when every phrase is bound already.
+ */
+export const stepsOptions = (
+  feature: string,
+  siblings: string[],
+): { imports: string; bindings: string } | undefined => {
   const own = phrases(feature).filter((p) => !bound(siblings, p));
-  if (own.length === 0) return 'export {};\n';
+  if (own.length === 0) return undefined;
   const keywords = [...new Set(own.map((p) => p.keyword))].sort();
   const table = own.some((p) => p.params.includes('table: DataTable'))
     ? ['type DataTable']
     : [];
-  return `/* eslint-disable @typescript-eslint/no-unused-vars -- pending bindings keep their arguments until the scenarios are implemented */
-import { ${[...keywords, ...table].join(', ')} } from 'quickpickle';
-
-${own.map(binding).join('\n\n')}
-`;
+  return {
+    imports: [...keywords, ...table].join(', '),
+    bindings: own.map(binding).join('\n\n'),
+  };
 };

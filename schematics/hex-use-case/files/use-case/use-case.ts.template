@@ -1,0 +1,13 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+{= .imports =}export interface {= .name =}Command {}
+
+export interface {= .name =}Result {}
+
+export type {= .name =} = (command: {= .name =}Command) => Promise<{= .name =}Result>;
+
+export const {= .token =} = Symbol('{= .name =}');
+
+export const make{= .name =} =
+  ({= .params =}): {= .name =} =>
+  () =>
+    Promise.reject(new Error('{= .name =} is not implemented'));

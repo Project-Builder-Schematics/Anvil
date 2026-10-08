@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { find } from '@pbuilder/sdk/commons';
+import { create, find, scaffold } from '@pbuilder/sdk/commons';
 import {
   DOMAIN_MODEL,
   ESLINT_CONFIG,
@@ -9,14 +9,13 @@ import {
   apiAlias,
   apiLibDir,
   assertDashed,
-  createFile,
   docsDir,
+  pascal,
   readRequired,
   rewrite,
   table,
   title,
 } from '../_shared/lib.ts';
-import { apiLibFiles } from '../_shared/libs.ts';
 import {
   addContextRelation,
   addLintContext,
@@ -101,75 +100,6 @@ ${contextMap(relations)}
 ${LEVEL_TEXT[level]}
 `;
 
-const domainModel = (
-  context: string,
-  subdomain: string,
-  inline: boolean,
-): string => `# ${title(subdomain)} — domain model
-
-${
-  inline
-    ? `The single subdomain of [${title(context)}](README.md). Terms are in the [glossary](glossary.md)`
-    : `Subdomain of [${title(context)}](../README.md). Terms are in the [glossary](glossary.md), or the [context root's](../glossary.md) for a term shared with another subdomain`
-}; sequence diagrams are in [flows.md](flows.md). Each business rule becomes a \`Rule:\` in a feature next to this file.
-
-## Aggregates
-
-| Aggregate | Root entity | Invariants it protects | Changed by |
-| --- | --- | --- | --- |
-
-## Entities
-
-| Entity | Identity | Attributes | Inside aggregate | Lifecycle |
-| --- | --- | --- | --- | --- |
-
-## Value objects
-
-| Value object | Attributes | Validation | Used by |
-| --- | --- | --- | --- |
-
-## Business rules
-
-Numbered; every validation cites one; state precedence when several can hold; \`<\` vs \`<=\` spelled. \`Source\` is \`decided[ — <reason>]\` or \`assumed\`, and an \`assumed\` rule may only back a \`@draft\` feature. Error codes are CAPS tokens in backticks.
-
-| # | Rule | Source |
-| --- | --- | --- |
-
-## Use cases
-
-One row per use case; \`Feature\` links the \`.feature\` written next to this file before the code is generated.
-
-| Use case | Command | Result | Driven ports | Feature |
-| --- | --- | --- | --- | --- |
-
-## Driven ports
-
-\`Adapter today\` starts with \`Memory\` or \`@<context>\` (another context's barrel). \`Contract\` is the invariant every implementation keeps, in-memory or real.
-
-| Port | Answers | Adapter today | Contract |
-| --- | --- | --- | --- |
-
-## Driving adapters
-
-\`Route\` is \`METHOD /<resource>[/path]\` under the API's global prefix. \`Answers\` lists the statuses; the first 2xx is the success status. \`Caller\` is who may call and where the identity comes from; request bodies never carry \`userId\`, \`accountId\` or \`actorId\`.
-
-| Route | Use case | Answers | Caller |
-| --- | --- | --- | --- |
-`;
-
-const flows = (subdomain: string): string => `# ${title(subdomain)} — flows
-
-Sequence diagrams for [${subdomain}](${DOMAIN_MODEL}). Rule numbers refer to its Business rules. One Mermaid \`sequenceDiagram\` per use case whose request crosses more than one component: controller, use case, driven ports, and whatever happens after the response.
-`;
-
-const subdomainGlossary = (
-  context: string,
-  subdomain: string,
-): string => `# ${title(context)} / ${subdomain} — glossary
-
-Terms of the ${subdomain} subdomain. A term shared by two or more subdomains lives in the [context glossary](../glossary.md) instead.
-`;
-
 const glossaryLink = (subdomain: string): string =>
   `- [${subdomain}](${subdomain}/glossary.md)`;
 
@@ -245,11 +175,18 @@ export default async (input: Input) => {
   );
 
   // Deliberately fail-closed: a context whose lib exists is never regenerated over.
-  for (const [path, template] of Object.entries(
-    apiLibFiles(context, input.purpose, inline),
-  )) {
-    createFile(path, template);
-  }
+  const lib = apiLibDir(context);
+  scaffold({
+    from: 'files/lib',
+    to: lib,
+    options: {
+      context,
+      dir: lib,
+      purpose: input.purpose,
+      module: `${pascal(context)}Module`,
+    },
+  });
+  if (inline) scaffold({ from: 'files/rings', to: lib, options: {} });
   rewrite(
     TSCONFIG_BASE,
     tsconfig,
@@ -276,23 +213,18 @@ One slice of code per row; docs mirror the code, so a context with several subdo
 ${modelDirs.map(({ subdomain, link }) => `| [${subdomain}](${link}) | |`).join('\n')}
 `;
   if (readme === undefined) {
-    createFile(
-      `${docs}/README.md`,
-      `# ${title(context)}
-
-${input.purpose}
-
-${classification(input, level, assumed, relations)}
-${subdomainsSection}
-## Ubiquitous language
-
-${
-  inline
-    ? 'See [glossary.md](glossary.md). Every name in `domain/` and every export of the context barrel is a term defined there.'
-    : 'See [glossary.md](glossary.md) for the terms two or more subdomains share and the table of contents; each subdomain owns the rest of its vocabulary next to its own `domain-model.md`. Every name in `domain/` and every export of the context barrel is a term defined in exactly one of them.'
-}
-`,
-    );
+    create(`${docs}/README.md`, {
+      templateFile: 'files/docs/README.md.template',
+      options: {
+        title: title(context),
+        purpose: input.purpose,
+        classification: classification(input, level, assumed, relations),
+        subdomains: subdomainsSection,
+        language: inline
+          ? 'See [glossary.md](glossary.md). Every name in `domain/` and every export of the context barrel is a term defined there.'
+          : 'See [glossary.md](glossary.md) for the terms two or more subdomains share and the table of contents; each subdomain owns the rest of its vocabulary next to its own `domain-model.md`. Every name in `domain/` and every export of the context barrel is a term defined in exactly one of them.',
+      },
+    });
   } else {
     const missing = [
       readme.includes('## Classification')
@@ -310,23 +242,15 @@ ${
 
   const linked = inline ? [] : subdomains;
   if (glossary === undefined) {
-    createFile(
-      `${docs}/glossary.md`,
-      `# ${title(context)} — glossary
-
-Terms of this bounded context. One meaning per term; the same word in another context is a different term.${
-        inline
-          ? ''
-          : ` A term used by two or more subdomains lives here; every other term lives in its own subdomain's glossary, linked below.
-
-## Global terms
-
-## Subdomains
-
-${linked.map(glossaryLink).join('\n')}`
-      }
-`,
-    );
+    create(`${docs}/glossary.md`, {
+      templateFile: inline
+        ? 'files/docs/glossary.md.template'
+        : 'files/docs/glossary-nested.md.template',
+      options: {
+        title: title(context),
+        links: linked.map(glossaryLink).join('\n'),
+      },
+    });
   } else {
     rewrite(
       `${docs}/glossary.md`,
@@ -337,23 +261,34 @@ ${linked.map(glossaryLink).join('\n')}`
 
   const createMissing = async (
     path: string,
-    template: string,
+    templateFile: string,
+    options: Record<string, string>,
   ): Promise<void> => {
-    if ((await find(path).read()) === undefined) createFile(path, template);
+    if ((await find(path).read()) === undefined)
+      create(path, { templateFile: `files/docs/${templateFile}`, options });
   };
   await Promise.all(
     modelDirs.flatMap(({ subdomain, dir }) => [
-      createMissing(
-        `${dir}/${DOMAIN_MODEL}`,
-        domainModel(context, subdomain, inline),
-      ),
-      createMissing(`${dir}/flows.md`, flows(subdomain)),
+      createMissing(`${dir}/${DOMAIN_MODEL}`, 'domain-model.md.template', {
+        title: title(subdomain),
+        intro: inline
+          ? `The single subdomain of [${title(context)}](README.md). Terms are in the [glossary](glossary.md)`
+          : `Subdomain of [${title(context)}](../README.md). Terms are in the [glossary](glossary.md), or the [context root's](../glossary.md) for a term shared with another subdomain`,
+      }),
+      createMissing(`${dir}/flows.md`, 'flows.md.template', {
+        title: title(subdomain),
+        subdomain,
+      }),
       ...(inline
         ? []
         : [
             createMissing(
               `${dir}/glossary.md`,
-              subdomainGlossary(context, subdomain),
+              'subdomain-glossary.md.template',
+              {
+                title: title(context),
+                subdomain,
+              },
             ),
           ]),
     ]),

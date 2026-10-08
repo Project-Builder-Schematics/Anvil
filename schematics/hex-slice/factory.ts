@@ -1,11 +1,9 @@
 import type { Input } from './schema.generated.ts';
-import { find } from '@pbuilder/sdk/commons';
-import { RINGS } from '../_shared/libs.ts';
+import { create, find, scaffold } from '@pbuilder/sdk/commons';
 import {
   apiLibDir,
   assertDashed,
   constant,
-  createFile,
   errorClass,
   errorCodes,
   pascal,
@@ -13,28 +11,6 @@ import {
   resolveSlice,
 } from '../_shared/lib.ts';
 import { addModuleEntry, startRun, withAst, type Run } from '../_shared/ts.ts';
-
-const errorsSource = (
-  slice: string,
-  context: string,
-  codes: string[],
-): string => {
-  if (codes.length === 0)
-    return `export const ${constant(slice)}_ERROR = {} as const;\n`;
-  const errors = `${constant(slice)}_ERROR`;
-  const cls = errorClass(slice);
-  return `export const ${errors} = {\n${codes.map((code) => `  ${code}: '${context}.${code.toLowerCase()}',`).join('\n')}\n} as const;
-
-export type ${cls}Code = keyof typeof ${errors};
-
-export class ${cls} extends Error {
-  constructor(readonly code: ${cls}Code) {
-    super(${errors}[code]);
-    this.name = '${cls}';
-  }
-}
-`;
-};
 
 export default async (input: Input, shared?: Run) => {
   const run = shared ?? startRun();
@@ -54,18 +30,29 @@ export default async (input: Input, shared?: Run) => {
 
   // Already generated: a re-run (hex-subdomain after a doc change) only registers what is new.
   if ((await find(`${code}/domain/errors.ts`).read()) !== undefined) return;
-  createFile(
-    `${code}/domain/errors.ts`,
-    errorsSource(slice, context, errorCodes(model)),
-  );
+  const codes = errorCodes(model);
+  create(`${code}/domain/errors.ts`, {
+    templateFile:
+      codes.length === 0
+        ? 'files/slice/errors-empty.ts.template'
+        : 'files/slice/errors.ts.template',
+    options: {
+      errors: `${constant(slice)}_ERROR`,
+      cls: errorClass(slice),
+      codes: codes.map((name) => ({
+        code: name,
+        message: `${context}.${name.toLowerCase()}`,
+      })),
+    },
+  });
 
   if (segment !== '') {
     const module = `${pascal(slice)}Module`;
-    for (const ring of RINGS) createFile(`${code}/${ring}/.gitkeep`, '');
-    createFile(
-      `${code}/composition.ts`,
-      `import { Module } from '@nestjs/common';\n\n@Module({})\nexport class ${module} {}\n`,
-    );
+    scaffold({ from: 'files/slice/rings', to: code, options: {} });
+    create(`${code}/composition.ts`, {
+      templateFile: 'files/slice/composition.ts.template',
+      options: { module },
+    });
     const contextModule = `${lib}/src/composition.ts`;
     await readRequired(
       contextModule,

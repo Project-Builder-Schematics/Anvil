@@ -1,5 +1,5 @@
 import type { Input } from './schema.generated.ts';
-import { find } from '@pbuilder/sdk/commons';
+import { create, find } from '@pbuilder/sdk/commons';
 import { astLibrary } from '@pbuilder/sdk/typescript';
 import {
   apiAlias,
@@ -9,7 +9,6 @@ import {
   camel,
   commandFields,
   constant,
-  createFile,
   dashed,
   errorClass,
   errorCodes,
@@ -96,47 +95,6 @@ const operation = ({ useCase, method, path, status, fields }: Operation) => {
     ...(status === defaultStatus(method) ? [] : ['HttpCode']),
   ];
   return { name, schemas, inputs, decorators, spread, nest };
-};
-
-/** Maps the domain errors the Answers cells cite to their status; an error nothing cites is logged and answers 500. */
-const errorFilterSource = (
-  slice: string,
-  statuses: Map<string, number>,
-): string => {
-  const error = errorClass(slice);
-  const filter = `${error}Filter`;
-  return `import { Catch, Logger, type ArgumentsHost } from '@nestjs/common';
-import { BaseExceptionFilter } from '@nestjs/core';
-import { ${error}, type ${error}Code } from '../../domain/errors';
-
-const STATUS: Partial<Record<${error}Code, number>> = {
-${[...statuses].map(([code, status]) => `  ${code}: ${String(status)},`).join('\n')}
-};
-
-@Catch(${error})
-export class ${filter} extends BaseExceptionFilter<${error}> {
-  private readonly logger = new Logger(${filter}.name);
-
-  override catch(exception: ${error}, host: ArgumentsHost): void {
-    const adapter = this.applicationRef ?? this.httpAdapterHost?.httpAdapter;
-    if (!adapter) {
-      super.catch(exception, host);
-      return;
-    }
-    const status = STATUS[exception.code];
-    if (status === undefined)
-      this.logger.error(
-        \`\${exception.code} has no status in the Driving adapters table, answering 500\`,
-      );
-    const statusCode = status ?? 500;
-    adapter.reply(
-      host.switchToHttp().getResponse(),
-      { statusCode, code: exception.code },
-      statusCode,
-    );
-  }
-}
-`;
 };
 
 /** Makes the status map say what the docs say now: new codes are added, changed ones updated, codes no Answers cell cites any more dropped. */
@@ -268,7 +226,14 @@ export default async (input: Input, shared?: Run) => {
     const filterPath = `${code}/infrastructure/http/${filter}.ts`;
     const statuses = errorStatuses(model);
     if ((await find(filterPath).read()) === undefined)
-      createFile(filterPath, errorFilterSource(slice, statuses));
+      create(filterPath, {
+        templateFile: 'files/route/error-filter.ts.template',
+        options: {
+          error: errorClass(slice),
+          filter,
+          statuses: [...statuses].map(([code, status]) => ({ code, status })),
+        },
+      });
     else
       run.edit(filterPath, (file) =>
         withAst(file, (ast) => {
@@ -278,10 +243,10 @@ export default async (input: Input, shared?: Run) => {
   }
   const created = (await find(controllerPath).read()) === undefined;
   if (created)
-    createFile(
-      controllerPath,
-      `@Controller('${resource}')\nexport class ${className} {}\n`,
-    );
+    create(controllerPath, {
+      templateFile: 'files/route/controller.ts.template',
+      options: { resource, className },
+    });
   const application = `../../application/${useCase}`;
   const routeDecorators = op.decorators.map(
     (d) => `@${d.name}(${d.arguments.join(', ')})`,
