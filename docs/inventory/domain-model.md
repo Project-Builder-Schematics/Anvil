@@ -4,10 +4,10 @@ The single subdomain of [Inventory](README.md). Terms are in the [glossary](glos
 
 ## Aggregates
 
-| Aggregate     | Root entity   | Invariants it protects                                                                                                                                                        | Changed by                                                     |
-| ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `StockItem`   | `StockItem`   | The level is an integer of 0 or more (6). A reservation takes stock only when enough is available (1). Release returns it (3). Commit consumes it (4).                        | `ReserveStock`, `ReleaseStock`, `CommitStock`, `SetStockLevel` |
-| `Reservation` | `Reservation` | One per order (2, 8). Held until it is released or committed, then final (3, 9). It records what the order reserved so that release and commit move exactly those quantities. | `ReserveStock`, `ReleaseStock`, `CommitStock`                  |
+| Aggregate     | Root entity   | Invariants it protects                                                                                                                                                                       | Changed by                                                     |
+| ------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `StockItem`   | `StockItem`   | The level is an integer of 0 or more (6) and never below what is reserved (11). A reservation takes stock only when enough is available (1). Release returns it (3). Commit consumes it (4). | `ReserveStock`, `ReleaseStock`, `CommitStock`, `SetStockLevel` |
+| `Reservation` | `Reservation` | One per order (2, 8). Held until it is released or committed, then final (3, 9). It records what the order reserved so that release and commit move exactly those quantities.                | `ReserveStock`, `ReleaseStock`, `CommitStock`                  |
 
 ## Entities
 
@@ -40,7 +40,7 @@ Rules 1 to 6 were approved by the user on 2026-10-08. Rules 7 to 11 fill gaps th
 | 8   | A released reservation no longer counts as the order's reservation: reserving again for that order creates a new one.                                                                                                           | assumed |
 | 9   | Only a held reservation can be released or committed. Committing an unknown, released or already committed reservation changes nothing and is not an error, and neither is releasing a committed one.                           | assumed |
 | 10  | When a reservation has several refusals, `PRODUCT_NOT_STOCKED` for any of its lines wins over `INSUFFICIENT_STOCK`.                                                                                                             | assumed |
-| 11  | Setting the level never consults reservations: it may fall below `reserved`, and `available` is then negative until reservations are released or committed.                                                                     | assumed |
+| 11  | A level below the reserved count is refused with `STOCK_LEVEL_INVALID`, so `reserved <= onHand` always holds and `available` is never negative.                                                                                 | assumed |
 
 ## Use cases
 
@@ -69,9 +69,9 @@ One row per use case; `Feature` links the `.feature` written next to this file b
 
 `Route` is `METHOD /<resource>[/path]` under the API's global prefix. `Answers` lists the statuses; the first 2xx is the success status. `Caller` is who may call and where the identity comes from; request bodies never carry `userId`, `accountId` or `actorId`.
 
-400 is the Zod body check (a number where a number is due). Everything else is a rule: 404 for rule 5, 422 for the value refusal of rule 6.
+400 is the Zod body check (a number where a number is due). Everything else is a rule: 404 for rule 5, 422 for the value refusals of rules 6 and 11.
 
-| Route                   | Use case        | Answers                | Caller               |
-| ----------------------- | --------------- | ---------------------- | -------------------- |
-| `PUT /stock/:productId` | `SetStockLevel` | 200 · 400 · 422 rule 6 | public — no auth yet |
-| `GET /stock/:productId` | `GetStockLevel` | 200 · 404 rule 5       | public — no auth yet |
+| Route                   | Use case        | Answers                     | Caller               |
+| ----------------------- | --------------- | --------------------------- | -------------------- |
+| `PUT /stock/:productId` | `SetStockLevel` | 200 · 400 · 422 rules 6, 11 | public — no auth yet |
+| `GET /stock/:productId` | `GetStockLevel` | 200 · 404 rule 5            | public — no auth yet |

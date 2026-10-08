@@ -84,6 +84,9 @@ sequenceDiagram
   end
   U->>S: byId(productId)
   Note over U: no record: a new item with nothing reserved (rule 7)
+  alt level below reserved
+    U-->>C: STOCK_LEVEL_INVALID (rule 11, 422)
+  end
   U->>S: save(item)
   U-->>C: { productId, onHand, reserved }
   Note over C: 200

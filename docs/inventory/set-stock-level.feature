@@ -32,12 +32,21 @@ Feature: Set stock level
       When the stock level of "lamp" is set to 3
       Then the stock of "lamp" is 3 on hand and 0 reserved
 
-  Rule: Rule 11 - Setting the level never consults reservations
+  Rule: Rule 11 - A level below the reserved count is refused
 
     @draft
-    Scenario: the level may fall below the reserved count
+    Scenario: the level may not fall below the reserved count
       Given the lines of order "o1" are reserved
         | product  | quantity |
         | keyboard | 8        |
       When the stock level of "keyboard" is set to 5
-      Then the stock of "keyboard" is 5 on hand and 8 reserved
+      Then it is refused with "STOCK_LEVEL_INVALID"
+      And the stock of "keyboard" is 10 on hand and 8 reserved
+
+    @draft
+    Scenario: the level may equal the reserved count
+      Given the lines of order "o1" are reserved
+        | product  | quantity |
+        | keyboard | 8        |
+      When the stock level of "keyboard" is set to 8
+      Then the stock of "keyboard" is 8 on hand and 8 reserved
