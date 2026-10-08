@@ -37,34 +37,40 @@ export class OrderStore {
   }
 
   async create(): Promise<string | undefined> {
+    this._orderId.set('');
     return (await this.run(this.api.create()))?.orderId;
   }
 
-  async addLine(line: AddLine): Promise<void> {
+  /** Commands answer whether the server applied them. */
+  async addLine(line: AddLine): Promise<boolean> {
     const order = await this.run(this.api.addLine(this.orderId(), line));
     if (order) this.resource.set(order);
+    return order !== undefined;
   }
 
-  place(): Promise<void> {
+  place(): Promise<boolean> {
     return this.changeStatus(this.api.place(this.orderId()));
   }
 
-  cancel(): Promise<void> {
+  cancel(): Promise<boolean> {
     return this.changeStatus(this.api.cancel(this.orderId()));
   }
 
   private async changeStatus(
     command: Observable<OrderStatusChange>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const change = await this.run(command);
     if (change) {
       this.resource.update(
         (order) => order && withStatus(order, change.status),
       );
     }
+    return change !== undefined;
   }
 
+  /** One command at a time: a command issued while another is in flight is dropped. */
   private async run<T>(command: Observable<T>): Promise<T | undefined> {
+    if (this.busy()) return undefined;
     this._busy.set(true);
     this._commandError.set('');
     try {

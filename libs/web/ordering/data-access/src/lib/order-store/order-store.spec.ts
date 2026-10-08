@@ -123,6 +123,44 @@ describe('OrderStore', () => {
     });
   });
 
+  it('leaves the open order when it creates another, so a failed read does not linger', async () => {
+    store.open('nope');
+    TestBed.tick();
+    http
+      .expectOne('/api/orders/nope')
+      .flush(
+        { statusCode: 404, code: 'ORDER_NOT_FOUND' },
+        refusal(404, 'Not Found'),
+      );
+    await settle();
+    expect(store.error()).toBe('ORDER_NOT_FOUND');
+
+    const creating = store.create();
+    http.expectOne('/api/orders').flush({ orderId: 'o9' });
+    await creating;
+
+    expect(store.orderId()).toBe('');
+    expect(store.error()).toBe('');
+  });
+
+  it('runs one command at a time: a second one while busy sends nothing', async () => {
+    await open();
+
+    const first = store.addLine({ productId: 'keyboard', quantity: 1 });
+    expect(await store.addLine({ productId: 'keyboard', quantity: 1 })).toBe(
+      false,
+    );
+    expect(await store.place()).toBe(false);
+
+    http
+      .expectOne('/api/orders/o1/lines')
+      .flush({ ...draft, lines: [keyboard] });
+    await first;
+
+    expect(store.order()?.lines).toEqual([keyboard]);
+    expect(store.busy()).toBe(false);
+  });
+
   describe('addLine', () => {
     it('shows the order the server answers, busy while the request is in flight', async () => {
       await open();
@@ -136,8 +174,8 @@ describe('OrderStore', () => {
         quantity: 2,
       });
       request.flush(added);
-      await adding;
 
+      expect(await adding).toBe(true);
       expect(store.order()).toEqual(added);
       expect(store.busy()).toBe(false);
     });
@@ -152,8 +190,8 @@ describe('OrderStore', () => {
           { statusCode: 422, code: 'PRODUCT_NOT_FOUND' },
           refusal(422, 'Unprocessable'),
         );
-      await refused;
 
+      expect(await refused).toBe(false);
       expect(store.order()).toEqual(draft);
       expect(store.error()).toBe('PRODUCT_NOT_FOUND');
       expect(store.busy()).toBe(false);
@@ -180,8 +218,8 @@ describe('OrderStore', () => {
       http
         .expectOne(`/api/orders/o1/${action}`)
         .flush({ orderId: 'o1', status });
-      await done;
 
+      expect(await done).toBe(true);
       expect(store.order()).toEqual({ ...draft, status, lines: [keyboard] });
     });
 
@@ -195,8 +233,8 @@ describe('OrderStore', () => {
           { statusCode: 409, code: 'ORDER_NOT_EDITABLE' },
           refusal(409, 'Conflict'),
         );
-      await done;
 
+      expect(await done).toBe(false);
       expect(store.order()).toEqual(draft);
       expect(store.error()).toBe('ORDER_NOT_EDITABLE');
     });
