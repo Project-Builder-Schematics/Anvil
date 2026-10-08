@@ -3,7 +3,11 @@ import { vi } from 'vitest';
 import { makeChargePayment } from '../application/ChargePayment';
 import { makeRefundPayment } from '../application/RefundPayment';
 import type { PaymentView } from '../application/PaymentView';
-import { MemoryPaymentGateway } from '../infrastructure/MemoryPaymentGateway';
+import { PaymentsError } from '../domain/errors';
+import {
+  GatewayError,
+  MemoryPaymentGateway,
+} from '../infrastructure/MemoryPaymentGateway';
 import { MemoryPayments } from '../infrastructure/MemoryPayments';
 
 export class PaymentsWorld extends QuickPickleWorld {
@@ -17,17 +21,17 @@ export class PaymentsWorld extends QuickPickleWorld {
   readonly answers: PaymentView[] = [];
 
   /** Refusals no step has claimed yet; the After hook fails the scenario if any is left. */
-  readonly refusals: Error[] = [];
+  readonly refusals: (PaymentsError | GatewayError)[] = [];
 
   /** What a gateway that gives no answer throws. */
-  readonly timeout = new Error('gateway timeout');
+  readonly timeout = new GatewayError('gateway timeout');
 
-  /** Runs a command; any error it throws is kept until a step claims it, or the After hook fails the scenario. */
+  /** Runs a command; a business refusal or a gateway error is kept until a step claims it, or the After hook fails the scenario. Anything else is a bug and fails the step. */
   async attempt<T>(run: () => Promise<T>): Promise<T | undefined> {
     try {
       return await run();
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof PaymentsError || error instanceof GatewayError) {
         this.refusals.push(error);
         return undefined;
       }

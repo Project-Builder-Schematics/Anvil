@@ -127,9 +127,9 @@ Then(
 );
 
 Then(
-  'the gateway has been charged {int} in total',
-  (world: PaymentsWorld, times: number) => {
-    expect(world.gateway.captured).toBe(times);
+  'the number of charges the gateway has captured is {int}',
+  (world: PaymentsWorld, count: number) => {
+    expect(world.gateway.captured).toBe(count);
   },
 );
 

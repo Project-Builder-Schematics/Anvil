@@ -16,7 +16,7 @@ describe('Payment', () => {
     });
   });
 
-  it('keeps its id through every transition', () => {
+  it('keeps its id and token through every transition', () => {
     expect(pending().capture().paymentMethodToken).toBe('tok_visa');
     expect(pending().capture().id).toBe('p1');
     expect(pending().fail().id).toBe('p1');

@@ -29,14 +29,14 @@ Feature: Charge payment
       When order "o1" is charged 9000 "USD" with token "tok_other"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
       And the answer is "Captured" for 4500 "USD" on order "o1"
-      And the gateway has been charged 1 in total
+      And the number of charges the gateway has captured is 1
 
     Scenario: another order is charged on its own
       Given order "o1" has been charged 4500 "USD" with token "tok_visa"
       When order "o2" is charged 100 "USD" with token "tok_visa"
       Then the payment of order "o2" is "Captured" for 100 "USD"
       And the answer is "Captured" for 100 "USD" on order "o2"
-      And the gateway has been charged 2 in total
+      And the number of charges the gateway has captured is 2
 
   Rule: Rule 3 - A gateway decline leaves the payment Failed
 
@@ -100,13 +100,13 @@ Feature: Charge payment
       Given the gateway gave no answer to the charge of order "o1" at 4500 "USD" with token "tok_visa"
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
-      And the gateway has been charged 1 in total
+      And the number of charges the gateway has captured is 1
 
     Scenario: charging again when the answer was lost takes the money once
       Given the gateway took the money of order "o1" at 4500 "USD" with token "tok_visa" but its answer was lost
       When order "o1" is charged 4500 "USD" with token "tok_visa"
       Then the payment of order "o1" is "Captured" for 4500 "USD"
-      And the gateway has been charged 1 in total
+      And the number of charges the gateway has captured is 1
       And the number of idempotency keys the gateway was given is 1
 
     Scenario: charging again with another token resolves with the first request
@@ -115,7 +115,7 @@ Feature: Charge payment
       Then the payment of order "o1" is "Captured" for 4500 "USD"
       And the answer is "Captured" for 4500 "USD" on order "o1"
       And the gateway was last asked to charge 4500 "USD" with token "tok_visa"
-      And the gateway has been charged 1 in total
+      And the number of charges the gateway has captured is 1
       And the number of idempotency keys the gateway was given is 1
 
     Scenario: a pending payment declined with its stored token fails and the next charge starts a new one
@@ -138,7 +138,7 @@ Feature: Charge payment
       When order "o1" is charged 4500 "USD" with token "tok_visa" twice at once
       Then the payment of order "o1" is "Captured" for 4500 "USD"
       And the answer is "Captured" for 4500 "USD" on order "o1"
-      And the gateway has been charged 1 in total
+      And the number of charges the gateway has captured is 1
       And the number of idempotency keys the gateway was given is 1
 
     Scenario: charging again after a decline uses a new key and captures

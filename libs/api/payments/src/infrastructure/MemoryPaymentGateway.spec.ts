@@ -1,6 +1,6 @@
-import { MemoryPaymentGateway } from './MemoryPaymentGateway';
+import { GatewayError, MemoryPaymentGateway } from './MemoryPaymentGateway';
 
-const request = (paymentMethodToken: string, idempotencyKey = 'o1') => ({
+const request = (paymentMethodToken: string, idempotencyKey = 'p1') => ({
   amount: 4500,
   currency: 'USD',
   paymentMethodToken,
@@ -33,15 +33,15 @@ describe('MemoryPaymentGateway (PaymentGateway contract)', () => {
   it('replays a decline for the same key and request', async () => {
     const gateway = new MemoryPaymentGateway();
     expect(await gateway.charge(request('tok_decline'))).toBe('Declined');
-    expect(gateway.outcomes.get('o1')?.outcome).toBe('Declined');
+    expect(gateway.outcomes.get('p1')?.outcome).toBe('Declined');
     expect(await gateway.charge(request('tok_decline'))).toBe('Declined');
   });
 
   it('refuses the same key with another request and keeps the first outcome', async () => {
     const gateway = new MemoryPaymentGateway();
     await gateway.charge(request('tok_visa'));
-    await expect(gateway.charge(request('tok_decline'))).rejects.toThrow(
-      'idempotency key reused with different parameters',
+    await expect(gateway.charge(request('tok_decline'))).rejects.toBeInstanceOf(
+      GatewayError,
     );
     await expect(
       gateway.charge({ ...request('tok_visa'), amount: 1 }),
@@ -49,7 +49,7 @@ describe('MemoryPaymentGateway (PaymentGateway contract)', () => {
     await expect(
       gateway.charge({ ...request('tok_visa'), currency: 'EUR' }),
     ).rejects.toThrow('idempotency key reused with different parameters');
-    expect(gateway.outcomes.get('o1')?.outcome).toBe('Captured');
+    expect(gateway.outcomes.get('p1')?.outcome).toBe('Captured');
   });
 
   it('takes the money once for two charges started together', async () => {

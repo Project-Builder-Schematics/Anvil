@@ -20,6 +20,9 @@ interface Remembered {
   readonly outcome: ChargeOutcome;
 }
 
+/** What the fake throws when it cannot answer a request; the use case treats it as any gateway failure. */
+export class GatewayError extends Error {}
+
 @Injectable()
 export class MemoryPaymentGateway implements PaymentGateway {
   /** The first outcome per idempotency key, a decline included; a call that throws leaves nothing. */
@@ -42,7 +45,9 @@ export class MemoryPaymentGateway implements PaymentGateway {
       return first.request === request
         ? Promise.resolve(first.outcome)
         : Promise.reject(
-            new Error('idempotency key reused with different parameters'),
+            new GatewayError(
+              'idempotency key reused with different parameters',
+            ),
           );
     const result: GatewayResult = {
       status:
