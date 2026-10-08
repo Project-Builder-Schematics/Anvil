@@ -7,6 +7,8 @@ const MESSAGES = {
   CURRENCY_MISMATCH: 'Every line of an order must use the same currency.',
   ORDER_NOT_CANCELLABLE: 'This order cannot be cancelled.',
   ORDER_NOT_FOUND: 'We could not find that order.',
+  COMMAND_IN_PROGRESS:
+    'Another action is still running. Try again in a moment.',
   NETWORK_ERROR:
     'We could not reach the server. Check your connection and try again.',
 } as const;
@@ -19,7 +21,7 @@ export const ORDERING_ERROR_CODES = Object.keys(
   MESSAGES,
 ) as readonly OrderingErrorCode[];
 
-/** `NETWORK_ERROR` is the client's own code; the others are the API's refusal codes. */
+/** `NETWORK_ERROR` and `COMMAND_IN_PROGRESS` are the client's own codes; the others are the API's refusal codes. */
 export const messageFor = (code: string | undefined): string =>
   code !== undefined && Object.hasOwn(MESSAGES, code)
     ? MESSAGES[code as OrderingErrorCode]

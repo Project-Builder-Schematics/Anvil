@@ -37,44 +37,69 @@ export class OrderStore {
   }
 
   async create(): Promise<string | undefined> {
-    this._orderId.set('');
-    return (await this.run(this.api.create()))?.orderId;
+    const created = await this.run(() => {
+      this._orderId.set('');
+      return this.api.create();
+    });
+    return created?.orderId;
   }
 
-  /** Commands answer whether the server applied them. */
-  async addLine(line: AddLine): Promise<boolean> {
-    const order = await this.run(this.api.addLine(this.orderId(), line));
-    if (order) this.resource.set(order);
-    return order !== undefined;
+  /** Commands answer whether the server applied them to the order still open. */
+  addLine(line: AddLine): Promise<boolean> {
+    return this.command(
+      (orderId) => this.api.addLine(orderId, line),
+      (order) => {
+        this.resource.set(order);
+      },
+    );
   }
 
   place(): Promise<boolean> {
-    return this.changeStatus(this.api.place(this.orderId()));
+    return this.changeStatus((orderId) => this.api.place(orderId));
   }
 
   cancel(): Promise<boolean> {
-    return this.changeStatus(this.api.cancel(this.orderId()));
+    return this.changeStatus((orderId) => this.api.cancel(orderId));
   }
 
-  private async changeStatus(
-    command: Observable<OrderStatusChange>,
+  private changeStatus(
+    request: (orderId: string) => Observable<OrderStatusChange>,
   ): Promise<boolean> {
-    const change = await this.run(command);
-    if (change) {
+    return this.command(request, (change) => {
       this.resource.update(
         (order) => order && withStatus(order, change.status),
       );
-    }
-    return change !== undefined;
+    });
   }
 
-  /** One command at a time: a command issued while another is in flight is dropped. */
-  private async run<T>(command: Observable<T>): Promise<T | undefined> {
-    if (this.busy()) return undefined;
+  /** The response is dropped when another order was opened while it was in flight. */
+  private async command<T>(
+    request: (orderId: string) => Observable<T>,
+    apply: (result: T) => void,
+  ): Promise<boolean> {
+    const orderId = this.orderId();
+    if (!orderId) {
+      this._commandError.set('ORDER_NOT_FOUND');
+      return false;
+    }
+    const result = await this.run(() => request(orderId));
+    if (result === undefined || this.orderId() !== orderId) return false;
+    apply(result);
+    return true;
+  }
+
+  /** One command at a time: a command issued while another is in flight is refused. */
+  private async run<T>(request: () => Observable<T>): Promise<T | undefined> {
+    if (this.busy()) {
+      this._commandError.set('COMMAND_IN_PROGRESS');
+      return undefined;
+    }
     this._busy.set(true);
     this._commandError.set('');
     try {
-      return await firstValueFrom(command);
+      const result = await firstValueFrom(request());
+      this._commandError.set('');
+      return result;
     } catch (error) {
       this._commandError.set(errorCodeOf(error));
       return undefined;

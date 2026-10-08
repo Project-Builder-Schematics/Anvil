@@ -200,6 +200,42 @@ describe('OrderPage', () => {
     expect(text('[role=status]')).toBe('');
   });
 
+  describe('when the route moves to another order', () => {
+    const goToSecond = async () => {
+      await harness.navigateByUrl('/orders/o2');
+      harness.detectChanges();
+      await answer('/api/orders/o2', { ...draft, orderId: 'o2' });
+    };
+
+    it('forgets the notice of the previous order', async () => {
+      await open();
+      await type('#add-line-product', 'keyboard');
+      button('Add line')?.click();
+      await settle();
+      await answer('/api/orders/o1/lines', withLine);
+      expect(text('[role=status]')).toBe('Line added.');
+
+      await goToSecond();
+
+      expect(text('h1')).toBe('Order o2');
+      expect(text('[role=status]')).toBe('');
+    });
+
+    it('does not announce a command that finishes on the previous order', async () => {
+      await open();
+      await type('#add-line-product', 'keyboard');
+      button('Add line')?.click();
+      await settle();
+
+      await goToSecond();
+      await answer('/api/orders/o1/lines', withLine);
+
+      expect(text('h1')).toBe('Order o2');
+      expect(text('[role=status]')).toBe('');
+      expect(text('tbody tr')).toContain('No lines yet.');
+    });
+  });
+
   it('has no accessibility violations: loaded, refused, missing', async () => {
     await open(withLine);
     expect(await axeViolations(page)).toEqual([]);

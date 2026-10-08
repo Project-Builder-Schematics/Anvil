@@ -143,22 +143,88 @@ describe('OrderStore', () => {
     expect(store.error()).toBe('');
   });
 
-  it('runs one command at a time: a second one while busy sends nothing', async () => {
-    await open();
+  describe('one command at a time', () => {
+    it('sends nothing for a second command and says so', async () => {
+      await open();
 
-    const first = store.addLine({ productId: 'keyboard', quantity: 1 });
-    expect(await store.addLine({ productId: 'keyboard', quantity: 1 })).toBe(
-      false,
-    );
-    expect(await store.place()).toBe(false);
+      const first = store.addLine({ productId: 'keyboard', quantity: 1 });
+      expect(await store.addLine({ productId: 'keyboard', quantity: 1 })).toBe(
+        false,
+      );
+      expect(store.error()).toBe('COMMAND_IN_PROGRESS');
+      expect(await store.place()).toBe(false);
 
-    http
-      .expectOne('/api/orders/o1/lines')
-      .flush({ ...draft, lines: [keyboard] });
-    await first;
+      http
+        .expectOne('/api/orders/o1/lines')
+        .flush({ ...draft, lines: [keyboard] });
+      await first;
 
-    expect(store.order()?.lines).toEqual([keyboard]);
-    expect(store.busy()).toBe(false);
+      expect(store.order()?.lines).toEqual([keyboard]);
+      expect(store.busy()).toBe(false);
+      expect(store.error()).toBe('');
+    });
+
+    it('keeps the open order when create is dropped', async () => {
+      await open();
+
+      const adding = store.addLine({ productId: 'keyboard', quantity: 1 });
+      expect(await store.create()).toBeUndefined();
+
+      expect(store.orderId()).toBe('o1');
+      expect(store.order()).toEqual(draft);
+      http.expectOne('/api/orders/o1/lines').flush(draft);
+      await adding;
+    });
+  });
+
+  describe.each([
+    ['addLine', (store: OrderStore) => store.addLine(keyboard)],
+    ['place', (store: OrderStore) => store.place()],
+    ['cancel', (store: OrderStore) => store.cancel()],
+  ] as const)('%s without an open order', (_name, command) => {
+    it('sends nothing and says the order was not found', async () => {
+      expect(await command(store)).toBe(false);
+
+      expect(store.error()).toBe('ORDER_NOT_FOUND');
+      expect(store.busy()).toBe(false);
+    });
+  });
+
+  describe('a response that lands after another order was opened', () => {
+    const openSecond = async () => {
+      store.open('o2');
+      TestBed.tick();
+      http.expectOne('/api/orders/o2').flush({ ...draft, orderId: 'o2' });
+      await settle();
+    };
+
+    it('does not put an added line on the other order', async () => {
+      await open();
+      const adding = store.addLine({ productId: 'keyboard', quantity: 2 });
+      await openSecond();
+
+      http
+        .expectOne('/api/orders/o1/lines')
+        .flush({ ...draft, lines: [keyboard] });
+
+      expect(await adding).toBe(false);
+      expect(store.order()).toEqual({ ...draft, orderId: 'o2' });
+      expect(store.busy()).toBe(false);
+    });
+
+    it('does not put a status change on the other order', async () => {
+      await open({ ...draft, lines: [keyboard] });
+      const placing = store.place();
+      await openSecond();
+
+      http.expectOne('/api/orders/o1/place').flush({
+        orderId: 'o1',
+        status: 'Placed',
+      });
+
+      expect(await placing).toBe(false);
+      expect(store.order()).toEqual({ ...draft, orderId: 'o2' });
+    });
   });
 
   describe('addLine', () => {

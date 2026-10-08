@@ -12,6 +12,12 @@ describe('messageFor', () => {
     expect(messageFor('QUANTITY_OUT_OF_RANGE')).toContain('1 to 99');
   });
 
+  it('tells the user to wait when another action is still running', () => {
+    expect(messageFor('COMMAND_IN_PROGRESS')).toBe(
+      'Another action is still running. Try again in a moment.',
+    );
+  });
+
   it('answers a generic message for a code it does not know and for none', () => {
     const generic = 'Something went wrong. Try again.';
 
