@@ -123,13 +123,13 @@ The advisory findings:
   - A notice stays visible after the route param changes (order-page.ts:61-67), and the param change is untested.
   - `` tracks lines by a key that can repeat (line-list.html:14).
   - `Order.lines` is mutable (domain order.ts:14).
-- [ ] Schematics, done together with S8:
-  - `ng-component` does not validate `type_import` (factory.ts:78).
-  - Type-name collisions are possible, and an extra colon in an output is accepted (_shared/ng.ts:118, 156).
-  - The test for a type_import with outputs only is missing.
+- [x] Schematics, done together with S8 (6470ca2):
+  - `ng-component` validates `type_import` as a package or relative path.
+  - A type named like the component class or `Component` is refused, and an input or output with a second colon is refused instead of cut.
+  - The test for a `type_import` with outputs only exists.
 - [ ] `axe-core` is flagged as unused in the root package.json. That is a false positive: the design-system testing helper uses it. Verify.
 - [ ] The `stripe` theme fails AA text contrast (danger on canvas 4.29:1, muted on surface 4.49:1). This needs a token decision.
 
 ## Next step
 
-S5, S7 and S8 (schematics), then `order-fulfilment-slice-2.md`, which starts F5 with U5.
+`order-fulfilment-slice-2.md`, which starts F5 with U5. S5, S7 and S8 (schematics) are done.

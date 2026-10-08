@@ -49,32 +49,29 @@ The IMPACT row for the missing tsconfig paths in the api vitest config is alread
 
 - 2026-10-08: document created. The user approved doing the improvements, then the next slice.
 - 2026-10-08: S1 to S4 done, each with its IMPACT row.
+- 2026-10-08: S5, S7 and S8 done by one writer in 7 commits on `feat/workspace-scaffold` (753ad06 tasks, c0429c2, eae2898, 74a8746, 6470ca2, 3899a9b, and this record).
 
 ## Follow-ups
 
 The review of 3d8c341..(the vscode settings commit) was approved and acknowledged (review-749c2a4d268e1e68). It left these advisory items:
 
-- [ ] S5: harden the generated error filter.
-  - The status map is not regenerated on a re-run after a docs change, so it goes stale (hex-route:265-271).
-  - The filter is applied only to the first controller.
-  - The catch-all `@Catch()` preempts global filters (OrderingErrorFilter.ts:22).
-  - An unmapped domain error becomes a silent 500. It should be logged.
-  - The status map is untyped, so exhaustiveness over the error codes is lost (OrderingErrorFilter.ts:5).
-  - The generated filter has no behavioural test.
-- [ ] Minor:
-  - The Answers and command-field regexes are greedy or narrow (lib.ts:224-226, hex-route:219).
-  - errorStatuses nesting (lib.ts:219-250).
-  - Old IMPACT rows were reflowed by prettier.
-  - `.mcp.json` runs `bunx ng`; pin it to the local binary.
-- [ ] S7: edit existing files through dialects (route: single writer, strict TDD; trigger evidence: 25+ files across `schematics/`).
-  - TypeScript and JavaScript files go through `@pbuilder/sdk/typescript`: named ops where they fit, `.modify` with `astLibrary` otherwise. No ts-morph dependency, no op pack.
-  - One handle per path. The engine rejects a second write directive per path, and every read flushes all open handles, so edits are queued and applied after the run's reads.
-  - HTML and CSS dialects under `schematics/_shared/dialects/`, with round-trip tests; only the ops a schematic needs.
-  - New files and JSON stay whole-string generation; IMPACT gets the `miss` row for the missing HTML, CSS and JSON dialects.
-  - Proof: existing tests green, ordering and one web lib regenerated with an empty `git diff` apart from documented formatting, and a real-engine no-op re-run.
-- [ ] S8: YAGNI cleanup of `schematics/` (unused inputs, helpers, wrappers, single-caller abstractions) plus the ordering-ui "Schematics" follow-ups (`type_import` validation, type-name collision, extra colon in an output, outputs-only test).
+- [x] S5 (74a8746): harden the generated error filter. Route: single writer, strict TDD.
+  - RED: 6 `hex-route` filter tests, 1 `hex-slice` test, the `lib.test.ts` suite (missing `commandFields`) and the generated-files filter run in `compiles.test.ts` failed before the change; GREEN with `bun test schematics` 275 pass.
+  - The filter catches only `<Slice>Error` (`hex-slice` writes the class), so global filters see every other exception. The status map is typed `Partial<Record<<Slice>ErrorCode, number>>` (a code no Answers cell cites is legitimate, so not exhaustive); an unmapped code is logged with `Logger` and answers 500; a re-run refreshes the map; every controller of the slice registers the filter.
+  - Ordering's `OrderingErrorFilter` was regenerated (deleted, then `hex-subdomain`): only that file changed. `nx test api-ordering` green.
+- [x] Minor (74a8746): the citation regex is a per-status parser, the command-field regex a top-level field reader, `errorStatuses` is flat, `.mcp.json` runs `./node_modules/.bin/ng`. "Old IMPACT rows were reflowed by prettier" is not fixed: prettier realigns the whole table when a row is wider than the rest.
+- [x] S7 (c0429c2, eae2898): edit existing files through dialects. Route: single writer, strict TDD; trigger evidence: 25+ files across `schematics/`.
+  - TypeScript and JavaScript files go through `@pbuilder/sdk/typescript`: `addImport` where it fits, `.modify` with `astLibrary` otherwise. No ts-morph dependency, no op pack. `writeBuffer` and the string and regex edits are gone.
+  - One handle per path, checked against the real engine: a second `modify` on a path is `path-collision` even after an awaited read, and every read flushes all open handles. `startRun()` queues edits and applies them after the run's reads, one handle per path; a path the run created may still be edited once. `one-write-per-path.test.ts` now counts one `create` and one `modify` per path.
+  - RED: `ts.test.ts` failed on the missing module, then 18 pass; the existing suite stayed green (249 pass) with its assertions on edited files reading prettier-formatted output.
+  - HTML (`@angular/compiler`, splices over the original source) and CSS (postcss 8.5.29, now a devDependency) dialects under `schematics/_shared/dialects/`, 14 tests, round-trip byte-identical on every real template and stylesheet. No op: no schematic edits HTML or CSS. `defineDialect` is exported from no public subpath of the SDK, so it is imported by file.
+  - Proof: ordering regenerated with the old and the new schematics in a scratch workspace gives identical files apart from import order and blank lines in the controller and barrel (and the S5 filter and error class); `web-context` output is identical; `hex-context --context=ordering` on the repo is "no changes" with the real engine.
+- [x] S8 (6470ca2, 3899a9b): YAGNI cleanup of `schematics/` plus the ordering-ui "Schematics" follow-ups.
+  - RED: 8 tests failed first (`type_import` values, type-name collision, extra colon in an input and an output); the outputs-only test passed at once (a coverage gap, not a defect).
+  - Removed inputs: `kind`, `provider`, `driven_ports`, `use_case`, `status`, `kind` (ng-component), `layer`, `tactical`. Removed helpers: `sentence`, `className`, the unused `shared` parameters, three copies of the Subdomains parsing.
+  - Kept, with no real use yet: the multi-subdomain layout and `subdomains`. Decision for the user.
 - [x] S6 (fa851e4): `ng-service` emits `@Injectable({ providedIn: "root" })`. Angular 22 best practice is `@Service` for new singletons, confirmed via the angular-cli MCP `get_best_practices` and present in @angular/core 22.1.8. Fixed in the ordering UI slice: the factory emits `@Service()` (RED: 2 factory tests failed first), the design-system `ExperimentService` was regenerated, and the IMPACT row is recorded.
 
 ## Next step
 
-S6 lands with the ordering UI slice. S5 comes before the next context generates a filter, which is slice 2. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 246 pass; `nx run-many -t lint test typecheck` green for 18 projects.
+S5, S7 and S8 are done. Slice 2 (`order-fulfilment-slice-2.md`) can generate its filter. Stryker on ordering: 100.00 (123 mutants, 0 survived). Last checks: `bun test schematics` 277 pass; `nx run-many -t lint test typecheck` green for 18 projects.
