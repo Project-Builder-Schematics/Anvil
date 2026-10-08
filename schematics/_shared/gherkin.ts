@@ -3,7 +3,7 @@
 interface Phrase {
   keyword: 'Given' | 'When' | 'Then';
   text: string;
-  /** Cucumber expression: quoted strings become {string}, bare integers {int}. */
+  /** Cucumber expression: quoted strings become {string}, bare integers {int}, decimals {float}. */
   expression: string;
   params: string[];
 }
@@ -25,7 +25,7 @@ export const phrases = (feature: string): Phrase[] => {
     const params: string[] = [];
     // One pass, so a digit inside a quoted string is part of the string and an escape never meets a parameter.
     const expression = text.replace(
-      /"[^"]*"|(?<![\w{])-?\d+(?![\w}])|[\\(){}/]/g,
+      /"[^"]*"|(?<![\w{])-?\d+(?:\.\d+)?(?![\w}])|[\\(){}/]/g,
       (token) => {
         if (token.startsWith('"')) {
           params.push(`arg${String(params.length)}: string`);
@@ -33,7 +33,7 @@ export const phrases = (feature: string): Phrase[] => {
         }
         if (/^-?\d/.test(token)) {
           params.push(`arg${String(params.length)}: number`);
-          return '{int}';
+          return token.includes('.') ? '{float}' : '{int}';
         }
         return `\\${token}`;
       },

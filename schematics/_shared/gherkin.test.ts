@@ -39,6 +39,13 @@ describe('phrases', () => {
     expect(table?.params).toEqual(['table: DataTable']);
   });
 
+  it('reads a decimal number as one {float}, not as two integers around a dot', () => {
+    const [p] = phrases('Scenario: s\n  When it is charged 10.5 "USD"\n');
+
+    expect(p?.expression).toBe('it is charged {float} {string}');
+    expect(p?.params).toEqual(['arg0: number', 'arg1: string']);
+  });
+
   it('ignores the text inside doc strings', () => {
     expect(
       phrases(
