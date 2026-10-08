@@ -64,6 +64,7 @@
         "jsdom": "^27.1.0",
         "lefthook": "^2.1.17",
         "nx": "23.2.1",
+        "postcss": "8.5.29",
         "prettier": "^3.8.1",
         "quickpickle": "1.11.2",
         "tslib": "^2.3.0",

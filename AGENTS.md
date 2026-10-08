@@ -91,6 +91,7 @@ Inputs, examples and the docs-first workflow are in the `schematics` skill (`.cl
 ### Working rules
 
 - Docs first: the backend generators read `docs/<ctx>/[<sub>/]domain-model.md` and the use case's `.feature`, and never write docs, except `hex-bounded-context`.
+- Existing TypeScript and JavaScript files are edited through `@pbuilder/sdk/typescript` (named ops, then `.modify` with `astLibrary`), queued on `startRun()` from `schematics/_shared/ts.ts`; never with string or regex edits. HTML and CSS have dialects in `schematics/_shared/dialects/`; JSON has none and stays a string edit. New files are generated whole.
 - Contexts depend on each other only through a barrel and a declared Context map relation (see the skill).
 - Tests are written first, with an observed RED: `bun run schematics:test`.
 - Ledger: every use of a schematic, and every time one was skipped or did not fit, gets a row in `schematics/IMPACT.md` in the same session.
