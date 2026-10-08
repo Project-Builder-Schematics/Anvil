@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- stub until the use case is implemented */
-import type { ReservationLine } from '../domain/Reservation';
+import { Reservation, type ReservationLine } from '../domain/Reservation';
 import type { Reservations } from '../domain/driven-ports/Reservations';
 import type { StockItems } from '../domain/driven-ports/StockItems';
+import { findLineItems } from './findItem';
 
 export interface ReserveStockCommand {
   readonly orderId: string;
@@ -21,5 +21,15 @@ export const RESERVE_STOCK = Symbol('ReserveStock');
 
 export const makeReserveStock =
   (stockItems: StockItems, reservations: Reservations): ReserveStock =>
-  () =>
-    Promise.reject(new Error('ReserveStock is not implemented'));
+  async ({ orderId, lines }) => {
+    const existing = await reservations.byOrderId(orderId);
+    if (existing && existing.status !== 'Released') return existing;
+
+    const reserved = (await findLineItems(stockItems, lines)).map(
+      ({ line, item }) => item.reserve(line.quantity),
+    );
+    await Promise.all(reserved.map((item) => stockItems.save(item)));
+    const reservation = Reservation.hold(orderId, lines);
+    await reservations.save(reservation);
+    return reservation;
+  };
