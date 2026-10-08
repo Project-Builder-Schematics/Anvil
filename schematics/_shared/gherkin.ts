@@ -42,7 +42,16 @@ export const phrases = (feature: string): Phrase[] => {
     if (!seen.has(expression))
       seen.set(expression, { keyword, text, expression, params });
   });
-  return [...seen.values()];
+  const all = [...seen.values()];
+  // {float} also matches an integer; binding both would make quickpickle report an ambiguous step.
+  return all.filter(
+    (p) =>
+      !all.some(
+        (q) =>
+          q.expression.includes('{float}') &&
+          q.expression.replaceAll('{float}', '{int}') === p.expression,
+      ),
+  );
 };
 
 const quoted = (text: string): string =>

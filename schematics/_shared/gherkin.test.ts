@@ -46,6 +46,16 @@ describe('phrases', () => {
     expect(p?.params).toEqual(['arg0: number', 'arg1: string']);
   });
 
+  it('binds one {float} step for a phrase seen with both integers and decimals', () => {
+    const list = phrases(
+      'Scenario: s\n  When it is charged 4500 "USD"\n  When it is charged 10.5 "USD"\n',
+    );
+
+    expect(list.map((p) => p.expression)).toEqual([
+      'it is charged {float} {string}',
+    ]);
+  });
+
   it('ignores the text inside doc strings', () => {
     expect(
       phrases(
