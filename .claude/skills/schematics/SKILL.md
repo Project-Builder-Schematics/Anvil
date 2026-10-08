@@ -62,7 +62,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-bounded-
 
 ### `hex-slice`
 
-`context`, `slice`. Needs the subdomain's docs.
+`context`, `slice`. Needs the subdomain's docs. Writes `domain/errors.ts`: the codes the Business rules name and the `<Slice>Error` class that carries one.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-slice --context=billing --slice=invoicing
@@ -86,7 +86,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-use-case
 
 ### `hex-route`
 
-`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _use_case_, _path_, _status_ (200|201|202|204). The use case must already be in the barrel. The first controller of a slice also gets `<Slice>ErrorFilter` (`infrastructure/http/`, registered with `@UseFilters`), whose code → status map comes from the Answers cells that cite a rule (`422 rules 2–3`) and that rule's error code; a code no cell cites answers 500. A body schema for a command whose fields are all path parameters is `z.object({}).default({})`, since Express leaves a missing body undefined.
+`context`, `slice`, `resource`, `method` (GET|POST|PATCH|PUT|DELETE); _use_case_, _path_, _status_ (200|201|202|204). The use case must already be in the barrel. A slice whose rules name error codes gets `<Slice>ErrorFilter` (`infrastructure/http/`), registered with `@UseFilters` on every controller of the slice. It catches only `<Slice>Error`, so global filters still see every other exception, and maps the code to a status through a map typed by the slice's codes. The map comes from the Answers cells that cite a rule (`422 rules 2–3`) and is refreshed from the docs on every re-run; a code no cell cites is logged and answers 500. The route refuses a slice whose `domain/errors.ts` has no `<Slice>Error` class. A body schema for a command whose fields are all path parameters is `z.object({}).default({})`, since Express leaves a missing body undefined.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-route --context=billing --slice=invoicing --resource=invoices --method=POST

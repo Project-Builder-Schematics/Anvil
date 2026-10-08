@@ -7,6 +7,7 @@ import {
   assertDashed,
   assertPascal,
   camel,
+  commandFields,
   constant,
   createFile,
   dashed,
@@ -90,36 +91,37 @@ const operation = ({ useCase, method, path, status, fields }: Operation) => {
   return { name, schemas, inputs, decorators, spread, nest };
 };
 
-/** Maps the domain errors the Answers cells cite to their status; an error nothing cites answers 500. */
+/** Maps the domain errors the Answers cells cite to their status; an error nothing cites is logged and answers 500. */
 const errorFilterSource = (
   slice: string,
   statuses: Map<string, number>,
 ): string => {
-  const errors = `${constant(slice)}_ERROR`;
-  return `import { Catch, type ArgumentsHost } from '@nestjs/common';
+  const error = `${pascal(slice)}Error`;
+  const filter = `${error}Filter`;
+  return `import { Catch, Logger, type ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
-import { ${errors} } from '../../domain/errors';
+import { ${error}, type ${error}Code } from '../../domain/errors';
 
-const STATUS: Record<string, number> = {
+const STATUS: Partial<Record<${error}Code, number>> = {
 ${[...statuses].map(([code, status]) => `  ${code}: ${String(status)},`).join('\n')}
 };
 
-const isDomainError = (error: unknown): error is { code: string } =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  typeof error.code === 'string' &&
-  Object.hasOwn(${errors}, error.code);
+@Catch(${error})
+export class ${filter} extends BaseExceptionFilter<${error}> {
+  private readonly logger = new Logger(${filter}.name);
 
-@Catch()
-export class ${pascal(slice)}ErrorFilter extends BaseExceptionFilter {
-  override catch(exception: unknown, host: ArgumentsHost): void {
+  override catch(exception: ${error}, host: ArgumentsHost): void {
     const adapter = this.applicationRef ?? this.httpAdapterHost?.httpAdapter;
-    if (!adapter || !isDomainError(exception)) {
+    if (!adapter) {
       super.catch(exception, host);
       return;
     }
-    const statusCode = STATUS[exception.code] ?? 500;
+    const status = STATUS[exception.code];
+    if (status === undefined)
+      this.logger.error(
+        \`\${exception.code} has no status in the Driving adapters table, answering 500\`,
+      );
+    const statusCode = status ?? 500;
     adapter.reply(
       host.switchToHttp().getResponse(),
       { statusCode, code: exception.code },
@@ -128,6 +130,23 @@ export class ${pascal(slice)}ErrorFilter extends BaseExceptionFilter {
   }
 }
 `;
+};
+
+/** Sets the status of every code the docs map, adding the codes a re-run finds new. */
+const refreshStatuses = (
+  ast: astLibrary.SourceFile,
+  statuses: Map<string, number>,
+): void => {
+  const map = ast
+    .getVariableDeclarationOrThrow('STATUS')
+    .getInitializerIfKindOrThrow(astLibrary.SyntaxKind.ObjectLiteralExpression);
+  for (const [code, status] of statuses) {
+    const property = map.getProperty(code);
+    if (property === undefined)
+      map.addPropertyAssignment({ name: code, initializer: String(status) });
+    else if (astLibrary.Node.isPropertyAssignment(property))
+      property.setInitializer(String(status));
+  }
 };
 
 const importTypes = (
@@ -205,13 +224,12 @@ export default async (input: Input, shared?: Run) => {
     ),
   );
   const command = row(model, 'Use cases', useCase)?.[1];
-  const fields = command?.match(/[A-Za-z_]\w*(?=\s*[,}:?])/g) ?? [];
   const op = operation({
     useCase,
     method: input.method,
     path,
     status,
-    fields: command === undefined ? undefined : fields,
+    fields: command === undefined ? undefined : commandFields(command),
   });
 
   const lib = apiLibDir(context);
@@ -246,18 +264,33 @@ export default async (input: Input, shared?: Run) => {
   const className = `${pascal(resource)}Controller`;
   const filter = `${pascal(slice)}ErrorFilter`;
   const filtered = errorCodes(model).length > 0;
-  const created = (await find(controllerPath).read()) === undefined;
-  if (created) {
-    if (filtered)
-      createFile(
-        `${code}/infrastructure/http/${filter}.ts`,
-        errorFilterSource(slice, errorStatuses(model)),
+  if (filtered) {
+    const errors = `${code}/domain/errors.ts`;
+    if (
+      !new RegExp(`export class ${pascal(slice)}Error\\b`).test(
+        await readRequired(errors, `create the slice first: hex-slice`),
+      )
+    )
+      throw new Error(
+        `${errors} defines no ${pascal(slice)}Error class, which the error filter catches — add it next to the codes`,
       );
+    const filterPath = `${code}/infrastructure/http/${filter}.ts`;
+    const statuses = errorStatuses(model);
+    if ((await find(filterPath).read()) === undefined)
+      createFile(filterPath, errorFilterSource(slice, statuses));
+    else
+      run.edit(filterPath, (file) =>
+        withAst(file, (ast) => {
+          refreshStatuses(ast, statuses);
+        }),
+      );
+  }
+  const created = (await find(controllerPath).read()) === undefined;
+  if (created)
     createFile(
       controllerPath,
       `@Controller('${resource}')\nexport class ${className} {}\n`,
     );
-  }
   const application = `../../application/${useCase}`;
   const routeDecorators = op.decorators.map(
     (d) => `@${d.name}(${d.arguments.join(', ')})`,
@@ -266,72 +299,83 @@ export default async (input: Input, shared?: Run) => {
     const seen = await withAst(file, (ast) => {
       const cls = ast.getClass(className);
       if (!cls) throw new Error(`${controllerPath} has no ${className}`);
-      const same = cls
-        .getMethod(op.name)
-        ?.getDecorators()
-        .map((d) => d.getText());
       return {
-        same,
+        same: cls
+          .getMethod(op.name)
+          ?.getDecorators()
+          .map((d) => d.getText()),
         answered: cls
           .getMethods()
           .some((m) =>
             m.getDecorators().some((d) => d.getText() === routeDecorators[0]),
           ),
+        filtered: cls
+          .getDecorators()
+          .some(
+            (d) =>
+              d.getName() === 'UseFilters' &&
+              d.getArguments().some((a) => a.getText() === filter),
+          ),
       };
     });
-    // Already generated: a re-run (hex-subdomain after a doc change) leaves it alone.
-    if (seen.same?.join('\n') === routeDecorators.join('\n')) return;
-    if (seen.same !== undefined)
+    // Already generated: a re-run (hex-subdomain after a doc change) leaves the route alone.
+    const routed = seen.same?.join('\n') === routeDecorators.join('\n');
+    if (!routed && seen.same !== undefined)
       throw new Error(
         `${className} already handles ${useCase} on another route — one controller method per use case`,
       );
-    if (seen.answered)
+    if (!routed && seen.answered)
       throw new Error(
         `${input.method} /${resource}${path === '/' ? '' : path} is already answered by ${className}`,
       );
+    const addFilter = filtered && !seen.filtered;
+    if (routed && !addFilter) return;
     for (const name of new Set([
       'Controller',
-      'Inject',
-      ...op.nest,
-      ...(created && filtered ? ['UseFilters'] : []),
+      ...(routed ? [] : ['Inject', ...op.nest]),
+      ...(addFilter ? ['UseFilters'] : []),
     ]))
       file.addImport(name, '@nestjs/common');
-    file.addImport('z', 'zod');
-    file.addImport(token, application);
-    if (created && filtered) file.addImport(filter, `./${filter}`);
+    if (addFilter) file.addImport(filter, `./${filter}`);
+    if (!routed) {
+      file.addImport('z', 'zod');
+      file.addImport(token, application);
+    }
     await withAst(file, (ast) => {
-      importTypes(ast, application, [useCase, `${useCase}Result`]);
+      const cls = ast.getClassOrThrow(className);
+      if (addFilter)
+        cls.addDecorator({ name: 'UseFilters', arguments: [filter] });
+      if (!routed) {
+        importTypes(ast, application, [useCase, `${useCase}Result`]);
+        ast.insertStatements(
+          cls.getChildIndex(),
+          `${astLibrary.Node.isImportDeclaration(cls.getPreviousSibling()) ? '\n' : ''}${op.schemas.join('\n')}`,
+        );
+        (cls.getConstructors()[0] ?? cls.addConstructor()).addParameter({
+          name: `${camel(useCase)}UseCase`,
+          type: useCase,
+          scope: astLibrary.Scope.Private,
+          isReadonly: true,
+          decorators: [{ name: 'Inject', arguments: [token] }],
+        });
+        cls.addMethod({
+          name: op.name,
+          decorators: op.decorators,
+          parameters: op.inputs.map((i) => ({
+            name: i.variable,
+            type: `z.infer<typeof ${i.schema}>`,
+            decorators: [
+              { name: i.decorator, arguments: [`{ schema: ${i.schema} }`] },
+            ],
+          })),
+          returnType: `Promise<${useCase}Result>`,
+          statements: `return this.${op.name}UseCase(${op.spread});`,
+        });
+      }
       const common = ast.getImportDeclarationOrThrow('@nestjs/common');
       const names = common.getNamedImports().map((n) => n.getName());
       common.removeNamedImports();
       common.addNamedImports(names.sort());
-      const cls = ast.getClassOrThrow(className);
-      ast.insertStatements(
-        cls.getChildIndex(),
-        `${astLibrary.Node.isImportDeclaration(cls.getPreviousSibling()) ? '\n' : ''}${op.schemas.join('\n')}`,
-      );
-      if (created && filtered)
-        cls.addDecorator({ name: 'UseFilters', arguments: [filter] });
-      (cls.getConstructors()[0] ?? cls.addConstructor()).addParameter({
-        name: `${camel(useCase)}UseCase`,
-        type: useCase,
-        scope: astLibrary.Scope.Private,
-        isReadonly: true,
-        decorators: [{ name: 'Inject', arguments: [token] }],
-      });
-      cls.addMethod({
-        name: op.name,
-        decorators: op.decorators,
-        parameters: op.inputs.map((i) => ({
-          name: i.variable,
-          type: `z.infer<typeof ${i.schema}>`,
-          decorators: [
-            { name: i.decorator, arguments: [`{ schema: ${i.schema} }`] },
-          ],
-        })),
-        returnType: `Promise<${useCase}Result>`,
-        statements: `return this.${op.name}UseCase(${op.spread});`,
-      });
     });
   });
 

@@ -7,7 +7,9 @@ import {
   camel,
   constant,
   dashed,
+  commandFields,
   errorCodes,
+  errorStatuses,
   numberedRules,
   parseRoute,
   pascal,
@@ -243,6 +245,76 @@ describe('domain model tables', () => {
     );
 
     expect(errorCodes(twice)).toEqual(['BUDGET_REQUIRED', 'CAMPAIGN_CLOSED']);
+  });
+});
+
+describe('errorStatuses', () => {
+  const model = (answers: string) =>
+    [
+      '## Business rules',
+      '',
+      '| # | Rule | Source |',
+      '| --- | --- | --- |',
+      '| 1 | One: `ONE_FAILED`. | decided |',
+      '| 2 | Two: `TWO_FAILED`. | decided |',
+      '| 3 | Three: `THREE_FAILED`. | decided |',
+      '| 4 | Four: `FOUR_FAILED`. | decided |',
+      '',
+      '## Driving adapters',
+      '',
+      '| Route | Use case | Answers | Caller |',
+      '| --- | --- | --- | --- |',
+      `| \`POST /things\` | \`MakeThing\` | ${answers} | token |`,
+      '',
+    ].join('\n');
+  const statuses = (answers: string) => [...errorStatuses(model(answers))];
+
+  it('maps the codes of the cited rules, ranges and lists included', () => {
+    expect(statuses('201 · 422 rules 1–2, 4 · 404 rule 3')).toEqual([
+      ['ONE_FAILED', 422],
+      ['TWO_FAILED', 422],
+      ['FOUR_FAILED', 422],
+      ['THREE_FAILED', 404],
+    ]);
+  });
+
+  it('reads each status on its own, so a cell never runs one citation into the next', () => {
+    expect(statuses('422 rule 1 · 409 rule 2 · 404 rule 3')).toEqual([
+      ['ONE_FAILED', 422],
+      ['TWO_FAILED', 409],
+      ['THREE_FAILED', 404],
+    ]);
+  });
+
+  it('takes a status with no rule as a plain answer', () => {
+    expect(statuses('200 · 400 · 404')).toEqual([]);
+  });
+
+  it('refuses a rule the model does not have and a code answered two ways', () => {
+    expect(() => statuses('422 rule 9')).toThrow('rule 9');
+    expect(() => statuses('422 rule 1 · 409 rule 1')).toThrow(
+      'ONE_FAILED is answered 422 and 409',
+    );
+  });
+});
+
+describe('commandFields', () => {
+  it('lists the field names of a command type', () => {
+    expect(commandFields('{ customerId }')).toEqual(['customerId']);
+    expect(commandFields('{ a, b }')).toEqual(['a', 'b']);
+    expect(commandFields('{}')).toEqual([]);
+  });
+
+  it('reads names, not their types, optional marks or nested shapes', () => {
+    expect(
+      commandFields(
+        '{ lines: Line[], note?: string, at: { x: number, y: number }, id }',
+      ),
+    ).toEqual(['lines', 'note', 'at', 'id']);
+    expect(commandFields('{ pair: Map<string, number>, last }')).toEqual([
+      'pair',
+      'last',
+    ]);
   });
 });
 

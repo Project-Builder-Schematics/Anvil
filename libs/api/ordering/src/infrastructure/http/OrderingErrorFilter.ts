@@ -1,8 +1,8 @@
-import { Catch, type ArgumentsHost } from '@nestjs/common';
+import { Catch, Logger, type ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
-import { ORDERING_ERROR } from '../../domain/errors';
+import { OrderingError, type OrderingErrorCode } from '../../domain/errors';
 
-const STATUS: Record<string, number> = {
+const STATUS: Partial<Record<OrderingErrorCode, number>> = {
   ORDER_NOT_FOUND: 404,
   ORDER_NOT_EDITABLE: 409,
   QUANTITY_OUT_OF_RANGE: 422,
@@ -12,22 +12,22 @@ const STATUS: Record<string, number> = {
   ORDER_NOT_CANCELLABLE: 409,
 };
 
-const isDomainError = (error: unknown): error is { code: string } =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  typeof error.code === 'string' &&
-  Object.hasOwn(ORDERING_ERROR, error.code);
+@Catch(OrderingError)
+export class OrderingErrorFilter extends BaseExceptionFilter<OrderingError> {
+  private readonly logger = new Logger(OrderingErrorFilter.name);
 
-@Catch()
-export class OrderingErrorFilter extends BaseExceptionFilter {
-  override catch(exception: unknown, host: ArgumentsHost): void {
+  override catch(exception: OrderingError, host: ArgumentsHost): void {
     const adapter = this.applicationRef ?? this.httpAdapterHost?.httpAdapter;
-    if (!adapter || !isDomainError(exception)) {
+    if (!adapter) {
       super.catch(exception, host);
       return;
     }
-    const statusCode = STATUS[exception.code] ?? 500;
+    const status = STATUS[exception.code];
+    if (status === undefined)
+      this.logger.error(
+        `${exception.code} has no status in the Driving adapters table, answering 500`,
+      );
+    const statusCode = status ?? 500;
     adapter.reply(
       host.switchToHttp().getResponse(),
       { statusCode, code: exception.code },

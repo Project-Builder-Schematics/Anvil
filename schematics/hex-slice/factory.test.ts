@@ -19,7 +19,20 @@ describe('hex-slice', () => {
       "import { Module } from '@nestjs/common';\n\n@Module({})\nexport class InvoicingModule {}\n",
     );
     expect(tree.get(`${LIB}/src/invoicing/domain/errors.ts`)).toBe(
-      "export const INVOICING_ERROR = {\n  LINES_REQUIRED: 'billing.lines_required',\n  CUSTOMER_UNKNOWN: 'billing.customer_unknown',\n} as const;\n",
+      `export const INVOICING_ERROR = {
+  LINES_REQUIRED: 'billing.lines_required',
+  CUSTOMER_UNKNOWN: 'billing.customer_unknown',
+} as const;
+
+export type InvoicingErrorCode = keyof typeof INVOICING_ERROR;
+
+export class InvoicingError extends Error {
+  constructor(readonly code: InvoicingErrorCode) {
+    super(INVOICING_ERROR[code]);
+    this.name = 'InvoicingError';
+  }
+}
+`,
     );
   });
 

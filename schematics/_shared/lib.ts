@@ -173,41 +173,72 @@ export const errorCodes = (model: string): string[] => {
   return [...codes];
 };
 
+/** Rule numbers of a citation: "2–3, 5" → [2, 3, 5]. */
+const citedRules = (list: string): number[] =>
+  list.split(',').flatMap((part) => {
+    const [from = 0, to = from] = part
+      .split(/[–-]/)
+      .map((n) => Number(n.trim()));
+    return Array.from(
+      { length: Math.max(to - from + 1, 0) },
+      (_, i) => from + i,
+    );
+  });
+
 /**
  * Error code → HTTP status, from the Driving adapters `Answers` cells: `422 rules 2–3`
- * gives the codes the business rules 2 and 3 name that status.
+ * gives the codes the business rules 2 and 3 name that status. A cell lists its statuses
+ * separated by `·`.
  */
 export const errorStatuses = (model: string): Map<string, number> => {
   const rules = numberedRules(model);
   const statuses = new Map<string, number>();
   for (const [, , answers] of table(model, 'Driving adapters')) {
-    for (const cited of (answers ?? '').matchAll(
-      /\b([45]\d\d)\s+rules?\s+([\d\s,–-]+)/g,
-    )) {
+    for (const answer of (answers ?? '').split('·')) {
+      const cited = /^\s*([45]\d\d)\s+rules?\s+(\d[\d\s,–-]*)$/.exec(answer);
+      if (!cited) continue;
       const status = Number(cited[1]);
-      for (const span of (cited[2] ?? '').matchAll(
-        /(\d+)(?:\s*[–-]\s*(\d+))?/g,
-      )) {
-        const from = Number(span[1]);
-        for (let n = from; n <= Number(span[2] ?? from); n += 1) {
-          const rule = rules.get(n);
-          if (rule === undefined)
+      for (const n of citedRules(cited[2] ?? '')) {
+        const rule = rules.get(n);
+        if (rule === undefined)
+          throw new Error(
+            `${String(status)} cites rule ${String(n)}, which is not in the Business rules table`,
+          );
+        for (const [, code = ''] of rule.matchAll(CODE)) {
+          const known = statuses.get(code);
+          if (known !== undefined && known !== status)
             throw new Error(
-              `${String(status)} cites rule ${String(n)}, which is not in the Business rules table`,
+              `${code} is answered ${String(known)} and ${String(status)} in the Driving adapters table`,
             );
-          for (const [, code = ''] of rule.matchAll(CODE)) {
-            const known = statuses.get(code);
-            if (known !== undefined && known !== status)
-              throw new Error(
-                `${code} is answered ${String(known)} and ${String(status)} in the Driving adapters table`,
-              );
-            statuses.set(code, status);
-          }
+          statuses.set(code, status);
         }
       }
     }
   }
   return statuses;
+};
+
+/** The field names of a command type such as `{ id, lines: Line[], at?: { x: number } }`: the first word of each top-level entry. */
+export const commandFields = (command: string): string[] => {
+  const inner = command.trim().replace(/^\{|\}$/g, '');
+  const fields: string[] = [];
+  const take = (from: number, to: number): void => {
+    const name = /^\s*([A-Za-z_]\w*)/.exec(inner.slice(from, to))?.[1];
+    if (name) fields.push(name);
+  };
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < inner.length; i += 1) {
+    const c = inner[i] ?? '';
+    if ('{[(<'.includes(c)) depth += 1;
+    else if ('}])>'.includes(c)) depth -= 1;
+    else if (c === ',' && depth === 0) {
+      take(start, i);
+      start = i + 1;
+    }
+  }
+  take(start, inner.length);
+  return fields;
 };
 
 /** `POST /orders/:id` → { method: "POST", resource: "orders", path: "/:id" } */

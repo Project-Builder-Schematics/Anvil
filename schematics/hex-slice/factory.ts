@@ -17,10 +17,23 @@ const errorsSource = (
   slice: string,
   context: string,
   codes: string[],
-): string =>
-  codes.length === 0
-    ? `export const ${constant(slice)}_ERROR = {} as const;\n`
-    : `export const ${constant(slice)}_ERROR = {\n${codes.map((code) => `  ${code}: '${context}.${code.toLowerCase()}',`).join('\n')}\n} as const;\n`;
+): string => {
+  if (codes.length === 0)
+    return `export const ${constant(slice)}_ERROR = {} as const;\n`;
+  const errors = `${constant(slice)}_ERROR`;
+  const cls = `${pascal(slice)}Error`;
+  return `export const ${errors} = {\n${codes.map((code) => `  ${code}: '${context}.${code.toLowerCase()}',`).join('\n')}\n} as const;
+
+export type ${cls}Code = keyof typeof ${errors};
+
+export class ${cls} extends Error {
+  constructor(readonly code: ${cls}Code) {
+    super(${errors}[code]);
+    this.name = '${cls}';
+  }
+}
+`;
+};
 
 export default async (input: Input, shared?: Run) => {
   const run = shared ?? startRun();

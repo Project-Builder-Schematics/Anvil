@@ -63,6 +63,31 @@ const generate = async (): Promise<Record<string, string>> => {
   return tree;
 };
 
+// What the generated filter does with a domain error, run on the generated files themselves.
+const FILTER_CHECK = `import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
+import { InvoicingError } from './libs/api/billing/src/invoicing/domain/errors';
+import { InvoicingErrorFilter } from './libs/api/billing/src/invoicing/infrastructure/http/InvoicingErrorFilter';
+
+const logged: string[] = [];
+Logger.overrideLogger({
+  log: () => undefined,
+  warn: () => undefined,
+  error: (message: unknown) => logged.push(String(message)),
+});
+const replies: unknown[] = [];
+const adapter = { reply: (_response: unknown, body: unknown, status: number) => replies.push([body, status]) };
+const host = { switchToHttp: () => ({ getResponse: () => 'response' }) };
+const filter = new InvoicingErrorFilter(adapter as never);
+filter.catch(new InvoicingError('LINES_REQUIRED'), host as never);
+filter.catch(new InvoicingError('CUSTOMER_UNKNOWN'), host as never);
+console.log(JSON.stringify({
+  replies,
+  logged,
+  catches: Reflect.getMetadata('__filterCatchExceptions__', InvoicingErrorFilter).map((type: { name: string }) => type.name),
+}));
+`;
+
 const exec = (
   cwd: string,
   bin: string,
@@ -102,6 +127,23 @@ describe('a generated context', () => {
       exec(root, 'tsc', ['-p', 'libs/api/billing/tsconfig.spec.json']),
     ).toEqual({ code: 0, output: '' });
   }, 120_000);
+
+  it('answers a domain error with its documented status, logs one no route maps and catches only its own class', () => {
+    writeFileSync(join(root, 'check-filter.ts'), FILTER_CHECK);
+    const result = Bun.spawnSync([process.execPath, 'check-filter.ts'], {
+      cwd: root,
+    });
+
+    expect(result.stderr.toString()).toBe('');
+    expect(JSON.parse(result.stdout.toString())).toEqual({
+      replies: [
+        [{ statusCode: 422, code: 'LINES_REQUIRED' }, 422],
+        [{ statusCode: 500, code: 'CUSTOMER_UNKNOWN' }, 500],
+      ],
+      logged: [expect.stringContaining('CUSTOMER_UNKNOWN')],
+      catches: ['InvoicingError'],
+    });
+  });
 
   it("passes the repo's strictTypeChecked lint", () => {
     const result = Bun.spawnSync(

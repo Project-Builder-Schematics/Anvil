@@ -340,14 +340,87 @@ describe('hex-route', () => {
       expect(source).not.toContain('400');
     });
 
-    it('answers 500 for a domain error no route maps, and leaves every other exception to Nest', async () => {
+    it('catches only the slice error class, so global filters still see every other exception', async () => {
       const source = (await go()).tree.get(filter) ?? '';
 
-      expect(source).toContain('@Catch()');
+      expect(source).toContain('@Catch(InvoicingError)');
+      expect(source).not.toContain('@Catch()');
       expect(source).toContain('extends BaseExceptionFilter');
-      expect(source).toContain('Object.hasOwn(INVOICING_ERROR, error.code)');
-      expect(source).toContain('STATUS[exception.code] ?? 500');
-      expect(source).toContain('super.catch(exception, host)');
+    });
+
+    it('types the status map by the error codes, so a typo or a removed code fails to compile', async () => {
+      const source = (await go()).tree.get(filter) ?? '';
+
+      expect(source).toContain(
+        'const STATUS: Partial<Record<InvoicingErrorCode, number>> = {',
+      );
+      expect(source).toContain(
+        "import { InvoicingError, type InvoicingErrorCode } from '../../domain/errors';",
+      );
+    });
+
+    it('logs a domain error no route maps and still answers 500', async () => {
+      const source = (await go()).tree.get(filter) ?? '';
+
+      expect(source).toContain('new Logger(InvoicingErrorFilter.name)');
+      expect(source).toContain('this.logger.error(');
+      expect(source).toContain('const statusCode = status ?? 500;');
+    });
+
+    it('refreshes the status map on a re-run after the docs change, leaving the controller alone', async () => {
+      const seed = await prepared();
+      const first = await go({}, seed);
+      const changed = {
+        ...after(seed, first.tree),
+        ...withAnswers('201 · 409 rule 1 · 404 rule 2', '204'),
+      };
+
+      const { tree, error } = await go({}, changed);
+
+      expect(error).toBeUndefined();
+      const source = tree.get(filter) ?? '';
+      expect(source).toContain('LINES_REQUIRED: 409,');
+      expect(source).toContain('CUSTOMER_UNKNOWN: 404,');
+      expect(source).not.toContain('422');
+      expect([...tree.keys()]).toEqual([filter]);
+    });
+
+    it('registers the filter on every controller of the slice, not only the first', async () => {
+      const seed = await prepared();
+      const first = await go({}, seed);
+      const model = invoicingModel.replace(
+        '/invoices/:invoiceId',
+        '/voids/:invoiceId',
+      );
+      const second = await go(
+        { resource: 'voids', method: 'DELETE', path: '/:invoiceId' },
+        { ...after(seed, first.tree), [`${DOCS}/domain-model.md`]: model },
+      );
+
+      expect(second.error).toBeUndefined();
+      const source = flat(
+        second.tree.get(`${slice}/infrastructure/http/voids.controller.ts`) ??
+          '',
+      );
+      expect(source).toContain(
+        "import { InvoicingErrorFilter } from './InvoicingErrorFilter';",
+      );
+      expect(source).toContain(
+        "@Controller('voids') @UseFilters(InvoicingErrorFilter) export class",
+      );
+      expect(second.tree.get(filter)).toBeUndefined();
+    });
+
+    it('refuses a slice whose errors file has no error class, pointing at the file', async () => {
+      const seed = await prepared();
+      seed[`${slice}/domain/errors.ts`] =
+        "export const INVOICING_ERROR = {\n  LINES_REQUIRED: 'billing.lines_required',\n  CUSTOMER_UNKNOWN: 'billing.customer_unknown',\n} as const;\n";
+      const { tree, error } = await go({}, seed);
+
+      expect(String(error)).toContain(
+        'domain/errors.ts defines no InvoicingError class',
+      );
+      expect([...tree.keys()]).toEqual([]);
     });
 
     it('registers the filter on the generated controller', async () => {
