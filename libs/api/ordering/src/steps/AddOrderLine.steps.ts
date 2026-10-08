@@ -35,10 +35,6 @@ Then('it is refused with {string}', (world: OrderingWorld, code: string) => {
   expect(world.refusals.pop()?.code).toBe(code);
 });
 
-Given('the order has been placed', async (world: OrderingWorld) => {
-  await world.attempt(() => world.placeOrder({ orderId: world.currentId }));
-});
-
 Given('the order has been cancelled', async (world: OrderingWorld) => {
   await world.attempt(() => world.cancelOrder({ orderId: world.currentId }));
 });

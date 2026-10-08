@@ -1,6 +1,35 @@
-import { When } from 'quickpickle';
+import { Given, When } from 'quickpickle';
 import type { OrderingWorld } from './world';
 
-When('the order is placed', async (world: OrderingWorld) => {
-  await world.attempt(() => world.placeOrder({ orderId: world.currentId }));
-});
+When(
+  'the order is placed with the payment method {string}',
+  async (world: OrderingWorld, token: string) => {
+    await world.attempt(() =>
+      world.placeOrder({ orderId: world.currentId, paymentMethodToken: token }),
+    );
+  },
+);
+
+Given(
+  'the order has been paid with the payment method {string}',
+  async (world: OrderingWorld, token: string) => {
+    await world.placeOrder({
+      orderId: world.currentId,
+      paymentMethodToken: token,
+    });
+  },
+);
+
+Given(
+  'the order has been placed while payments gives no answer',
+  async (world: OrderingWorld) => {
+    world.charges.giveNoAnswerOnce();
+    await world.attempt(() =>
+      world.placeOrder({
+        orderId: world.currentId,
+        paymentMethodToken: 'tok_visa',
+      }),
+    );
+    world.noAnswers = 0;
+  },
+);
