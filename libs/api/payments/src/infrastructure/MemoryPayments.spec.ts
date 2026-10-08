@@ -31,6 +31,24 @@ describe('MemoryPayments (Payments contract)', () => {
     expect(await payments.byOrderId('o1')).toBe(retried);
   });
 
+  describe('save over another id', () => {
+    it('does not replace the stored payment with one of another id', async () => {
+      const payments = new MemoryPayments();
+      const current = pending('o1', 'p2');
+      await payments.save(current);
+      await payments.save(pending('o1', 'p1').fail());
+      expect(await payments.byOrderId('o1')).toBe(current);
+    });
+
+    it('replaces the stored payment with the same id moved on', async () => {
+      const payments = new MemoryPayments();
+      await payments.save(pending('o1', 'p1'));
+      const captured = pending('o1', 'p1').capture();
+      await payments.save(captured);
+      expect(await payments.byOrderId('o1')).toBe(captured);
+    });
+  });
+
   describe('startCharge', () => {
     it.each([
       ['captured', pending('o1').capture()],

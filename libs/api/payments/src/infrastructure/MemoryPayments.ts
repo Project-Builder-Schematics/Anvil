@@ -11,7 +11,9 @@ export class MemoryPayments implements Payments {
   }
 
   save(payment: Payment): Promise<void> {
-    this.payments.set(payment.orderId, payment);
+    const stored = this.payments.get(payment.orderId);
+    if (!stored || stored.id === payment.id)
+      this.payments.set(payment.orderId, payment);
     return Promise.resolve();
   }
 
