@@ -1,6 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- pending bindings keep their arguments until the scenarios are implemented */
-import { When } from 'quickpickle';
+import { Given, When } from 'quickpickle';
+import type { PaymentsWorld } from './world';
 
-When('order {string} is refunded', (_world, arg0: string) => {
-  throw new Error('step not implemented: order "o1" is refunded');
-});
+When(
+  'order {string} is refunded',
+  async (world: PaymentsWorld, orderId: string) => {
+    await world.attempt(() => world.refundPayment({ orderId }));
+  },
+);
+
+Given(
+  'order {string} has been refunded',
+  async (world: PaymentsWorld, orderId: string) => {
+    await world.refundPayment({ orderId });
+  },
+);

@@ -1,10 +1,18 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface, @typescript-eslint/no-unused-vars -- generated stub: the shapes and the body come from the feature */
+import { Amount } from '../domain/Amount';
+import { Payment } from '../domain/Payment';
+import { PaymentsError } from '../domain/errors';
 import type { PaymentGateway } from '../domain/driven-ports/PaymentGateway';
 import type { Payments } from '../domain/driven-ports/Payments';
+import { toView, type PaymentView } from './PaymentView';
 
-export interface ChargePaymentCommand {}
+export interface ChargePaymentCommand {
+  readonly orderId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly paymentMethodToken: string;
+}
 
-export interface ChargePaymentResult {}
+export type ChargePaymentResult = PaymentView;
 
 export type ChargePayment = (
   command: ChargePaymentCommand,
@@ -14,5 +22,21 @@ export const CHARGE_PAYMENT = Symbol('ChargePayment');
 
 export const makeChargePayment =
   (payments: Payments, paymentGateway: PaymentGateway): ChargePayment =>
-  () =>
-    Promise.reject(new Error('ChargePayment is not implemented'));
+  async ({ orderId, amount, currency, paymentMethodToken }) => {
+    const pending = Payment.pending(orderId, Amount.of(amount), currency);
+    const existing = await payments.byOrderId(orderId);
+    if (existing?.isCharged) return toView(existing);
+
+    const outcome = await paymentGateway.charge({
+      amount,
+      currency,
+      paymentMethodToken,
+    });
+    if (outcome === 'Declined') {
+      await payments.save(pending.fail());
+      throw new PaymentsError('PAYMENT_DECLINED');
+    }
+    const captured = pending.capture();
+    await payments.save(captured);
+    return toView(captured);
+  };
