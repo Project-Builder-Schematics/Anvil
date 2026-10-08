@@ -21,8 +21,8 @@ const lines = [
 const refusal = (code: string) => Object.assign(new Error(code), { code });
 
 const adapter = (reserve: ReserveStock = () => Promise.reject(new Error())) => {
-  const release = vi.fn<ReleaseStock>(() => Promise.resolve({ orderId: 'o1' }));
-  const commit = vi.fn<CommitStock>(() => Promise.resolve({ orderId: 'o1' }));
+  const release = vi.fn<ReleaseStock>(() => Promise.resolve({}));
+  const commit = vi.fn<CommitStock>(() => Promise.resolve({}));
   return {
     release,
     commit,

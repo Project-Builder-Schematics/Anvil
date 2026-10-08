@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { InventoryModule } from '@demo/api-inventory';
+import { PaymentsModule } from '@demo/api-payments';
 import { ORDER_REPOSITORY } from './domain/driven-ports/OrderRepository';
 import { MemoryOrderRepository } from './infrastructure/MemoryOrderRepository';
 import { PRODUCT_PRICES } from './domain/driven-ports/ProductPrices';
@@ -17,6 +19,7 @@ import { DOMAIN_EVENTS } from './domain/driven-ports/DomainEvents';
 import { MemoryDomainEvents } from './infrastructure/MemoryDomainEvents';
 
 @Module({
+  imports: [InventoryModule, PaymentsModule],
   controllers: [OrdersController],
   providers: [
     { provide: ORDER_REPOSITORY, useClass: MemoryOrderRepository },
@@ -34,12 +37,12 @@ import { MemoryDomainEvents } from './infrastructure/MemoryDomainEvents';
     {
       provide: PLACE_ORDER,
       useFactory: makePlaceOrder,
-      inject: [ORDER_REPOSITORY],
+      inject: [ORDER_REPOSITORY, STOCK_RESERVATION, CHARGES, DOMAIN_EVENTS],
     },
     {
       provide: CANCEL_ORDER,
       useFactory: makeCancelOrder,
-      inject: [ORDER_REPOSITORY],
+      inject: [ORDER_REPOSITORY, DOMAIN_EVENTS],
     },
     {
       provide: GET_ORDER,

@@ -46,7 +46,9 @@ const addOrderLineBody = z.object({
 });
 
 const placeOrderParams = z.object({ orderId: z.string().trim().min(1) });
-const placeOrderBody = z.object({}).default({});
+const placeOrderBody = z.object({
+  paymentMethodToken: z.string().trim().min(1),
+});
 
 const cancelOrderParams = z.object({ orderId: z.string().trim().min(1) });
 const cancelOrderBody = z.object({}).default({});

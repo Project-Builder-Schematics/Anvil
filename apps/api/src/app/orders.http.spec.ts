@@ -63,7 +63,13 @@ describe('orders over HTTP', () => {
     return body['orderId'] as string;
   };
 
-  it('runs the lifecycle: create, add a line, get, place, cancel', async () => {
+  const place = (orderId: string, paymentMethodToken = 'tok_visa') =>
+    call('POST', `/orders/${orderId}/place`, { paymentMethodToken });
+
+  const addLine = (orderId: string, productId: string, quantity: number) =>
+    call('POST', `/orders/${orderId}/lines`, { productId, quantity });
+
+  it('runs the lifecycle: create, add a line, get, place and pay', async () => {
     const created = await call('POST', '/orders');
     expect(created.status).toBe(201);
     const orderId = created.body['orderId'] as string;
@@ -88,14 +94,48 @@ describe('orders over HTTP', () => {
       body: view,
     });
 
-    expect(await call('POST', `/orders/${orderId}/place`)).toEqual({
+    expect(await place(orderId)).toEqual({
       status: 200,
-      body: { orderId, status: 'Placed' },
+      body: { orderId, status: 'Paid' },
     });
+    expect((await call('GET', `/orders/${orderId}`)).body['status']).toBe(
+      'Paid',
+    );
+  });
+
+  it('cancels a draft order', async () => {
+    const orderId = await newOrder();
     expect(await call('POST', `/orders/${orderId}/cancel`)).toEqual({
       status: 200,
       body: { orderId, status: 'Cancelled' },
     });
+  });
+
+  it('answers 402 for a declined payment and leaves the order in draft, ready to place again', async () => {
+    const orderId = await newOrder();
+    await addLine(orderId, 'mouse', 1);
+
+    expect(await place(orderId, 'tok_decline')).toEqual({
+      status: 402,
+      body: { statusCode: 402, code: 'PAYMENT_DECLINED' },
+    });
+    expect((await call('GET', `/orders/${orderId}`)).body['status']).toBe(
+      'Draft',
+    );
+    expect((await place(orderId)).body['status']).toBe('Paid');
+  });
+
+  it('answers 409 when the stock cannot cover the order and leaves it in draft', async () => {
+    const orderId = await newOrder();
+    await addLine(orderId, 'monitor', 99);
+
+    expect(await place(orderId)).toEqual({
+      status: 409,
+      body: { statusCode: 409, code: 'INSUFFICIENT_STOCK' },
+    });
+    expect((await call('GET', `/orders/${orderId}`)).body['status']).toBe(
+      'Draft',
+    );
   });
 
   it('answers 404 for an order that does not exist', async () => {
@@ -104,7 +144,7 @@ describe('orders over HTTP', () => {
       status: 404,
       body: { statusCode: 404, code: 'ORDER_NOT_FOUND' },
     });
-    expect((await call('POST', '/orders/nope/place')).status).toBe(404);
+    expect((await place('nope')).status).toBe(404);
     expect((await call('POST', '/orders/nope/cancel')).status).toBe(404);
     expect(
       await call('POST', '/orders/nope/lines', {
@@ -129,7 +169,7 @@ describe('orders over HTTP', () => {
       status: 422,
       body: { statusCode: 422, code: 'PRODUCT_NOT_FOUND' },
     });
-    expect(await call('POST', `/orders/${orderId}/place`)).toEqual({
+    expect(await place(orderId)).toEqual({
       status: 422,
       body: { statusCode: 422, code: 'ORDER_EMPTY' },
     });
@@ -155,22 +195,29 @@ describe('orders over HTTP', () => {
       productId: 'mouse',
       quantity: 1,
     });
-    await call('POST', `/orders/${orderId}/place`);
-    expect(
-      await call('POST', `/orders/${orderId}/lines`, {
-        productId: 'mouse',
-        quantity: 1,
-      }),
-    ).toEqual({
+    await place(orderId);
+    expect(await addLine(orderId, 'mouse', 1)).toEqual({
       status: 409,
       body: { statusCode: 409, code: 'ORDER_NOT_EDITABLE' },
     });
-    expect((await call('POST', `/orders/${orderId}/place`)).status).toBe(409);
-    await call('POST', `/orders/${orderId}/cancel`);
-    expect(await call('POST', `/orders/${orderId}/cancel`)).toEqual({
+    expect((await place(orderId)).status).toBe(409);
+  });
+
+  it('refuses to cancel a paid order and a cancelled one', async () => {
+    const paid = await newOrder();
+    await addLine(paid, 'mouse', 1);
+    await place(paid);
+    expect(await call('POST', `/orders/${paid}/cancel`)).toEqual({
       status: 409,
       body: { statusCode: 409, code: 'ORDER_NOT_CANCELLABLE' },
     });
+    expect((await call('GET', `/orders/${paid}`)).body['status']).toBe('Paid');
+
+    const cancelled = await newOrder();
+    await call('POST', `/orders/${cancelled}/cancel`);
+    expect((await call('POST', `/orders/${cancelled}/cancel`)).status).toBe(
+      409,
+    );
   });
 
   it('answers 400 for a malformed body', async () => {
@@ -185,9 +232,22 @@ describe('orders over HTTP', () => {
     expect((await add({ productId: 'keyboard' })).status).toBe(400);
   });
 
+  it('answers 400 for a place body without a payment method token', async () => {
+    const orderId = await newOrder();
+    const bodies = [
+      {},
+      { paymentMethodToken: '  ' },
+      { paymentMethodToken: 7 },
+    ];
+    for (const body of bodies)
+      expect(
+        (await call('POST', `/orders/${orderId}/place`, body)).status,
+      ).toBe(400);
+  });
+
   it('answers 400 for a blank order id, which the schema refuses before the value object can', async () => {
     expect((await call('GET', '/orders/%20')).status).toBe(400);
-    expect((await call('POST', '/orders/%20/place')).status).toBe(400);
+    expect((await place('%20')).status).toBe(400);
   });
 
   it('ignores a customer or actor id in the body', async () => {

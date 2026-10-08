@@ -10,6 +10,8 @@ const STATUS: Partial<Record<OrderingErrorCode, number>> = {
   CURRENCY_MISMATCH: 422,
   ORDER_EMPTY: 422,
   ORDER_NOT_CANCELLABLE: 409,
+  INSUFFICIENT_STOCK: 409,
+  PAYMENT_DECLINED: 402,
 };
 
 @Catch(OrderingError)
