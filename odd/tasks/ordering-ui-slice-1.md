@@ -45,10 +45,14 @@ Out of scope: auth, a list of orders (no list endpoint exists), and the catalog 
 
 ## Tasks
 
-- [ ] U1: `domain`: DTOs and the error-message map. Route: delegated writer.
-- [ ] U2: `data-access`: API client and store. Route: delegated writer.
-- [ ] U3: `ui`: presentational components (order summary, line list, add-line form, action bar). Route: delegated writer.
-- [ ] U4: `feature`: containers, routes, and wiring into `apps/web`. Route: delegated writer.
+Route per task: delegated writer (single writer, no parallel writers). Trigger evidence: each task writes 2 or more non-trivial files. Mode: strict TDD, runner `bun test schematics` for schematics and the Angular unit-test builder (`bunx nx test <project>`, vitest + jsdom) for the web libs.
+
+- [x] S6 (prerequisite, `schematics-impact-round-1.md`): `ng-service` emits `@Service()`. Commit fa851e4. RED: 2 factory tests failed first.
+- [x] U0 (schematic extension): `ng-component` accepts PascalCase types for inputs and outputs, plus `type_import`. Commit a7758ff. RED: 4 factory tests failed first. The AXE helper and the focus ring came with 44221d5, and `axe-core` with 150c352.
+- [x] U1: `domain`: DTOs, totals, status predicates, `isQuantity`, and the error-message map. Commit b8d7cb0 (and `isQuantity` in 1a5f43c). RED: 3 suites failed on a missing module, then 12 `isQuantity` cases failed.
+- [x] U2: `data-access`: `OrderingApi` (HttpClient commands, `httpResource` read), `errorCodeOf`, `OrderStore`. Commits c329901 and 13e7eda. RED: compile errors for the missing members, then 2 store tests, then the boolean results.
+- [x] U3: `ui`: `order-summary`, `line-list`, `add-line-form` (Signal Forms), `order-actions` (`*dsVariant` place label). Commit 1a5f43c. RED: 4 spec files failed (22 of 32 tests) before the templates existed.
+- [x] U4: `feature`: `order-page`, `order-new`, `orderingRoutes`, wiring into `apps/web` (lazy `orders` route, redirect from `/`, `provideHttpClient`, the page shell). Commit e0c315f. RED: 13 feature tests failed before the containers existed, the routes spec failed on a missing module, and 3 app specs failed before the wiring.
 
 ## Acceptance criteria
 
@@ -57,10 +61,43 @@ Out of scope: auth, a list of orders (no list endpoint exists), and the catalog 
 - The components come from schematics, and the IMPACT rows are recorded.
 - A runtime checklist for the user: create → add → place → cancel in the browser, the CORS and CSRF headers, and the A/B variant forced with `?exp=checkout-cta:b`.
 
+## Assumptions
+
+Product decisions the doc did not settle; each is the simplest option.
+
+- Copy of the `checkout-cta` variants on the Place button: `control` shows "Place order", `b` shows "Place order securely". The placeholder demo in `apps/web` used "Pay now" and "Pay securely", but placing an order is not a payment.
+- `/` redirects to `/orders/new`, since there is no other entry point and no order list.
+- The add-line form keeps its values after a line is added, so the user can add the same product again. The server stays authoritative on the quantity; the client check is 1 to 99 and an integer.
+- Add-line, Place and Cancel run one command at a time (the store drops a command issued while another is in flight). The form is not disabled while busy, so keyboard focus is never lost from a field.
+- Cancel has no confirmation step.
+- After a successful Place or Cancel the clicked button becomes disabled, so keyboard focus falls back to the page. Moving focus to the status region is not done.
+- Money is shown in `en-US`, using the currency's own minor-unit digits.
+- The status and alert regions are always in the DOM (`role="status"` for loading and success messages, `role="alert"` for command and read errors), so changes are announced.
+- Error messages and secondary text use `--ds-color-ink` and `--ds-color-body`, and `--ds-color-danger` only for borders. In the `stripe` theme `danger` on `canvas` is 4.29:1 and `muted` on `surface` is 4.49:1, below the 4.5:1 of AA for text; the `shopify` theme passes every pair used. The tokens were not changed.
+- Routes are mounted under `orders` by the app and `orderingRoutes` reads `new` before `:orderId`.
+- The API base is the relative `/api`. The production `nginx.conf` of `apps/web` has no `/api` proxy, so only the dev server's proxy serves the API from the browser.
+
+## Verification evidence
+
+- AXE: `axe-core` 4.14.0 runs under the Angular unit-test builder with jsdom through `axeViolations` (`@demo/web-shared-design-system/testing`, spec in the design-system lib). Every ui and feature spec asserts no violations. Colour contrast is disabled there because jsdom has no layout; it is the browser check below, and the token pairs were computed by hand (see the assumptions).
+- CSRF and CORS: the API's cross-origin protection allows a state-changing request when `Sec-Fetch-Site` is `same-origin`, or when `Origin` matches the request host or the trusted origin. Through the dev proxy the browser calls its own origin, so the request is same-origin. `CORS_ORIGIN` is `http://localhost:4200` in `.env.example` and `docker-compose.yml`, and `tools/dev` sets it to `http://localhost:<webPort>` per worktree, which is the web dev origin. API security settings were not changed.
+
 ## Progress
 
 - 2026-10-08: document created after the user chose vertical slices. It runs after `schematics-impact-round-1.md` and before `order-fulfilment-slice-2.md`.
+- 2026-10-08: S6, U0 and U1 to U4 done in 11 commits on `feat/workspace-scaffold`; every commit left `bun test schematics` (252 pass), `nx run-many -t lint test typecheck` (18 projects) and `prettier --check .` green. The Engram mirror `odd/ordering-ui-slice-1/tasks` was not updated by the writer.
+
+## Runtime checklist (for the user, in the browser)
+
+1. `bun run dev --detach`, then read the web URL from `bun run dev:status`. Open it at `localhost`, not another host name.
+2. Flow: `/` redirects to `/orders/new`, which creates an order and lands on `/orders/<id>`. Add a line (`keyboard`, `mouse`; the API seeds three demo products), see the line total and the order total, Place it, then Cancel it. Add and Place are disabled after Place; Cancel is disabled after Cancel.
+3. Errors: add `ghost` (PRODUCT_NOT_FOUND), quantity `0`, `100` and `1.5` (client message, no request), Place an empty order (the button is disabled), open `/orders/nope` (not found message and a link to a new order), stop the API and try a command (network message). Each one shows its human message in the alert region and the next success clears it.
+4. Network tab: every call is `/api/orders...` on the web origin, no `OPTIONS` preflight, `POST` requests carry `Origin` and `Sec-Fetch-Site: same-origin`, and none answers 403. A 403 means the origin did not match `CORS_ORIGIN`.
+5. A/B variant: `?exp=checkout-cta:b` shows "Place order securely", `?exp=checkout-cta:control` shows "Place order"; the override persists for the session. The exposure is logged to the console (`exposure`).
+6. Theme: `?exp=theme:b` switches `data-theme` to `stripe`; check the focus ring, the error borders and the status badge in both themes.
+7. AXE in the browser (the axe DevTools extension or Lighthouse) on `/orders/new`, an empty draft, a draft with lines, a placed order and the not-found page, in both themes. This is where colour contrast is checked; expect the `stripe` theme to flag `muted` text on `surface` if any is used, and `danger` as text (none is).
+8. Keyboard: Tab through the form and the actions, submit with Enter, check the visible focus ring, and check that a refused submit moves focus to the first invalid field.
 
 ## Next step
 
-U1, after the schematics round lands.
+Review, then `order-fulfilment-slice-2.md`. The S5 hardening of the generated error filter should land before slice 2 generates a second filter.
