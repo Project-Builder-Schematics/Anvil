@@ -74,6 +74,10 @@ Product decisions the doc did not settle; each is the simplest option.
 - Money is shown in `en-US`, using the currency's own minor-unit digits.
 - The status and alert regions are always in the DOM (`role="status"` for loading and success messages, `role="alert"` for command and read errors), so changes are announced.
 - Error messages and secondary text use `--ds-color-ink` and `--ds-color-body`, and `--ds-color-danger` only for borders. In the `stripe` theme `danger` on `canvas` is 4.29:1 and `muted` on `surface` is 4.49:1, below the 4.5:1 of AA for text; the `shopify` theme passes every pair used. The tokens were not changed.
+- A command refused because another is in flight shows `COMMAND_IN_PROGRESS` ("Another action is still running. Try again in a moment.") in the alert region instead of being dropped silently. The form stays enabled while busy. The message clears when the running command succeeds.
+- A command issued with no open order shows `ORDER_NOT_FOUND`, reusing the existing message.
+- A command answers `true` only when the server applied it and its order is still the open one. A response for another order is ignored and answers `false` without an error, so the page does not announce it.
+- The line rows track by `$index`: the table is read-only, so row identity carries no state, and the API's one line per product is not relied on.
 - Routes are mounted under `orders` by the app and `orderingRoutes` reads `new` before `:orderId`.
 - The API base is the relative `/api`. The production `nginx.conf` of `apps/web` has no `/api` proxy, so only the dev server's proxy serves the API from the browser.
 
@@ -86,6 +90,7 @@ Product decisions the doc did not settle; each is the simplest option.
 
 - 2026-10-08: document created after the user chose vertical slices. It runs after `schematics-impact-round-1.md` and before `order-fulfilment-slice-2.md`.
 - 2026-10-08: S6, U0 and U1 to U4 done in 12 commits on `feat/workspace-scaffold`; every commit left `bun test schematics` (252 pass), `nx run-many -t lint test typecheck` (18 projects) and `prettier --check .` green. The Engram mirror `odd/ordering-ui-slice-1/tasks` was not updated by the writer.
+- 2026-10-08: U5 done in 3 commits (091c767, 0778bf4, 7c96a1f); `nx run-many -t lint test typecheck` (18 projects) and `prettier --check .` green. The Engram mirror was not updated by the writer.
 
 ## Runtime checklist (for the user, in the browser)
 
@@ -110,24 +115,23 @@ The whole range was over the review budget (`lens_context_budget_exceeded`), so 
 
 The advisory findings:
 
-- [ ] U5: correctness fixes in the order flow. These land at the start of slice 2 F5, which touches the same libs.
-  - The back button recreates an order: `/orders/new` creates on every visit. Navigate with `replaceUrl` (order-new.ts:21-28).
-  - Navigation still runs after the component is destroyed (order-new.ts:25-28).
-  - Store races:
-    - An add-line response can land on another order (order-store.ts:44-45).
-    - A status change can be stale (59-63).
-    - Busy commands overlap (67-77).
-    - Create clears the open order before the guard (40).
-    - A dropped command is silent (73).
-    - A command can run with no open order (43-53).
-  - A notice stays visible after the route param changes (order-page.ts:61-67), and the param change is untested.
-  - `` tracks lines by a key that can repeat (line-list.html:14).
-  - `Order.lines` is mutable (domain order.ts:14).
+- [x] U5: correctness fixes in the order flow (091c767, 0778bf4, 7c96a1f). Route: one delegated writer. Strict TDD, RED observed per item before the fix.
+  - Back button recreates an order (091c767): `OrderNew` navigates with `replaceUrl: true`. RED: the spec expected `navigate(['/orders', 'o9'], { replaceUrl: true })`; the call had no options.
+  - Navigation after destroy (091c767): `OrderNew` skips `navigate` when its `DestroyRef` is destroyed. RED: after `fixture.destroy()` and the response, `navigate` was still called once.
+  - Store races (0778bf4), each with a store spec that failed first:
+    - A response for an order that is no longer open is dropped (add-line and status change), and the command answers `false`. RED: the other order showed the first order's line and status (the page spec showed `Order o1` where `Order o2` was expected).
+    - Busy commands: a second command sends nothing and sets `COMMAND_IN_PROGRESS`. RED: `error()` was `''`.
+    - Create no longer clears the open order before the busy guard (the request is built after the guard). RED: the spec failed (the open order was cleared by the dropped create).
+    - The dropped command is no longer silent (same `COMMAND_IN_PROGRESS`, new message in the domain `messageFor`; RED: the message came back as the generic one).
+    - A command with no open order sends nothing, answers `false` and sets `ORDER_NOT_FOUND`. RED: the three specs failed; no code was exposed.
+  - Notice after a param change (0778bf4): the param-change spec was added to `OrderPage`. Clearing on a param change already worked (that spec passed on arrival); the real defect was a command finishing after the change, which announced on the new order. RED, with the old store: `Order o1` shown on `/orders/o2`.
+  - `@for` key (7c96a1f): the rows track by `$index`. RED: Angular's NG0955 duplicate-key warning on `console.warn` when the list is updated with a repeated product. Angular only detects duplicates on update, not on first render.
+  - `Order.lines` is `readonly OrderLine[]` (7c96a1f), and `LineList.lines` accepts it. RED: `tsc -p libs/web/ordering/domain/tsconfig.spec.json` failed with TS2578 (unused `@ts-expect-error`) against the old type. The web libs have no `typecheck` target, so this check is by `tsc`.
 - [x] Schematics, done together with S8 (6470ca2):
   - `ng-component` validates `type_import` as a package or relative path.
   - A type named like the component class or `Component` is refused, and an input or output with a second colon is refused instead of cut.
   - The test for a `type_import` with outputs only exists.
-- [ ] `axe-core` is flagged as unused in the root package.json. That is a false positive: the design-system testing helper uses it. Verify.
+- [x] `axe-core` is flagged as unused in the root package.json. Verified a false positive, no change: it is a `devDependency`, installed, imported by `libs/web/shared/design-system/src/testing/axe.ts` (`axeViolations`) and exercised by every ui and feature spec. No tool in the repo (lint, knip, depcheck) reports it; the flag came from the review.
 - [ ] The `stripe` theme fails AA text contrast (danger on canvas 4.29:1, muted on surface 4.49:1). This needs a token decision.
 
 ## Next step

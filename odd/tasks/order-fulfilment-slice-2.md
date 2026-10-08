@@ -96,6 +96,7 @@ Aggregate `Payment`: Pending → Captured, Failed or Refunded. A fake `PaymentGa
 ## Progress
 
 - 2026-10-08: document created. The slice and its rules were approved by the user. It waits for `schematics-impact-round-1.md` to finish.
+- 2026-10-08: U5 done (091c767, 0778bf4, 7c96a1f); F5 can start.
 
 ## Next step
 
