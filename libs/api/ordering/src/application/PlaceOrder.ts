@@ -26,14 +26,20 @@ export const PLACE_ORDER = Symbol('PlaceOrder');
  * Process manager (rules 12 to 14, 17). Only a refusal that leaves nothing behind compensates:
  * when the charge gives no answer the error propagates and the order stays Placed with its stock reserved.
  */
-export const makePlaceOrder =
-  (
-    orderRepository: OrderRepository,
-    stockReservation: StockReservation,
-    charges: Charges,
-    domainEvents: DomainEvents,
-  ): PlaceOrder =>
-  async ({ orderId, paymentMethodToken }) => {
+export const makePlaceOrder = (
+  orderRepository: OrderRepository,
+  stockReservation: StockReservation,
+  charges: Charges,
+  domainEvents: DomainEvents,
+): PlaceOrder => {
+  // A retry finds the order Placed while the run it retries is still going, so the runs of one order queue
+  // here instead of overlapping. It holds within one API instance only.
+  const running = new Map<string, Promise<PlaceOrderResult>>();
+
+  const place = async ({
+    orderId,
+    paymentMethodToken,
+  }: PlaceOrderCommand): Promise<PlaceOrderResult> => {
     const placed = (await findOrder(orderRepository, orderId)).place();
     await orderRepository.save(placed);
 
@@ -59,3 +65,17 @@ export const makePlaceOrder =
     await domainEvents.publish({ type: 'OrderPaid', orderId });
     return { orderId: paid.id.value, status: paid.status };
   };
+
+  return (command) => {
+    const previous = running.get(command.orderId);
+    const run = (previous ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => place(command));
+    running.set(command.orderId, run);
+    const settle = () => {
+      if (running.get(command.orderId) === run) running.delete(command.orderId);
+    };
+    run.then(settle, settle);
+    return run;
+  };
+};

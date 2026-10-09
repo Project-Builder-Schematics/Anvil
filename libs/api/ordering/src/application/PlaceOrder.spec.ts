@@ -117,4 +117,25 @@ describe('PlaceOrder', () => {
     expect(calls).toEqual(['save Placed', 'reserve', 'charge 9000 tok']);
     expect(stored().status).toBe('Placed');
   });
+
+  it('runs two placements of one order one after the other', async () => {
+    const { place, calls } = setup();
+
+    const [first, second] = await Promise.allSettled([
+      place(command),
+      place(command),
+    ]);
+
+    expect(first).toEqual({
+      status: 'fulfilled',
+      value: { orderId: 'a', status: 'Paid' },
+    });
+    expect(second).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'ORDER_NOT_EDITABLE' },
+    });
+    expect(calls.filter((call) => call.startsWith('publish'))).toEqual([
+      'publish OrderPaid a',
+    ]);
+  });
 });
