@@ -8,8 +8,15 @@
       aria-required="true"
       [formField]="form.productId"
       [attr.aria-invalid]="productError() ? 'true' : null"
-      [attr.aria-describedby]="productError() ? 'add-line-product-error' : null"
+      [attr.aria-describedby]="
+        productError()
+          ? 'add-line-product-hint add-line-product-error'
+          : 'add-line-product-hint'
+      "
     />
+    <p id="add-line-product-hint" class="hint">
+      Demo products: keyboard, mouse, monitor.
+    </p>
     @if (productError(); as message) {
     <p id="add-line-product-error" class="error">{{ message }}</p>
     }

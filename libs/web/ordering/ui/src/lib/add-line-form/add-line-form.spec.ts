@@ -68,7 +68,7 @@ describe('AddLineForm', () => {
     expect(added).toEqual([]);
     expect(error('add-line-product-error')).toBe('Enter a product id.');
     expect(product?.getAttribute('aria-describedby')).toBe(
-      'add-line-product-error',
+      'add-line-product-hint add-line-product-error',
     );
     expect(product?.getAttribute('aria-invalid')).toBe('true');
     expect(document.activeElement).toBe(product);
@@ -102,6 +102,17 @@ describe('AddLineForm', () => {
     await send();
 
     expect(added).toEqual([{ productId: 'keyboard', quantity: Number(value) }]);
+  });
+
+  it('names the demo products in a hint linked to the product field', async () => {
+    const { product } = await render();
+
+    expect(
+      document.getElementById('add-line-product-hint')?.textContent.trim(),
+    ).toBe('Demo products: keyboard, mouse, monitor.');
+    expect(product?.getAttribute('aria-describedby')).toBe(
+      'add-line-product-hint',
+    );
   });
 
   it('shows no error before the user has touched a field', async () => {
