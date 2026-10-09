@@ -1,0 +1,7 @@
+{
+  "name": "api-inventory",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/inventory/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:inventory", "type:domain"]
+}

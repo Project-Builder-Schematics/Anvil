@@ -1,0 +1,51 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "purpose": {
+      "type": "string",
+      "label": "One sentence: what this context is responsible for, in business words",
+      "required": true
+    },
+    "subdomain_class": {
+      "type": "enum",
+      "label": "Subdomain class, decides design investment. core: differentiates the product; supporting: needed, not differentiating, cannot be bought; generic: a vendor could provide it",
+      "choices": ["core", "supporting", "generic"],
+      "required": true
+    },
+    "criticality": {
+      "type": "enum",
+      "label": "Criticality, decides verification rigor. high: a bug is a financial error, a confidentiality breach or data loss",
+      "choices": ["low", "medium", "high"],
+      "required": true
+    },
+    "volatility": {
+      "type": "enum",
+      "label": "Volatility, how often the rules change; decides how much cleanup is worth",
+      "choices": ["low", "medium", "high"],
+      "required": true
+    },
+    "classification_status": {
+      "type": "enum",
+      "label": "Whether the person confirmed the classification. Omitted means confirmed. assumed: the values are annotated as assumptions and the strict level applies until they confirm it",
+      "choices": ["confirmed", "assumed"],
+      "required": false
+    },
+    "context_map": {
+      "type": "string",
+      "label": "Contexts this one depends on, comma-separated <context>:<relationship> with relationship customer-supplier, conformist or acl (e.g. billing:conformist,shipping:acl). Each context must already exist. Written to the docs Context map and declared in the lint boundaries",
+      "required": false,
+      "default": ""
+    },
+    "subdomains": {
+      "type": "string",
+      "label": "Comma-separated subdomains, dash-case (e.g. invoicing,payouts). Empty: the context is its single subdomain and its docs and code stay inline; several: one docs folder and one code folder per subdomain.",
+      "required": false,
+      "default": ""
+    }
+  },
+  "description": "New API bounded context, starting from its strategic design: the docs come before any code. Requires the subdomain class, criticality and volatility, derives the architecture level (strict when core or high-criticality, else standard), and writes docs/<context>/README.md (purpose, classification, context map, subdomains), glossary.md and per subdomain a domain-model.md (tables Business rules, Use cases, Driven ports, Driving adapters) and flows.md; features (.feature) go next to each domain model. Then creates the whole Nx lib libs/api/<context> (project.json with tags scope:api, context:<context>, type:domain; eslint, tsconfig, vitest config running the docs features through quickpickle; COD100.md; src/index.ts barrel and src/composition.ts Nest module), registers the alias @demo/api-<context> in tsconfig.base.json and the context in the lint boundary list; context_map relations also become the allowed barrel dependencies in the lint boundaries. The only generator that writes docs. Fails if the lib already exists. Run before hex-slice."
+}

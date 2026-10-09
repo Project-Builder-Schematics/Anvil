@@ -1,0 +1,15 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    }
+  },
+  "description": "The whole code skeleton of one subdomain from its domain-model.md, in dependency order: hex-slice, then one hex-driven-port per Driven ports row, then one hex-use-case per Use cases row, then one hex-route per Driving adapters row. Idempotent: what already exists is left alone, so after a doc change it is run again and only the new rows appear. Stops at the first row that cannot be generated, naming it: fix the doc and run again. Left to the implementer: domain/, the bodies of use cases and adapters, the step definitions and the Zod schemas of each route."
+}

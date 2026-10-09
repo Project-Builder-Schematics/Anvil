@@ -1,109 +1,87 @@
-# New Nx Repository
+# Demo
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Order management demo: an Nx monorepo with a NestJS API and an Angular web app, organised as bounded contexts (catalog, inventory, ordering, payments, shipping, notifications). Domain modelling comes later; this repo is the stack and the skeleton.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Stack
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/docs/technologies/typescript/introduction?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+| Area      | Choice                                                                                                                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Workspace | Nx 23, Bun as package manager, Nx run under Node                                                                        |
+| API       | NestJS 12, bundled with Rsbuild, Zod validation, OpenAPI JSON                                                           |
+| Web       | Angular 22, zoneless, standalone, signals, esbuild application builder                                                  |
+| Tests     | vitest 4 (Angular unit-test builder for web), `bun test` for `tools/`, coverage thresholds, Stryker for API domain code |
+| Quality   | typescript-eslint strictTypeChecked, Nx module boundaries, Prettier, commitlint, lefthook                               |
+| Runtime   | Docker (Postgres 17, pgadmin, api, nginx for web)                                                                       |
 
-🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/get-started). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
+## Prerequisites
 
-## Generate a library
+Bun, Node 24 or newer, Docker. Then `bun install`, and once per clone or worktree `bunx lefthook install` to enable the git hooks (pre-commit runs `nx affected -t lint typecheck`, commit-msg runs commitlint).
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
-```
-
-## Run tasks
-
-To build the library use:
-
-```sh
-npx nx run pkg1:build
-```
-
-To run any task with Nx use:
+## Commands
 
 ```sh
-npx nx run <project-name>:<target>
+bunx nx run-many -t lint test typecheck   # everything
+bunx nx affected -t lint typecheck test   # what changed
+bunx nx format:check                      # Prettier (format:write fixes)
+bun run check:tools                       # lint, typecheck and test tools/
+bun run check:schematics                  # lint, typecheck and test schematics/
+bun run design:themes                     # regenerate theme CSS from themes/
+bun run mutation                          # Stryker on libs/api/*/src/{domain,application}
+bun run dev                               # local stack, see the worktree section below
 ```
 
-These targets are either [inferred automatically](https://nx.dev/docs/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+Builds are not part of these commands; CI does not build yet. Add `build` to the CI target list when you want it.
 
-[More about running tasks in the docs &raquo;](https://nx.dev/docs/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
+## Architecture map
 
 ```
-npx nx release
+apps/api              NestJS delivery (controllers, config, OpenAPI)
+apps/web              Angular shell
+libs/api/<ctx>        one bounded context: src/domain (+driven-ports), src/application, src/infrastructure, src/composition.ts
+libs/api/shared-kernel
+libs/web/<ctx>/{feature,ui,data-access,domain}   catalog and ordering so far
+libs/web/shared/design-system
+docs/<ctx>            glossary, model, flows per context
+docs/adr              decisions
+tools/                dev stack, theme generator
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+Tags: `scope:api|web`, `context:<ctx>|shared`, `type:app|feature|ui|data-access|domain|kernel`. Enforced by `@nx/enforce-module-boundaries`: a context depends only on itself and `context:shared`; api and web never import each other; `domain` depends on `domain` and `kernel`; `ui` never depends on `data-access` or `feature`. Rings: `domain/` and `application/` never import `@nestjs/*`, `typeorm`, `pg`, `knex` or `infrastructure/`.
 
-[Learn more about Nx release &raquo;](https://nx.dev/docs/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Backend rules: use cases are plain TypeScript factories wired only in `composition.ts`; ports are injected with explicit `Symbol` tokens, never type-based DI; Zod schemas live in delivery.
 
-## Keep TypeScript project references up to date
+## Add a context
 
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
+Libs, components, services, directives, controllers and providers come from Project Builder schematics, not from Nx, Angular or Nest generators; see "Schematics" in `AGENTS.md` for the schematic per situation and the `BUILDER_*` environment gotcha.
 
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
+1. `hex-bounded-context` creates the API lib (`libs/api/<ctx>`, alias, tags, lint registration, Nest module) and the docs skeleton (`docs/<ctx>/`).
+2. Fill in `docs/<ctx>/domain-model.md` and write a `.feature` per use case; the generators read them and never invent contracts.
+3. `hex-subdomain` (or `hex-context`) generates the slice, driven ports, use cases and Nest controllers from those tables.
+4. `web-context` creates `libs/web/<ctx>/{feature,ui,data-access,domain}`; `ng-component`, `ng-service` and `ng-directive` fill them.
+5. Run `bunx prettier --write` on the files an `execute` lists, and log the use in `schematics/IMPACT.md`.
+
+## Several worktrees at once
+
+Each git worktree gets its own ports, compose project and database, so any number of worktrees can run side by side. Identity is derived from the worktree path on every call; there is no state file.
+
+|                         | Primary checkout   | Linked worktree        |
+| ----------------------- | ------------------ | ---------------------- |
+| Web / API / debug ports | 4200 / 3000 / 9229 | base + offset (2..199) |
+| Compose project         | `demo`             | `demo-<slug>-<hash>`   |
+| Database                | `demo`             | `demo_<slug>_<hash>`   |
+
+One shared Postgres and pgadmin (project `demo`, network `demo-shared-net`) serve every worktree; each worktree runs only its own `api` container. Angular runs on the host and proxies `/api` to that worktree's API port.
+
+Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect=0.0.0.0:9229` (a loopback bind would refuse the host through Docker's published port; the unauthenticated inspector is reachable only from `127.0.0.1` on the host and from the containers on `demo-shared-net`); open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
 
 ```sh
-npx nx sync
+bun run dev                 # shared infra, DB, api container, then the web dev server (Ctrl+C stops this worktree's api)
+bun run dev --detach        # same, web server in the background (.dev/web.log)
+bun run dev:status          # URLs, ports, compose project, DB name, running state
+bun run dev:logs            # api compose logs plus the web log
+bun run dev:stop            # stop web and api for this worktree only
+bun run dev:seed            # re-run the seed on this worktree's DB
+bun run dev --port-offset=N # override the derived offset (0-999)
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
-
-```sh
-npx nx sync:check
-```
-
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
-
-## Nx Cloud
-
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/docs/features/ci-features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/docs/features/ci-features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/docs/features/ci-features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/docs/features/ci-features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Set up CI (non-Github Actions CI)
-
-**Note:** This is only required if your CI provider is not GitHub Actions.
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/docs/features/ci-features?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/docs/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## 🔗 Learn More
-
-- [Nx Documentation](https://nx.dev/docs)
-- [Crafting Your Workspace Tutorial](https://nx.dev/docs/getting-started/tutorials/crafting-your-workspace)
-- [Module Boundaries](https://nx.dev/docs/features/enforce-module-boundaries)
-- [Releasing Packages](https://nx.dev/docs/features/manage-releases)
-- [Nx Plugins](https://nx.dev/docs/concepts/nx-plugins)
-- [Nx Cloud](https://nx.dev/nx-cloud)
-
-## 💬 Community
-
-Join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [X (Twitter)](https://twitter.com/nxdevtools)
-- [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [YouTube](https://www.youtube.com/@nxdevtools)
-- [Blog](https://nx.dev/blog)
+A new worktree's database is created and seeded automatically the first time `dev` runs; an existing database is never re-seeded, and a failed seed drops the new database so the next run seeds it again. `dev:seed` re-runs the seed on demand (statements must be upserts) and retries transient connection errors. Exit codes follow the web server's. There is no ORM or migration yet, so the seed currently only verifies the connection, and a new worktree starts with an empty database.

@@ -1,0 +1,15 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    }
+  },
+  "description": "Code skeleton of one subdomain slice inside an existing context lib, only once its docs exist (docs first: the subdomain's domain-model.md, written by hex-bounded-context --subdomains). Creates <slice>/domain/errors.ts with the error codes the Business rules name. For a context with several subdomains it also creates <slice>/composition.ts (the slice's Nest module) and imports it into the context module in src/composition.ts; a single-subdomain context keeps its module at src/composition.ts. Follow with hex-driven-port and hex-use-case, or use hex-subdomain to do all of it."
+}

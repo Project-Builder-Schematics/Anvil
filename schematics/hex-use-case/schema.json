@@ -1,0 +1,20 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Use case in PascalCase, a business action from the context's glossary (e.g. IssueInvoice)",
+      "required": true
+    }
+  },
+  "description": "New use case in a slice, read from its row in the Use cases table of domain-model.md (driven ports, feature) and from the feature itself: application/<Name>.ts (command, result, the use case type, its Symbol token and a make<Name> factory that receives its driven ports), steps/<Name>.steps.ts (one pending quickpickle step definition per distinct phrase of the feature), the provider in the slice's composition.ts (useFactory with the port tokens as inject) and the token and type re-exports in the context barrel. The row and its .feature must already exist in the docs: generators never invent contracts. Idempotent: an existing use case is left alone."
+}

@@ -1,0 +1,27 @@
+{
+  "name": "web-inventory-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/inventory/feature/src",
+  "prefix": "inventory",
+  "projectType": "library",
+  "tags": ["scope:web", "context:inventory", "type:feature"],
+  "targets": {
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "libs/web/inventory/feature/tsconfig.spec.json",
+        "buildTarget": "web:build:development",
+        "watch": false,
+        "coverage": true,
+        "coverageExclude": ["**/*.spec.ts", "**/index.ts"],
+        "coverageThresholds": {
+          "lines": 70,
+          "branches": 70,
+          "functions": 70,
+          "statements": 70
+        },
+        "coverageInclude": ["libs/web/inventory/feature/src/**/*.ts"]
+      }
+    }
+  }
+}

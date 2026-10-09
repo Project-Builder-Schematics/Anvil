@@ -1,0 +1,7 @@
+{
+  "name": "api-payments",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/payments/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:payments", "type:domain"]
+}

@@ -1,0 +1,8 @@
+import { {= .angular =} } from '@angular/core';
+{= .typeImport =}
+@Component({
+  selector: '{= .selector =}',
+  templateUrl: './{= .name =}.html',
+  styleUrl: './{= .name =}.css',
+})
+export class {= .cls =} {{= .members =}}

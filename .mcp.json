@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "angular-cli": {
+      "type": "stdio",
+      "command": "./node_modules/.bin/ng",
+      "args": ["mcp", "--read-only"],
+      "env": {}
+    }
+  }
+}

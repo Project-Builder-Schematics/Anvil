@@ -1,0 +1,57 @@
+{
+  "$schema": "./node_modules/@pbuilder/sdk/schemas/project-builder.schema.json",
+  "collections": {
+    "default": {
+      "hex-bounded-context": {
+        "path": "./schematics/hex-bounded-context"
+      },
+      "hex-context": {
+        "path": "./schematics/hex-context"
+      },
+      "hex-driven-port": {
+        "path": "./schematics/hex-driven-port"
+      },
+      "hex-route": {
+        "path": "./schematics/hex-route"
+      },
+      "hex-slice": {
+        "path": "./schematics/hex-slice"
+      },
+      "hex-subdomain": {
+        "path": "./schematics/hex-subdomain"
+      },
+      "hex-use-case": {
+        "path": "./schematics/hex-use-case"
+      },
+      "ng-component": {
+        "path": "./schematics/ng-component"
+      },
+      "ng-directive": {
+        "path": "./schematics/ng-directive"
+      },
+      "ng-service": {
+        "path": "./schematics/ng-service"
+      },
+      "web-context": {
+        "path": "./schematics/web-context"
+      },
+      "web-shared-lib": {
+        "path": "./schematics/web-shared-lib"
+      }
+    }
+  },
+  "dependencies": {},
+  "settings": {
+    "autoInstall": true,
+    "conflictPolicy": "child-wins",
+    "depValidation": "dev",
+    "schematicCollections": [
+      "default"
+    ]
+  },
+  "skill": {
+    "enabled": true,
+    "path": ".claude/skills/pbuilder/SKILL.md"
+  },
+  "version": "1"
+}

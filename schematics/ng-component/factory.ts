@@ -1,0 +1,107 @@
+import type { Input } from './schema.generated.ts';
+import { scaffold } from '@pbuilder/sdk/commons';
+import { assertDashed, pascal } from '../_shared/lib.ts';
+import {
+  customTypes,
+  parseInputs,
+  parseOutputs,
+  readNgLib,
+  registerInLib,
+} from '../_shared/ng.ts';
+
+const KIND_OF_TYPE: Record<string, 'container' | 'presentational'> = {
+  feature: 'container',
+  ui: 'presentational',
+};
+const MODULE =
+  /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[A-Za-z0-9._-]+)*$|^\.\.?(?:\/[A-Za-z0-9._-]+)*$/;
+const SAMPLE: Record<string, string> = {
+  string: "'sample'",
+  number: '1',
+  boolean: 'true',
+};
+const sampleOf = (type: string): string | undefined =>
+  type.endsWith('[]') ? '[]' : SAMPLE[type];
+
+export default async (input: Input) => {
+  const name = assertDashed(input.name, 'name');
+  const lib = await readNgLib(input.lib.replace(/\/+$/, ''));
+  const derived = KIND_OF_TYPE[lib.type];
+  if (!derived)
+    throw new Error(
+      `${lib.name} is a ${lib.type || 'untyped'} lib, not an Angular lib that holds components (ui or feature)`,
+    );
+  const inputs = parseInputs(input.inputs ?? '');
+  const outputs = parseOutputs(input.outputs ?? '');
+  const both = inputs.find((i) => outputs.some((o) => o.name === i.name));
+  if (both) throw new Error(`${both.name} is both an input and an output`);
+  if (derived === 'container' && (inputs.length > 0 || outputs.length > 0)) {
+    throw new Error(
+      'a container takes no inputs or outputs: it gets its data from data-access',
+    );
+  }
+
+  const imported = customTypes([
+    ...inputs.map((i) => i.type),
+    ...outputs.flatMap((o) => (o.type ? [o.type] : [])),
+  ]);
+  if (imported.length > 0 && !input.type_import) {
+    throw new Error(
+      `${imported.join(', ')} must be imported from a module: pass type_import`,
+    );
+  }
+  // The module goes into an import line as code, so only a package or a relative path passes.
+  if (input.type_import && !MODULE.test(input.type_import)) {
+    throw new Error(
+      `type_import "${input.type_import}" must be a package or a relative path, e.g. @demo/web-ordering-domain`,
+    );
+  }
+
+  const cls = pascal(name);
+  for (const type of imported) {
+    if (type === cls)
+      throw new Error(
+        `${type} is the component class: rename the type or the component`,
+      );
+    if (type === 'Component')
+      throw new Error(
+        'Component is imported from @angular/core: rename the type',
+      );
+  }
+  const folder = input.folder ? assertDashed(input.folder, 'folder') : name;
+  const dir = `${lib.dir}/src/lib/${folder}`;
+  const angular = [
+    'Component',
+    ...(inputs.length > 0 ? ['input'] : []),
+    ...(outputs.length > 0 ? ['output'] : []),
+  ];
+  const members = [
+    ...inputs.map((i) => `  readonly ${i.name} = input.required<${i.type}>();`),
+    ...outputs.map(
+      (o) => `  readonly ${o.name} = output${o.type ? `<${o.type}>` : ''}();`,
+    ),
+  ];
+
+  // Deliberately fail-closed: a component that exists is never regenerated over.
+  scaffold({
+    from: 'files/component',
+    to: dir,
+    options: {
+      name,
+      cls,
+      angular: angular.join(', '),
+      typeImport:
+        imported.length > 0
+          ? `import type { ${imported.join(', ')} } from '${input.type_import}';\n`
+          : '',
+      selector: `${lib.prefix}-${name}`,
+      members: members.length > 0 ? `\n${members.join('\n')}\n` : '',
+      samples: inputs.flatMap((i) => {
+        const value = sampleOf(i.type);
+        return value === undefined ? [] : [{ name: i.name, value }];
+      }),
+    },
+  });
+
+  await registerInLib(lib, `./lib/${folder}/${name}`);
+};

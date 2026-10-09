@@ -1,0 +1,39 @@
+{
+  "properties": {
+    "lib": {
+      "type": "string",
+      "label": "Repo-relative directory of the Angular lib that gets the component (e.g. libs/web/catalog/ui)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Component name, dash-case (e.g. order-card); the class is OrderCard and the selector <prefix>-order-card",
+      "required": true
+    },
+    "inputs": {
+      "type": "string",
+      "label": "Presentational only. Comma-separated required signal inputs as name:type, type string, number, boolean, a PascalCase type or any of them followed by [] (e.g. label:string,lines:OrderLine[]). A PascalCase type needs type_import",
+      "required": false,
+      "default": ""
+    },
+    "outputs": {
+      "type": "string",
+      "label": "Presentational only. Comma-separated signal outputs, camelCase, optionally name:type with the same types as inputs (e.g. dismissed,added:AddLine). Without a type the output has no payload",
+      "required": false,
+      "default": ""
+    },
+    "type_import": {
+      "type": "string",
+      "label": "Module the PascalCase input and output types are imported from with `import type` (e.g. @demo/web-ordering-domain). Required when any input or output uses one",
+      "required": false,
+      "default": ""
+    },
+    "folder": {
+      "type": "string",
+      "label": "Folder under src/lib that holds the files, dash-case. Omit to use the name; set it to group related artifacts (e.g. experiments for a service and its directive)",
+      "required": false,
+      "default": ""
+    }
+  },
+  "description": "New standalone Angular component in a ui or feature lib: <lib>/src/lib/<name>/<name>.ts, .html, .css and .spec.ts (no class suffix), exported from the lib barrel. Signal inputs and outputs are readonly (an input or output type may be a PascalCase type imported from type_import), there is no changeDetection property (OnPush is the default in Angular 22) and no decorators besides @Component. A component in a feature lib is a container and takes no inputs or outputs; one in a ui lib is presentational. Gives the lib a unit-test target when it has none. Replaces nx g @nx/angular:component."
+}

@@ -1,0 +1,3 @@
+# {= .title =} — glossary
+
+Terms of this bounded context. One meaning per term; the same word in another context is a different term.

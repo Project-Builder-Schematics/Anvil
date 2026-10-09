@@ -1,0 +1,3 @@
+# {= .title =} / {= .subdomain =} — glossary
+
+Terms of the {= .subdomain =} subdomain. A term shared by two or more subdomains lives in the [context glossary](../glossary.md) instead.

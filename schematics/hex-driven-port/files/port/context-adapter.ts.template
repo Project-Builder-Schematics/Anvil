@@ -1,0 +1,9 @@
+import { Injectable } from '@nestjs/common';
+import type * as {= .api =} from '{= .alias =}';
+import type { {= .name =} } from '../domain/driven-ports/{= .name =}';
+
+// Translates this port into {= .provider =}'s language: the only file of the slice that knows its barrel.
+export type {= .providerClass =}Api = typeof {= .api =};
+
+@Injectable()
+export class {= .providerClass =}{= .name =} implements {= .name =} {}

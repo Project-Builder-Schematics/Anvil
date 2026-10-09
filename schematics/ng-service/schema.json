@@ -1,0 +1,27 @@
+{
+  "properties": {
+    "lib": {
+      "type": "string",
+      "label": "Repo-relative directory of the Angular lib that gets the service (e.g. libs/web/catalog/data-access)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Service name, dash-case (e.g. order-store); the class is OrderStore",
+      "required": true
+    },
+    "fields": {
+      "type": "string",
+      "label": "Comma-separated state fields as name:type, type string, number, boolean or one of them followed by [] (e.g. count:number,ids:string[]). Each becomes a private writable signal exposed as a readonly signal",
+      "required": false,
+      "default": ""
+    },
+    "folder": {
+      "type": "string",
+      "label": "Folder under src/lib that holds the files, dash-case. Omit to use the name; set it to group related artifacts (e.g. experiments for a service and its directive)",
+      "required": false,
+      "default": ""
+    }
+  },
+  "description": "New root-provided Angular service (@Service()) with signal state in any Angular lib (data-access and feature libs hold state; a ui lib may carry infrastructure such as the design system's experiments): <lib>/src/lib/<name>/<name>.ts and .spec.ts (no class suffix), exported from the lib barrel. Every field is a private writable signal with a typed initial value, exposed as a readonly signal; methods that change state are written by hand. Not for domain libs. Gives the lib a unit-test target when it has none. Replaces nx g @nx/angular:service."
+}

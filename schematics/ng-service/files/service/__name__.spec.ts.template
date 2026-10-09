@@ -1,0 +1,10 @@
+import { TestBed } from '@angular/core/testing';
+import { {= .cls =} } from './{= .name =}';
+
+describe('{= .cls =}', () => {
+  it('starts with its initial state', () => {
+    const service = TestBed.inject({= .cls =});
+
+{= .expectations =}
+  });
+});

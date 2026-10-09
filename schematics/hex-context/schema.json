@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    }
+  },
+  "description": "Runs hex-subdomain for every subdomain listed in the Subdomains table of the context's docs/<context>/README.md. Use after writing the docs of a whole context."
+}

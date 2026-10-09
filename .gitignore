@@ -48,3 +48,15 @@ Thumbs.db
 .nx/polygraph
 .nx/self-healing
 .nx/migrate-runs
+test-output
+
+vitest.config.*.timestamp*
+.angular
+
+__screenshots__/
+
+.dev/
+.stryker-tmp
+reports
+
+.env

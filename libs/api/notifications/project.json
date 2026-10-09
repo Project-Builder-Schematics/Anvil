@@ -1,0 +1,7 @@
+{
+  "name": "api-notifications",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/notifications/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:notifications", "type:domain"]
+}

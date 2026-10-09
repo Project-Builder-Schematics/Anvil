@@ -1,0 +1,7 @@
+{
+  "name": "api-{= .context =}",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "{= .dir =}/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:{= .context =}", "type:domain"]
+}

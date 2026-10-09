@@ -1,0 +1,27 @@
+{
+  "name": "web-ordering-ui",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/ordering/ui/src",
+  "prefix": "ordering",
+  "projectType": "library",
+  "tags": ["scope:web", "context:ordering", "type:ui"],
+  "targets": {
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "libs/web/ordering/ui/tsconfig.spec.json",
+        "buildTarget": "web:build:development",
+        "watch": false,
+        "coverage": true,
+        "coverageExclude": ["**/*.spec.ts", "**/index.ts"],
+        "coverageThresholds": {
+          "lines": 70,
+          "branches": 70,
+          "functions": 70,
+          "statements": 70
+        },
+        "coverageInclude": ["libs/web/ordering/ui/src/**/*.ts"]
+      }
+    }
+  }
+}

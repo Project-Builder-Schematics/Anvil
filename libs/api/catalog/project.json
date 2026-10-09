@@ -1,0 +1,7 @@
+{
+  "name": "api-catalog",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/catalog/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:catalog", "type:domain"]
+}

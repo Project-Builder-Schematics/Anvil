@@ -1,0 +1,37 @@
+<form [formRoot]="form" aria-label="Place or cancel the order">
+  <div class="field">
+    <label for="payment-token">Payment token</label>
+    <input
+      id="payment-token"
+      type="text"
+      autocomplete="off"
+      aria-required="true"
+      [formField]="form.paymentMethodToken"
+      [attr.aria-invalid]="tokenError() ? 'true' : null"
+      [attr.aria-describedby]="
+        tokenError()
+          ? 'payment-token-hint payment-token-error'
+          : 'payment-token-hint'
+      "
+    />
+    <p id="payment-token-hint" class="hint">
+      Use tok_decline to get a declined payment; any other token is captured.
+    </p>
+    @if (tokenError(); as message) {
+    <p id="payment-token-error" class="error">{{ message }}</p>
+    }
+  </div>
+  <div class="actions">
+    <ds-button type="submit" [disabled]="!canPlace() || busy()">
+      <ng-container *dsVariant="'checkout-cta'; is: 'control'"
+        >Place order</ng-container
+      >
+      <ng-container *dsVariant="'checkout-cta'; is: 'b'"
+        >Place order securely</ng-container
+      >
+    </ds-button>
+    <ds-button [disabled]="!canCancel() || busy()" (click)="cancelOrder.emit()">
+      Cancel order
+    </ds-button>
+  </div>
+</form>

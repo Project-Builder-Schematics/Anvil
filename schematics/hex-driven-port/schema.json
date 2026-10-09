@@ -1,0 +1,20 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. billing)",
+      "required": true
+    },
+    "slice": {
+      "type": "string",
+      "label": "Subdomain slice inside the context, dash-case (e.g. invoicing)",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "label": "Port name in PascalCase, in the slice's own language (e.g. InvoiceRepository, Clock)",
+      "required": true
+    }
+  },
+  "description": "Driven port plus the adapter that implements it, for one slice: domain/driven-ports/<Name>.ts (the interface and its exported Symbol token, no framework) and infrastructure/<Kind><Name>.ts, a Nest @Injectable class, the only place with decorators. A port whose Adapter today cell starts with Memory gets an in-memory adapter (Memory<Name>); one that starts with @<context> gets an adapter that imports that context's barrel @demo/api-<context> and is named <Context><Name>. Binds the token to the adapter in the slice's composition.ts (useClass). A context adapter needs the provider in the Context map of docs/<context>/README.md (refused otherwise) and declares the relation in the lint boundaries. Idempotent: an existing port is left alone."
+}

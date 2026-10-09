@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "context": {
+      "type": "string",
+      "label": "Bounded context, dash-case (e.g. ordering)",
+      "required": true
+    }
+  },
+  "description": "New web bounded context: the four Nx libs libs/web/<context>/{feature,ui,data-access,domain} (feature holds containers, ui presentational components, data-access state and API access, domain plain TypeScript), tagged scope:web, context:<context>, type:<layer>, with the Angular selector prefix <context>, the aliases @demo/web-<context>-<layer> in tsconfig.base.json, and the context in the lint boundary list. Fails if any of the libs exists. Components, services and directives then come from ng-component, ng-service and ng-directive."
+}

@@ -1,0 +1,9 @@
+{
+  "name": "api-shared-kernel",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/shared-kernel/src",
+  "projectType": "library",
+  "tags": ["scope:api", "context:shared", "type:kernel"],
+  "// targets": "to see all targets run: nx show project api-shared-kernel --web",
+  "targets": {}
+}
