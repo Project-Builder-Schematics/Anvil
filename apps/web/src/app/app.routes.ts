@@ -7,4 +7,9 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@demo/web-ordering-feature').then((m) => m.orderingRoutes),
   },
+  {
+    path: 'stock/:productId',
+    loadComponent: () =>
+      import('@demo/web-inventory-feature').then((m) => m.StockPage),
+  },
 ];

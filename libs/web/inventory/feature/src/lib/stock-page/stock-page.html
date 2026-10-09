@@ -1,0 +1,16 @@
+<h1>Stock: {{ store.productId() }}</h1>
+@if (store.level(); as level) {
+<inventory-stock-summary [level]="level" />
+}
+<section aria-labelledby="set-level-heading">
+  <h2 id="set-level-heading">Set the level</h2>
+  <inventory-stock-level-form (levelSet)="setLevel($event)" />
+</section>
+<div role="status">
+  @if (store.loading()) { Loading stock… } @else { {{ notice() }} }
+</div>
+<div role="alert">
+  @if (problem(); as message) {
+  <p class="error">{{ message }}</p>
+  }
+</div>

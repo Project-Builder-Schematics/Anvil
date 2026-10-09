@@ -56,10 +56,20 @@ describe('App', () => {
     http.expectOne('/api/orders/o1');
   });
 
-  it('has no accessibility violations', async () => {
-    await visit('/orders/o1');
-    http.expectOne('/api/orders/o1');
+  it('loads the stock page for a product id', async () => {
+    await visit('/stock/keyboard');
 
-    expect(await axeViolations(page)).toEqual([]);
+    expect(page.querySelector('main inventory-stock-page')).not.toBeNull();
+    http.expectOne('/api/stock/keyboard');
   });
+
+  it.each(['/orders/o1', '/stock/keyboard'])(
+    'has no accessibility violations on %s',
+    async (url) => {
+      await visit(url);
+      http.expectOne(`/api${url}`);
+
+      expect(await axeViolations(page)).toEqual([]);
+    },
+  );
 });
