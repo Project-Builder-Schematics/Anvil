@@ -120,10 +120,10 @@ Product decisions the approved rules leave open, taken as the simplest reading. 
   - [x] External ground truth in the docs phase (user decision, 2026-10-09; 0b1d39b). A driven port to a system we do not own (for example a payment gateway) must cite that system's official docs in its row of the ports table, written when the docs are, before the code. Add it to the schematics skill's docs-first workflow and to AGENTS.md, and make the docs consistency check refuse a non-Memory, non-`@<context>` adapter whose row has no source link.
 
     Why: the order id as the idempotency key contradicted Stripe's documented replay of declines, and only a review after the code caught it.
-- [ ] F5: UI. Slices are vertical (user decision, 2026-10-08), so this slice ships its UI. Route: delegated writer.
-  - Add a payment-token field to Place, which shows `PAYMENT_DECLINED` or `INSUFFICIENT_STOCK` and leaves the order back in Draft.
-  - Show the `Paid` status.
-  - Add an inventory stock page at `/stock/:productId` (GET and PUT the level) in `libs/web/inventory`, generated with `web-context`.
+- [x] F5: UI. Slices are vertical (user decision, 2026-10-08), so this slice ships its UI. Route: delegated writer (single writer; trigger: 2+ non-trivial files per step). Commits 4a8e396, 5224b61, b1a1693, 155d599, cb06bb9, 525ee83, 9cef14e and 75a04fc (IMPACT). Details in Progress, assumptions in "F5 assumptions", the browser checks in "F5 runtime checklist".
+  - [x] Add a payment-token field to Place, which shows `PAYMENT_DECLINED` or `INSUFFICIENT_STOCK` and leaves the order back in Draft (5224b61). A server error during place says the payment result is unknown, reads the order again (it stays `Placed`) and lets the user place it again.
+  - [x] Show the `Paid` status; Cancel only for a `Draft`; Place also for a `Placed` order (4a8e396).
+  - [x] Add an inventory stock page at `/stock/:productId` (GET and PUT the level) in `libs/web/inventory`, generated with `web-context` (b1a1693, 155d599, cb06bb9, 525ee83, 9cef14e).
 
 ## Review follow-ups
 
@@ -157,6 +157,27 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
     - unnumbered rules carry over (67-86).
   - The Progress entry at line 215 still calls rules 20 and 21 assumed.
   - Minor: an unexplained padded id (`PlaceOrder.spec.ts:133`) and an unchecked word parameter (`Placement.steps.ts:23`).
+
+## F5 assumptions
+
+Product decisions the docs leave open for the UI, each the simplest option.
+
+- **Where the token lives.** The payment-token field sits with the actions in `OrderActions`, as a Signal Forms form: Place is its submit button, so Enter in the field places. Label "Payment token", hint "Use tok_decline to get a declined payment; any other token is captured." The field is required and trimmed ("Enter a payment token." after a refused submit, which also focuses it). It is disabled when Place is not allowed, stays filled after a refusal and is never cleared.
+- **Copy of the new messages.**
+  - `PAYMENT_DECLINED`: "The payment was declined and nothing was charged. The order is a draft again; try another payment token."
+  - `INSUFFICIENT_STOCK`: "There is not enough stock for this order. It is a draft again; change the quantities and place it again."
+  - Unknown outcome: "We could not confirm the payment, so the payment result is unknown. The order is still placed, and placing the order again is safe."
+  - Success notice: "Order paid."
+- **Unknown outcome is a 500.** A 5xx without a refusal code becomes the client code `SERVER_ERROR` ("The server failed to complete the request. Try again."); during Place the store turns it into `PAYMENT_OUTCOME_UNKNOWN` and reads the order again. A lost connection (`NETWORK_ERROR`) during Place is not treated as unknown, although the server may have charged: the brief names the 500 only.
+- **A refusal is not reloaded.** After a 402 or 409 the server and the page both hold a `Draft`, so the page keeps its copy and shows the message.
+- **`PRODUCT_NOT_STOCKED` on place.** The API answers `INSUFFICIENT_STOCK` (409) for it, because ordering treats it as such (rule 18), so ordering has no message for it; the code is only an inventory one.
+- **Actions by status.** Add line stays `Draft` only (rule 4), Place is `Draft` or `Placed` with at least one line (rules 10 and 17), Cancel is `Draft` only (rule 19). A `Paid` order has everything closed.
+- **Stock page.** `/stock/:productId` is mounted by `loadComponent` in `apps/web` (no routes file, one route). The shell has no nav, so no link was added and the page is reached by URL; there is no product picker (no catalog API).
+- **Stock form.** Label "Units on hand", starts at 0, hint "A whole number of 0 or more, not below the units already reserved.", button "Set level". The client checks only the integer of 0 or more; a level below the reserved count is left to the server (422 `STOCK_LEVEL_INVALID`, message names both rules). Success notice: "Stock level set."
+- **Not stocked yet.** A 404 on the read shows "This product is not stocked yet. Set a level to start stocking it." in the alert region and no summary; the form stays enabled because a PUT creates the record (rule 7).
+- **Summary.** On hand, reserved and available (`onHand - reserved`), with no refresh: the page shows the level at load and after the last PUT, so reservations made by orders appear on reload.
+- **One command at a time**, the same rules as the order store: a second command shows `COMMAND_IN_PROGRESS`, and a response that lands after another product was opened is dropped.
+- **Duplicated helpers.** `errorCodeOf` and `messageFor` exist in both web contexts, since a web context may not import another (IMPACT row).
 
 ## Acceptance criteria
 
@@ -225,7 +246,35 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
   - Steps index (5532c0e): `catalog`, `notifications`, `ordering` and `shipping` (also stale) now equal the current template output (the same file as inventory's and payments'); `nx run-many -t test -p api-ordering,api-catalog,api-notifications,api-shipping` green.
   - Stryker (`bunx stryker run --concurrency 3`, 8 min 16 s): total 98.03; inventory 100.00, payments 100.00, ordering 96.51 (162 killed, 4 timeouts, 6 survived). The six survivors are the map cleanup of the placement queue in `PlaceOrder.ts` (lines 75 to 78, from 65d1f04): nothing observable depends on `running` being emptied, so they are left. The gate (break 90) passes.
   - IMPACT: one use row (slice 2 summary), two defect rows (the web typecheck target; the docs fitness test), no miss.
+- 2026-10-09: F5 done in 4a8e396, 5224b61, b1a1693, 155d599, cb06bb9, 525ee83, 9cef14e and 75a04fc. Route: delegated writer (single writer; each step writes 2+ non-trivial files). TDD strict, source the user's global configuration, runner `bunx nx test <project>` (Angular unit-test builder, vitest + jsdom) and `bun test schematics`. The Engram mirror `odd/order-fulfilment-slice-2/tasks` was not updated by the writer.
+  - Paid status (4a8e396): `OrderStatus` gains `Paid`; `canPlace` allows `Placed` with lines (rule 17) and `canCancel` is `Draft` only (rule 19). RED: 2 domain specs (place a `Placed` order, cancel a `Placed` one); the page spec for an order left `Placed` also failed against the old domain (1 test).
+  - Place with a token (5224b61), one commit across the four layers because the store signature changes with the UI. RED, in order: data-access compile errors (`place` took 0 arguments, TS2554) and a failing `errorCodeOf` spec; 4 domain message specs; 5 `OrderActions` specs (token field, hint, trim, blank refusal, disabled); the page compile error and 8 page specs. `OrderStore.place(token)` sends `{ paymentMethodToken }`; a `SERVER_ERROR` becomes `PAYMENT_OUTCOME_UNKNOWN` and triggers `resource.reload()`. `OrderActions` was edited by hand (no schematic edits an existing component). The `checkout-cta` spec (`control` and `b` labels) passes unchanged.
+  - Inventory context (b1a1693): `web-context --context=inventory`, 26 files in one pass, the four libs and the aliases; lint, test and typecheck pass on the empty libs.
+  - Domain (155d599): `StockLevel`, `availableOf`, `isOnHand`, `messageFor`. RED: both suites failed on a missing module; 16 tests.
+  - Data-access (cb06bb9): `ng-service` for `InventoryApi` and `StockStore` (fields `productId`, `busy`, `commandError`), `errorCodeOf` by hand. RED: compile errors (`setLevel`, `stock`, `open`, `level` missing, `./error-code` unresolved), then 4 failing store tests; the fixes were in my own specs (a read error persists until the PUT answers) and in the store (clear the command error on success).
+  - UI (525ee83): `ng-component` for `stock-summary` and `stock-level-form`. RED: 10 specs failed against the generated stubs.
+  - Feature and route (9cef14e): `ng-component` for `stock-page`, wired as `stock/:productId` in `apps/web`. RED: 10 page specs failed against the stub, then 2 app specs (the stock page and its AXE check) before the route. Every ui and feature spec asserts no AXE violations.
+  - Context map: unchanged. `web-inventory-*` imports only itself and `context:shared`; a throwaway import of `web-ordering-domain` from `web-inventory-domain` is rejected by `@nx/enforce-module-boundaries`. The reverse is not rejected: `contextRelations` (`ordering -> inventory`, declared for the API) also lets the web ordering libs import the web inventory libs. Nothing imports across the two web contexts; making the web side stricter needs a scoped map (IMPACT row).
+  - Schematics used: `web-context` (1), `ng-service` (2), `ng-component` (3), `ng-directive` (none needed). No schematic changed. IMPACT rows: 3 use, 3 miss and 1 defect. `ng-component` evidence: 74 lines generated in 12 files against 609 final lines (12%); 56 of the 74 survive; every template, stylesheet and spec body was rewritten, and the Signal Forms model, computed members and param subscription are hand-written. It saves the naming and wiring convention (about 2-3 minutes per component), not code.
+  - Checks: `bunx nx run-many -t lint test typecheck` green for 22 projects; `bun test schematics` 362 pass; `bunx prettier --check .` clean. Not run: Stryker (no api code changed), builds and boots.
+
+## F5 runtime checklist (for the user, in the browser)
+
+Start with `bun run dev --detach`, read the web URL from `bun run dev:status` and open it at `localhost`. The API seeds `keyboard`, `mouse` and `monitor` with 50 units each.
+
+1. Pay: `/` creates an order; add `keyboard` x1, type any token (for example `tok_visa`) and Place. The status becomes `Paid`, the notice says "Order paid.", and Add, Place, Cancel and the token field are disabled.
+2. Declined: on a new order with a line, place with `tok_decline`. The alert shows the declined message, the status stays `Draft`, the token field keeps its text, and Place and Cancel are enabled. Replace the token with `tok_visa` and Place again: `Paid`.
+3. No stock: on a new order add `keyboard` x60 (stock is 50) and place. The alert shows the stock message and the order is a `Draft`. Lower the quantity to 1, or raise the level on `/stock/keyboard`, and place again.
+4. Paid is not cancellable: after step 1 the Cancel button is disabled; `POST /api/orders/<id>/cancel` from the Network tab or `curl` answers 409 `ORDER_NOT_CANCELLABLE`. A `Draft` can still be cancelled.
+5. Unknown outcome (optional, needs the API to throw): the page shows the unknown-payment message, the order reads as `Placed` after a reload, Place is enabled and Cancel is not.
+6. Blank token: press Place with the field empty; the page shows "Enter a payment token.", sends nothing and focuses the field. Enter in the field places.
+7. Stock page, GET: open `/stock/keyboard` (on hand 50, reserved 0, available 50). Place an order for it and reload: reserved changes while the order is `Placed`, and on hand and reserved drop after `Paid`. Open `/stock/ghost`: the alert says it is not stocked yet and no summary shows.
+8. Stock page, PUT: set `7` on `keyboard` ("Stock level set.", the summary updates). Set `-1` or `1.5` (client message, no request). With reserved units held, set a level below the reserved count (422 message). Set `5` on `/stock/ghost`: it creates the record (rule 7) and the not-stocked alert clears.
+9. Network tab: calls are `/api/stock/<id>` (GET, PUT with `{ "onHand": n }`) and `/api/orders/<id>/place` (body `{ "paymentMethodToken": ... }`) on the web origin, with no `OPTIONS` and no 403.
+10. A/B and theme: `?exp=checkout-cta:b` shows "Place order securely", `control` shows "Place order"; `?exp=theme:b` switches to `stripe`. Check the focus ring on the token and stock inputs, and the error borders, in both themes.
+11. AXE in the browser (extension or Lighthouse) on an order with the token field (empty, error showing, disabled after Paid) and on `/stock/keyboard` (idle, error, not stocked), in both themes. Colour contrast is only checked here; the `stripe` theme is known to miss AA for `danger` and `muted` text.
+12. Keyboard: Tab through the token field, Place, Cancel, and the stock field and Set level; Enter submits both forms; a refused submit moves focus to the field.
 
 ## Next step
 
-F5: the UI (payment-token field, `Paid` status, the stock page). Ordering rules 20 and 21 were confirmed by the user on 2026-10-09. Optimistic concurrency (`CancelOrder.ts:26`, `ReserveStock`) still has to land before a real database adapter.
+F5 is done and the slice has all its tasks; the user runs the F5 runtime checklist in the browser. Open follow-ups: the F4 review items, the optimistic concurrency follow-up (`CancelOrder.ts:26`, `ReserveStock`) that must land before a real database adapter, a web-scoped context map (IMPACT), and treating a lost connection during Place as an unknown outcome if the user wants it.
