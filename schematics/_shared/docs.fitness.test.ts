@@ -282,6 +282,19 @@ describe('the docs of this repo', () => {
     expect(bad).toEqual([]);
   });
 
+  it('cites the Stripe docs the fake payment gateway copies', () => {
+    const payments = models.find(
+      ({ path }) => path === 'docs/payments/domain-model.md',
+    );
+    const gateway = table(payments?.text ?? '', 'Driven ports').find(
+      ([port]) => port === 'PaymentGateway',
+    );
+
+    expect(gateway?.join(' ')).toContain(
+      'https://docs.stripe.com/api/idempotent_requests',
+    );
+  });
+
   it('cites a source for every port to a system we do not own', () => {
     const bad = models.flatMap(({ path, text }) =>
       unsourcedPorts(text).map((port) => `${path}: ${port}`),

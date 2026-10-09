@@ -38,6 +38,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:<schematic> 
 
 1. `hex-bounded-context` writes `docs/<ctx>/` (README, glossary, a `domain-model.md` and `flows.md` per subdomain) and the lib. It is the only schematic that writes docs.
 2. A human fills `domain-model.md` (tables `Business rules`, `Use cases`, `Driven ports`, `Driving adapters`) and writes each use case's `.feature` next to it. A missing `.feature` is an error: write the contract by hand.
+   - A driven port to a system we do not own (a payment gateway, say) cites that system's official docs in its `Driven ports` row, written with the table and before any code. The fake copies those documented semantics, not our guess of them. `schematics/_shared/docs.fitness.test.ts` refuses an adapter cell that is neither `Memory` nor `@<context>` when its row has no source link, and `Source` edits are checked there too: a rule edited after its Source was recorded must update the Source (`amended <date>`).
 3. `hex-subdomain` (one subdomain) or `hex-context` (all of them) generates slice, ports, use cases and routes from those tables. It is idempotent: after a doc change, run it again and only new rows appear. Use the leaves (`hex-slice`, `hex-driven-port`, `hex-use-case`, `hex-route`) to add a single piece.
 4. Implement the generated step definitions and the use case bodies; the scenarios fail until you do.
 
