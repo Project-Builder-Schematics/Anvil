@@ -185,7 +185,6 @@ Feature: Place order
 
   Rule: Rule 20 - Nothing is compensated once the charge is captured
 
-    @draft
     Scenario: a stock commit with no answer leaves the order placed with the money taken
       Given inventory gives no answer to the next commit
       And 2 of "keyboard" is added to the order
@@ -196,7 +195,6 @@ Feature: Place order
       And the stock of "keyboard" is 5 on hand and 2 reserved
       And no event is published
 
-    @draft
     Scenario: placing the order again after the failed commit pays it with one charge
       Given inventory gives no answer to the next commit
       And 2 of "keyboard" is added to the order
@@ -212,7 +210,6 @@ Feature: Place order
 
   Rule: Rule 21 - A refusal that leaves nothing charged is treated as a decline
 
-    @draft
     Scenario: an order with a total of 0 is refused as declined and goes back to Draft
       Given the catalog prices "sticker" at 0 "USD"
       And the stock of "sticker" is 5
