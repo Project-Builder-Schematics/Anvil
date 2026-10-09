@@ -138,6 +138,15 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
   - `MemoryPaymentGateway`: the `GatewayError` doc is missing (23-24), and its spec mixes assertions and checks the error type only partly (43-45).
   - `Payments.ts:5`: the atomicity of `save` is not stated in the port contract.
   - `MemoryPayments.spec.ts:34`: the describe name.
+- [x] The F3 review covered the whole range, 6096239..307690f (review-3dd4d850cd5b0202). It was approved after one bounded correction (65d1f04) and acknowledged on 2026-10-09. The CRITICAL finding: a retry finds the order `Placed` while the run it retries is still going, so two placements of one order overlapped, which could publish `OrderPaid` twice or leave a `Paid` order with uncommitted stock. `PlaceOrder` now queues the runs of one order. RED: the new spec saw both placements end `Paid`. The queue holds within one API instance only; the optimistic concurrency follow-up still owns the multi-instance case.
+  - Two earlier slices of the same range, ending at 6dfdfe8 and at ef760f9, were abandoned with the user's authorization (review-d6d28ca6aa8a19e1, review-2402ed155851f82a). Each cut landed between a domain change and the application code that uses it, so the review flagged the intermediate state.
+  - Lesson for writers: a domain change that activates behaviour lands in the same commit as the application code that uses it.
+- [ ] Follow-ups from the F3 reviews (review-70b0f8a5ccc4ca4f and review-3dd4d850cd5b0202), for F4:
+  - `CancelOrder.ts:26` can lose an update against a concurrent placement. This belongs with optimistic concurrency.
+  - `PaymentsCharges.ts:28-30`: a deterministic payments refusal other than a decline (for example `INVALID_AMOUNT`) is treated as an unknown outcome, so the order stays `Placed`.
+  - `PlaceOrder.steps.ts:23-35`: a Given does not assert the precondition it sets up.
+  - `PlaceOrder.spec.ts`: no test covers a failure after the capture (commit or save failing).
+  - `PlaceOrder.ts:59`: the event id comes from the raw command.
 
 ## Acceptance criteria
 
