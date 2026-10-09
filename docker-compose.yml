@@ -26,7 +26,7 @@ services:
     ports:
       - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@demo.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-demo}
     networks: [shared]
 
@@ -37,10 +37,12 @@ services:
     # address, so a 127.0.0.1 bind would refuse the host. It has no authentication; it is reachable from the host only
     # through 127.0.0.1 and from the containers on demo-shared-net (db, pgadmin, the other worktrees' api).
     # node_modules lives in a volume so the container installs its own Linux binaries and the host's stay intact.
+    # Bun reads the tsconfig of its working directory, not the one nearest each file, and --tsconfig-override does not
+    # bring in experimentalDecorators, so the API runs from apps/api or Nest's legacy decorators break at startup.
     command:
       - sh
       - -c
-      - bun install --frozen-lockfile && exec bun --inspect=0.0.0.0:9229 --watch --tsconfig-override=apps/api/tsconfig.app.json apps/api/src/main.ts
+      - bun install --frozen-lockfile && cd apps/api && exec bun --inspect=0.0.0.0:9229 --watch src/main.ts
     volumes:
       - .:/repo
       - node-modules:/repo/node_modules
