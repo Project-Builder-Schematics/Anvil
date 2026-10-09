@@ -149,6 +149,14 @@ On 2026-10-09 the U5 review (754935a..07d9f81, review-88533ca97c6f7b39) and the 
   - [x] `PlaceOrder.steps.ts:23-35`: a Given does not assert the precondition it sets up.
   - [x] `PlaceOrder.spec.ts`: no test covers a failure after the capture (commit or save failing).
   - [x] `PlaceOrder.ts:59`: the event id comes from the raw command.
+- [ ] Follow-ups from the F4 review (4dac8a8..3b99bda, review-89ea10a06e10674b, approved and acknowledged on 2026-10-09):
+  - `docs.fitness.test.ts:218-230` reads git history, so a shallow clone breaks it or makes it vacuous. CI checks out with `fetch-depth: 0`, so CI is safe today; a local shallow clone is not. Fail with a clear message when the history is shallow.
+  - `docs-consistency.ts`:
+    - a redundant link regex (157);
+    - a Memory fake of an external system is exempt from the source link (152-159);
+    - unnumbered rules carry over (67-86).
+  - The Progress entry at line 215 still calls rules 20 and 21 assumed.
+  - Minor: an unexplained padded id (`PlaceOrder.spec.ts:133`) and an unchecked word parameter (`Placement.steps.ts:23`).
 
 ## Acceptance criteria
 
