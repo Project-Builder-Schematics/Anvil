@@ -1,0 +1,8 @@
+{
+  "name": "web-inventory-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/inventory/feature/src",
+  "prefix": "inventory",
+  "projectType": "library",
+  "tags": ["scope:web", "context:inventory", "type:feature"]
+}

@@ -40,7 +40,15 @@
       ],
       "@demo/web-shared-design-system/testing": [
         "./libs/web/shared/design-system/src/testing/axe.ts"
-      ]
+      ],
+      "@demo/web-inventory-ui": ["./libs/web/inventory/ui/src/index.ts"],
+      "@demo/web-inventory-feature": [
+        "./libs/web/inventory/feature/src/index.ts"
+      ],
+      "@demo/web-inventory-data-access": [
+        "./libs/web/inventory/data-access/src/index.ts"
+      ],
+      "@demo/web-inventory-domain": ["./libs/web/inventory/domain/src/index.ts"]
     },
     "noUncheckedIndexedAccess": true,
     "noPropertyAccessFromIndexSignature": true,
