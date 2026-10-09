@@ -179,6 +179,29 @@ Product decisions the docs leave open for the UI, each the simplest option.
 - **One command at a time**, the same rules as the order store: a second command shows `COMMAND_IN_PROGRESS`, and a response that lands after another product was opened is dropped.
 - **Duplicated helpers.** `errorCodeOf` and `messageFor` exist in both web contexts, since a web context may not import another (IMPACT row).
 
+### F5 review follow-ups
+
+F5 was reviewed in four slices, cut where a behaviour is complete. Each was approved and acknowledged on 2026-10-09:
+
+| Slice                                        | Range            | Review                  |
+| -------------------------------------------- | ---------------- | ----------------------- |
+| Ordering                                     | a1d6441..5224b61 | review-316e704cca977e11 |
+| Inventory generation, domain and data-access | 5224b61..cb06bb9 | review-084b67b74bc778fc |
+| Inventory ui                                 | cb06bb9..525ee83 | review-09216e51b10381d3 |
+| Stock page                                   | 525ee83..9cef14e | review-a758452910d676ae |
+
+The trailing docs commits are passive. Two larger cuts went over the review budget (`lens_context_budget_exceeded`), so they were split again.
+
+- [ ] `order-store.ts:62-64`: a lost connection during place is not treated as an unknown outcome (only a 500 is), and a stale order can get the unknown-outcome notice.
+- [ ] `stock-store.ts:54-56`: a stale failure leaks into the product that is now open. `stock-store.ts:45-49` sets a level with no product open (suggestion).
+- [ ] `stock-level-form.html:15-17`: the "not below reserved" rule is in the hint but is not checked on the client. The server stays authoritative, so decide whether the client mirrors it.
+- [ ] Minor:
+  - the default submit is untested;
+  - a summary edge case is not asserted;
+  - an a11y test name does not match what it checks;
+  - the stale-command guard in `stock-page.ts:35-38`.
+- [ ] Context map: `contextRelations` is not scoped by layer, so the API relation `ordering -> inventory` also lets web ordering import web inventory. A throwaway import passed lint. Design decision for the user.
+
 ## Acceptance criteria
 
 - Every scenario is green in the three contexts.
