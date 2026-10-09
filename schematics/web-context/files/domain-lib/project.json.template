@@ -3,5 +3,24 @@
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "{= .dir =}/src",
   "projectType": "library",
-  "tags": [{= .tags =}]
+  "tags": [{= .tags =}],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        { "externalDependencies": ["typescript"] }
+      ],
+      "options": {
+        "cwd": "{= .dir =}",
+        "commands": [
+          "tsc -p tsconfig.lib.json --noEmit",
+          "tsc -p tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
 }

@@ -111,7 +111,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:hex-context 
 
 ### `web-context`
 
-`context`. Creates `libs/web/<ctx>/{feature,ui,data-access,domain}`; the selector prefix is the context name without dashes.
+`context`. Creates `libs/web/<ctx>/{feature,ui,data-access,domain}`; the selector prefix is the context name without dashes. The plain-TypeScript `domain` lib gets a `typecheck` target (`tsc --noEmit` over the lib and its specs, so a `@ts-expect-error` spec is checked); the Angular libs have none, as their tsconfigs only work under the Angular compiler.
 
 ```sh
 env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:web-context --context=ordering

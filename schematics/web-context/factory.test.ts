@@ -150,6 +150,26 @@ describe('web-context', () => {
       sourceRoot: `${dir}/src`,
       projectType: 'library',
       tags: ['scope:web', 'context:shipping', 'type:domain'],
+      // tsc checks the specs too, so a `@ts-expect-error` spec fails when its error goes away.
+      targets: {
+        typecheck: {
+          executor: 'nx:run-commands',
+          cache: true,
+          inputs: [
+            'default',
+            '^production',
+            { externalDependencies: ['typescript'] },
+          ],
+          options: {
+            cwd: dir,
+            commands: [
+              'tsc -p tsconfig.lib.json --noEmit',
+              'tsc -p tsconfig.spec.json --noEmit',
+            ],
+            parallel: false,
+          },
+        },
+      },
     });
   });
 

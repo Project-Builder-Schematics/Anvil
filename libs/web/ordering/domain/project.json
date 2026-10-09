@@ -3,5 +3,24 @@
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/web/ordering/domain/src",
   "projectType": "library",
-  "tags": ["scope:web", "context:ordering", "type:domain"]
+  "tags": ["scope:web", "context:ordering", "type:domain"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        { "externalDependencies": ["typescript"] }
+      ],
+      "options": {
+        "cwd": "libs/web/ordering/domain",
+        "commands": [
+          "tsc -p tsconfig.lib.json --noEmit",
+          "tsc -p tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
 }
