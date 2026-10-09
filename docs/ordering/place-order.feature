@@ -155,7 +155,6 @@ Feature: Place order
 
   Rule: Rule 17 - An unknown charge outcome is not compensated and placing a Placed order retries it
 
-    @draft
     Scenario: no answer from payments leaves the order placed with its stock reserved
       Given payments gives no answer to the next charge
       And 2 of "keyboard" is added to the order
@@ -165,7 +164,6 @@ Feature: Place order
       And the stock of "keyboard" is 5 on hand and 2 reserved
       And no event is published
 
-    @draft
     Scenario: placing a placed order again pays it with one charge
       Given 2 of "keyboard" is added to the order
       And the order has been placed while payments gives no answer
@@ -179,7 +177,6 @@ Feature: Place order
 
   Rule: Rule 18 - A product the stock does not hold is treated as a stock that cannot cover it
 
-    @draft
     Scenario: an unstocked product sends the order back to Draft
       Given 1 of "mouse" is added to the order
       When the order is placed with the payment method "tok_visa"

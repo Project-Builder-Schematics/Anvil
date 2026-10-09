@@ -30,7 +30,6 @@ Feature: Cancel order
 
   Rule: Rule 19 - A Placed order is not cancellable
 
-    @draft
     Scenario: a placed order is refused and keeps its stock
       Given 1 of "keyboard" is added to the order
       And the order has been placed while payments gives no answer
