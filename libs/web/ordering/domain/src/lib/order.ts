@@ -1,6 +1,6 @@
 import type { Money } from './money';
 
-export type OrderStatus = 'Draft' | 'Placed' | 'Cancelled';
+export type OrderStatus = 'Draft' | 'Placed' | 'Paid' | 'Cancelled';
 
 export interface OrderLine {
   readonly productId: string;
@@ -52,13 +52,12 @@ export const orderTotal = (lines: readonly OrderLine[]): Money | null => {
 /** Rule 4. */
 export const canEdit = ({ status }: Order): boolean => status === 'Draft';
 
-/** Rules 6 and 10. */
-export const canPlace = (order: Order): boolean =>
-  canEdit(order) && order.lines.length > 0;
+/** Rules 6, 10 and 17: a `Placed` order is one whose payment outcome is unknown, so placing it again is safe. */
+export const canPlace = ({ status, lines }: Order): boolean =>
+  (status === 'Draft' || status === 'Placed') && lines.length > 0;
 
-/** Rule 8. */
-export const canCancel = ({ status }: Order): boolean =>
-  status === 'Draft' || status === 'Placed';
+/** Rules 8 and 19. */
+export const canCancel = ({ status }: Order): boolean => status === 'Draft';
 
 export const withStatus = (order: Order, status: OrderStatus): Order => ({
   ...order,

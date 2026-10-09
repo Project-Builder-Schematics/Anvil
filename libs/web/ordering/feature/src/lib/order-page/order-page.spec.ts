@@ -155,21 +155,30 @@ describe('OrderPage', () => {
     expect(text('[role=alert]')).toBe('');
   });
 
-  it('places the order: new status announced, editing and placing closed, cancelling open', async () => {
+  it('places the order: it is paid, and editing, placing and cancelling are closed', async () => {
     await open(withLine);
 
     button('Place order')?.click();
     await settle();
-    await answer('/api/orders/o1/place', { orderId: 'o1', status: 'Placed' });
+    await answer('/api/orders/o1/place', { orderId: 'o1', status: 'Paid' });
 
-    expect(text('.status')).toBe('Status: Placed');
+    expect(text('.status')).toBe('Status: Paid');
     expect(text('[role=status]')).toBe('Order placed.');
     expect(button('Place order')?.disabled).toBe(true);
     expect(button('Add line')?.disabled).toBe(true);
     expect(
       page.querySelector<HTMLInputElement>('#add-line-product')?.disabled,
     ).toBe(true);
-    expect(button('Cancel order')?.disabled).toBe(false);
+    expect(button('Cancel order')?.disabled).toBe(true);
+  });
+
+  it('lets an order left placed by an unknown payment outcome be placed again, but not cancelled (rules 17 and 19)', async () => {
+    await open({ ...withLine, status: 'Placed' });
+
+    expect(text('.status')).toBe('Status: Placed');
+    expect(button('Place order')?.disabled).toBe(false);
+    expect(button('Cancel order')?.disabled).toBe(true);
+    expect(button('Add line')?.disabled).toBe(true);
   });
 
   it('cancels the order and closes every action', async () => {

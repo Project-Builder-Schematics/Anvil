@@ -53,27 +53,30 @@ describe('what the status allows', () => {
   it('lets only a draft change its lines (rule 4)', () => {
     expect(canEdit(order('Draft'))).toBe(true);
     expect(canEdit(order('Placed'))).toBe(false);
+    expect(canEdit(order('Paid'))).toBe(false);
     expect(canEdit(order('Cancelled'))).toBe(false);
   });
 
-  it('lets only a draft with a line be placed (rules 6 and 10)', () => {
+  it('lets a draft or a placed order with a line be placed (rules 6, 10 and 17)', () => {
     expect(canPlace(order('Draft', [mouse]))).toBe(true);
+    expect(canPlace(order('Placed', [mouse]))).toBe(true);
     expect(canPlace(order('Draft'))).toBe(false);
-    expect(canPlace(order('Placed', [mouse]))).toBe(false);
+    expect(canPlace(order('Paid', [mouse]))).toBe(false);
     expect(canPlace(order('Cancelled', [mouse]))).toBe(false);
   });
 
-  it('lets a draft or a placed order be cancelled (rule 8)', () => {
+  it('lets only a draft be cancelled (rules 8 and 19)', () => {
     expect(canCancel(order('Draft'))).toBe(true);
-    expect(canCancel(order('Placed'))).toBe(true);
+    expect(canCancel(order('Placed'))).toBe(false);
+    expect(canCancel(order('Paid'))).toBe(false);
     expect(canCancel(order('Cancelled'))).toBe(false);
   });
 });
 
 describe('withStatus', () => {
   it('changes the status and keeps the lines', () => {
-    expect(withStatus(order('Draft', [mouse]), 'Placed')).toEqual(
-      order('Placed', [mouse]),
+    expect(withStatus(order('Draft', [mouse]), 'Paid')).toEqual(
+      order('Paid', [mouse]),
     );
   });
 });
