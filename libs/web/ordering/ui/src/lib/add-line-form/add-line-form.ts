@@ -6,8 +6,8 @@ import {
   FormRoot,
   validate,
 } from '@angular/forms/signals';
-import { isQuantity, type AddLine } from '@demo/web-ordering-domain';
-import { Button } from '@demo/web-shared-design-system';
+import { isQuantity, type AddLine } from '@anvil/web-ordering-domain';
+import { Button } from '@anvil/web-shared-design-system';
 
 const firstMessage = (field: {
   touched(): boolean;

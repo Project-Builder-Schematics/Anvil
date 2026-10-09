@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { StockLevelForm } from './stock-level-form';
 
 describe('StockLevelForm', () => {

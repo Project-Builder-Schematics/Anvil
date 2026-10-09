@@ -4,7 +4,7 @@ import {
   withStatus,
   type AddLine,
   type OrderStatusChange,
-} from '@demo/web-ordering-domain';
+} from '@anvil/web-ordering-domain';
 import { errorCodeOf } from '../error-code';
 import { OrderingApi } from '../ordering-api/ordering-api';
 

@@ -90,7 +90,7 @@ describe('hex-driven-port', () => {
     const adapter =
       tree.get(`${slice}/infrastructure/LedgerLedgerGateway.ts`) ?? '';
     expect(adapter).toContain(
-      "import type * as ledger from '@demo/api-ledger';",
+      "import type * as ledger from '@anvil/api-ledger';",
     );
     expect(adapter).toContain('export type LedgerApi = typeof ledger;');
     expect(adapter).toContain(
@@ -119,7 +119,7 @@ describe('hex-driven-port', () => {
     const adapter =
       tree.get(`${slice}/infrastructure/OrderItemsLedgerGateway.ts`) ?? '';
     expect(adapter).toContain(
-      "import type * as orderItems from '@demo/api-order-items';",
+      "import type * as orderItems from '@anvil/api-order-items';",
     );
     expect(adapter).toContain('export type OrderItemsApi = typeof orderItems;');
   });
@@ -173,12 +173,12 @@ describe('hex-driven-port', () => {
   it('refuses a provider context that is not registered', async () => {
     const seed = await sliced();
     seed['tsconfig.base.json'] = (seed['tsconfig.base.json'] ?? '').replace(
-      '@demo/api-ledger',
-      '@demo/api-other',
+      '@anvil/api-ledger',
+      '@anvil/api-other',
     );
     const { tree, error } = await go({ name: 'LedgerGateway' }, seed);
 
-    expect(String(error)).toContain('@demo/api-ledger is not registered');
+    expect(String(error)).toContain('@anvil/api-ledger is not registered');
     expect([...tree.keys()]).toEqual([]);
   });
 

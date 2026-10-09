@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { InventoryModule } from '@demo/api-inventory';
-import { PaymentsModule } from '@demo/api-payments';
+import { InventoryModule } from '@anvil/api-inventory';
+import { PaymentsModule } from '@anvil/api-payments';
 import { ORDER_REPOSITORY } from './domain/driven-ports/OrderRepository';
 import { MemoryOrderRepository } from './infrastructure/MemoryOrderRepository';
 import { PRODUCT_PRICES } from './domain/driven-ports/ProductPrices';

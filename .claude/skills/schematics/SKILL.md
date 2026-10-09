@@ -44,7 +44,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:<schematic> 
 
 ## Context map
 
-A context depends on another only through its public barrel `@demo/api-<ctx>`, and only along a relation declared in two places the schematics keep in step: the `## Context map` table of `docs/<ctx>/README.md` and `contextRelations` in `eslint.config.mjs`. Undeclared relations and deep imports are rejected by lint.
+A context depends on another only through its public barrel `@anvil/api-<ctx>`, and only along a relation declared in two places the schematics keep in step: the `## Context map` table of `docs/<ctx>/README.md` and `contextRelations` in `eslint.config.mjs`. Undeclared relations and deep imports are rejected by lint.
 
 - Declare it in the docs first: a row `| <provider> | customer-supplier / conformist / acl |`.
 - `hex-driven-port --kind=context --provider=<ctx>` refuses a provider that is not in the table and adds the lint edge. Never hand-edit `contextRelations`.
@@ -136,7 +136,7 @@ env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component
 With domain types (a presentational component that takes a list and emits a payload):
 
 ```sh
-env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/ordering/ui --name=line-list '--inputs=lines:OrderLine[]' --type_import=@demo/web-ordering-domain
+env -u BUILDER_MANIFEST -u BUILDER_SDK_ROOT builder execute default:ng-component --lib=libs/web/ordering/ui --name=line-list '--inputs=lines:OrderLine[]' --type_import=@anvil/web-ordering-domain
 ```
 
 ### `ng-service`

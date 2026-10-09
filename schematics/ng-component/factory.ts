@@ -53,7 +53,7 @@ export default async (input: Input) => {
   // The module goes into an import line as code, so only a package or a relative path passes.
   if (input.type_import && !MODULE.test(input.type_import)) {
     throw new Error(
-      `type_import "${input.type_import}" must be a package or a relative path, e.g. @demo/web-ordering-domain`,
+      `type_import "${input.type_import}" must be a package or a relative path, e.g. @anvil/web-ordering-domain`,
     );
   }
 

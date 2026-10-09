@@ -46,7 +46,7 @@ describe('web-shared-lib', () => {
     const { tree } = await go();
 
     expect(tree.get('tsconfig.base.json')).toContain(
-      '"@demo/web-shared-design-system": [',
+      '"@anvil/web-shared-design-system": [',
     );
     expect(tree.has('eslint.config.mjs')).toBe(false);
   });

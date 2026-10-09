@@ -1,4 +1,4 @@
-import type { ChargePayment } from '@demo/api-payments';
+import type { ChargePayment } from '@anvil/api-payments';
 import { Money } from '../domain/Money';
 import { OrderId } from '../domain/OrderId';
 import { PaymentsCharges } from './PaymentsCharges';

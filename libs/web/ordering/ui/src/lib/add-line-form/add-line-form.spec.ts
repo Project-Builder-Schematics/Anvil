@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import type { AddLine } from '@demo/web-ordering-domain';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+import type { AddLine } from '@anvil/web-ordering-domain';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { AddLineForm } from './add-line-form';
 
 describe('AddLineForm', () => {

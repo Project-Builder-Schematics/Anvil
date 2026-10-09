@@ -2,7 +2,7 @@ import type {
   CommitStock,
   ReleaseStock,
   ReserveStock,
-} from '@demo/api-inventory';
+} from '@anvil/api-inventory';
 import { Money } from '../domain/Money';
 import { OrderId } from '../domain/OrderId';
 import { ProductId } from '../domain/ProductId';

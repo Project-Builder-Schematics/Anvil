@@ -177,14 +177,14 @@ describe('ng-component', () => {
     const typed = {
       inputs: 'lines:OrderLine[],order:Order,label:string',
       outputs: 'added:AddLine,placed',
-      type_import: '@demo/web-catalog-domain',
+      type_import: '@anvil/web-catalog-domain',
     };
 
     it('declares custom types and imports them from the given module', async () => {
       const source = (await go(typed)).tree.get(`${dir}/order-card.ts`) ?? '';
 
       expect(source).toContain(
-        "import { Component, input, output } from '@angular/core';\nimport type { AddLine, Order, OrderLine } from '@demo/web-catalog-domain';\n",
+        "import { Component, input, output } from '@angular/core';\nimport type { AddLine, Order, OrderLine } from '@anvil/web-catalog-domain';\n",
       );
       expect(source).toContain(
         'readonly lines = input.required<OrderLine[]>();',
@@ -221,21 +221,21 @@ describe('ng-component', () => {
         (
           await go({
             outputs: 'added:AddLine',
-            type_import: '@demo/web-catalog-domain',
+            type_import: '@anvil/web-catalog-domain',
           })
         ).tree.get(`${dir}/order-card.ts`) ?? '';
 
       expect(source).toContain(
-        "import { Component, output } from '@angular/core';\nimport type { AddLine } from '@demo/web-catalog-domain';\n",
+        "import { Component, output } from '@angular/core';\nimport type { AddLine } from '@anvil/web-catalog-domain';\n",
       );
       expect(source).toContain('readonly added = output<AddLine>();');
     });
 
     it.each([
       "x'; process.exit(); '",
-      '@demo/x y',
-      '@demo/x\nimport',
-      '"@demo/x"',
+      '@anvil/x y',
+      '@anvil/x\nimport',
+      '"@anvil/x"',
       '/abs/path',
     ])(
       'refuses a type_import that is not a module specifier: %s',
@@ -250,7 +250,7 @@ describe('ng-component', () => {
     it('accepts a package, a scoped package and a relative path as the module', async () => {
       for (const module of [
         'rxjs',
-        '@demo/web-catalog-domain',
+        '@anvil/web-catalog-domain',
         '../domain/src',
       ])
         expect(

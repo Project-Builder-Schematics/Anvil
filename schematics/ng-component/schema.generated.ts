@@ -10,7 +10,7 @@ export type Input = {
   inputs?: string;
   /** Presentational only. Comma-separated signal outputs, camelCase, optionally name:type with the same types as inputs (e.g. dismissed,added:AddLine). Without a type the output has no payload */
   outputs?: string;
-  /** Module the PascalCase input and output types are imported from with `import type` (e.g. @demo/web-ordering-domain). Required when any input or output uses one */
+  /** Module the PascalCase input and output types are imported from with `import type` (e.g. @anvil/web-ordering-domain). Required when any input or output uses one */
   type_import?: string;
   /** Folder under src/lib that holds the files, dash-case. Omit to use the name; set it to group related artifacts (e.g. experiments for a service and its directive) */
   folder?: string;

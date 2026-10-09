@@ -14,7 +14,7 @@ const tsconfigBase = `{
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@demo/api-ledger": ["./libs/api/ledger/src/index.ts"]
+      "@anvil/api-ledger": ["./libs/api/ledger/src/index.ts"]
     },
     "noUncheckedIndexedAccess": true
   }

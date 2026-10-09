@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import type { OrderLine } from '@demo/web-ordering-domain';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+import type { OrderLine } from '@anvil/web-ordering-domain';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { LineList } from './line-list';
 
 const keyboard: OrderLine = {

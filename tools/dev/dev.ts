@@ -21,8 +21,8 @@ import { infraValue, loadInfraEnv, sharedPorts } from './infra';
 import { isFree, isListening } from './net';
 import { deriveIdentity, readGitPaths, type Identity } from './worktree';
 
-const SHARED_PROJECT = 'demo';
-const NETWORK = 'demo-shared-net';
+const SHARED_PROJECT = 'anvil';
+const NETWORK = 'anvil-shared-net';
 const PID_FILE = '.dev/web.pid';
 const LOG_FILE = '.dev/web.log';
 

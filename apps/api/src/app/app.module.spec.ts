@@ -4,8 +4,8 @@ import { afterEach, vi } from 'vitest';
 const valid = {
   DB_HOST: 'db',
   DB_PORT: '5432',
-  DB_NAME: 'demo',
-  DB_USER: 'demo',
+  DB_NAME: 'anvil',
+  DB_USER: 'anvil',
   DB_PASSWORD: 'secret',
   CORS_ORIGIN: 'http://localhost:4200',
 };

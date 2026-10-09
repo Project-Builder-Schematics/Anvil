@@ -129,7 +129,9 @@ describe('hex-route', () => {
       'controllers: [InvoicesController]',
     );
     const app = tree.get('apps/api/src/app/app.module.ts') ?? '';
-    expect(app).toContain("import { BillingModule } from '@demo/api-billing';");
+    expect(app).toContain(
+      "import { BillingModule } from '@anvil/api-billing';",
+    );
     expect(app).toContain(
       'ConfigModule.forRoot({ isGlobal: true, validationSchema: envSchema }),',
     );

@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { availableOf, type StockLevel } from '@demo/web-inventory-domain';
+import { availableOf, type StockLevel } from '@anvil/web-inventory-domain';
 
 @Component({
   selector: 'inventory-stock-summary',

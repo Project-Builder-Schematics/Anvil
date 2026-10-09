@@ -6,7 +6,7 @@
 
 ## Decision
 
-The API is bundled with Rsbuild (`output.target: 'node'`, ESM, `source.decorators.version: 'legacy'`, node_modules external, `@demo/*` bundled). Targets are inferred by `@nx/rsbuild`; no `@nx/nest` executors are used.
+The API is bundled with Rsbuild (`output.target: 'node'`, ESM, `source.decorators.version: 'legacy'`, node_modules external, `@anvil/*` bundled). Targets are inferred by `@nx/rsbuild`; no `@nx/nest` executors are used.
 
 ## Consequences
 

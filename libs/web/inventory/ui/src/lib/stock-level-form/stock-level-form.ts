@@ -1,7 +1,7 @@
 import { Component, computed, output, signal } from '@angular/core';
 import { form, FormField, FormRoot, validate } from '@angular/forms/signals';
-import { isOnHand } from '@demo/web-inventory-domain';
-import { Button } from '@demo/web-shared-design-system';
+import { isOnHand } from '@anvil/web-inventory-domain';
+import { Button } from '@anvil/web-shared-design-system';
 
 @Component({
   imports: [FormField, FormRoot, Button],

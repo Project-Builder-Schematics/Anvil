@@ -4,7 +4,7 @@ import type {
   AddLine,
   Order,
   OrderStatusChange,
-} from '@demo/web-ordering-domain';
+} from '@anvil/web-ordering-domain';
 
 const BASE = '/api/orders';
 const path = (orderId: string, action = ''): string =>

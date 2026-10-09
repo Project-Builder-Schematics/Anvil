@@ -63,7 +63,7 @@ describe('web-context', () => {
     const base = tree.get('tsconfig.base.json') ?? '';
 
     for (const layer of LAYERS)
-      expect(base).toContain(`"@demo/web-shipping-${layer}": `);
+      expect(base).toContain(`"@anvil/web-shipping-${layer}": `);
     expect(base).toContain('"./libs/web/shipping/data-access/src/index.ts"');
     expect(tree.get('eslint.config.mjs')).toContain(
       "const contexts = ['ledger', 'catalog', 'shipping'];",

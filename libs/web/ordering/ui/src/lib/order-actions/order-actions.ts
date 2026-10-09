@@ -6,7 +6,7 @@ import {
   FormRoot,
   validate,
 } from '@angular/forms/signals';
-import { Button, DsVariant } from '@demo/web-shared-design-system';
+import { Button, DsVariant } from '@anvil/web-shared-design-system';
 
 @Component({
   imports: [FormField, FormRoot, Button, DsVariant],

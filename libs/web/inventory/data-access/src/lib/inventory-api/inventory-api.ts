@@ -1,6 +1,6 @@
 import { HttpClient, httpResource } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import type { StockLevel } from '@demo/web-inventory-domain';
+import type { StockLevel } from '@anvil/web-inventory-domain';
 
 const path = (productId: string): string =>
   `/api/stock/${encodeURIComponent(productId)}`;

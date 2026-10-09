@@ -4,7 +4,7 @@ import {
   lineTotal,
   orderTotal,
   type OrderLine,
-} from '@demo/web-ordering-domain';
+} from '@anvil/web-ordering-domain';
 
 @Component({
   selector: 'ordering-line-list',

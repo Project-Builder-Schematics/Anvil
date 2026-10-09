@@ -40,7 +40,7 @@
 
 ### One worktree per change
 
-- Create a sibling worktree `../demo-<branch>` on its own branch from a fresh base, never under `/tmp`. The main checkout stays on `main` and clean.
+- Create a sibling worktree `../anvil-<branch>` on its own branch from a fresh base, never under `/tmp`. The main checkout stays on `main` and clean.
 - Each worktree runs its own `bun install`; never symlink `node_modules`.
 - The dev scripts (`bun run dev`, see the README) isolate ports, compose project and database per worktree, so several worktrees run side by side.
 

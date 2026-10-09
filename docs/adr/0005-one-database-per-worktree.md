@@ -6,7 +6,7 @@ Several git worktrees must run their dev stacks at the same time without collidi
 
 ## Decision
 
-One shared Postgres and pgadmin (compose project `demo`). Each worktree runs only its own `api` container in project `demo-<slug>-<hash>`, uses ports offset by a hash of its path, and gets its own database, created and seeded on first `dev`. Identity is recomputed from git on every call.
+One shared Postgres and pgadmin (compose project `anvil`). Each worktree runs only its own `api` container in project `anvil-<slug>-<hash>`, uses ports offset by a hash of its path, and gets its own database, created and seeded on first `dev`. Identity is recomputed from git on every call.
 
 ## Consequences
 

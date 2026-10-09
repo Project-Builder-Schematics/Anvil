@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
-import type { OrderStatus } from '@demo/web-ordering-domain';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
+import type { OrderStatus } from '@anvil/web-ordering-domain';
 import { OrderSummary } from './order-summary';
 
 describe('OrderSummary', () => {

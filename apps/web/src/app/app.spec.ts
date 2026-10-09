@@ -9,8 +9,8 @@ import {
   EXPERIMENT_OVERRIDES,
   ExposureSink,
   SUBJECT_ID,
-} from '@demo/web-shared-design-system';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+} from '@anvil/web-shared-design-system';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { App } from './app';
 import { appRoutes } from './app.routes';
 

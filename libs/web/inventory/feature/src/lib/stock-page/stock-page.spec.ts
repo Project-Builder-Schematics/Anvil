@@ -6,8 +6,8 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import type { StockLevel } from '@demo/web-inventory-domain';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+import type { StockLevel } from '@anvil/web-inventory-domain';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { StockPage } from './stock-page';
 
 const keyboard: StockLevel = {

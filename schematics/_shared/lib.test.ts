@@ -143,56 +143,56 @@ const paths = (tsconfig: string): unknown =>
     .compilerOptions.paths;
 
 describe('addTsPath', () => {
-  const base = `{\n  "compilerOptions": {\n    "paths": {\n      "@demo/a": ["./libs/a/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`;
+  const base = `{\n  "compilerOptions": {\n    "paths": {\n      "@anvil/a": ["./libs/a/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`;
 
   it('appends an entry after the last path in prettier layout, changing nothing else', () => {
-    expect(addTsPath(base, '@demo/api-b', './libs/api/b/src/index.ts')).toBe(
-      `{\n  "compilerOptions": {\n    "paths": {\n      "@demo/a": ["./libs/a/src/index.ts"],\n      "@demo/api-b": ["./libs/api/b/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`,
+    expect(addTsPath(base, '@anvil/api-b', './libs/api/b/src/index.ts')).toBe(
+      `{\n  "compilerOptions": {\n    "paths": {\n      "@anvil/a": ["./libs/a/src/index.ts"],\n      "@anvil/api-b": ["./libs/api/b/src/index.ts"]\n    },\n    "strict": true\n  }\n}\n`,
     );
   });
 
   it('appends an entry after the last path without disturbing the rest', () => {
-    const out = addTsPath(base, '@demo/api-b', './libs/api/b/src/index.ts');
+    const out = addTsPath(base, '@anvil/api-b', './libs/api/b/src/index.ts');
 
     expect(paths(out)).toEqual({
-      '@demo/a': ['./libs/a/src/index.ts'],
-      '@demo/api-b': ['./libs/api/b/src/index.ts'],
+      '@anvil/a': ['./libs/a/src/index.ts'],
+      '@anvil/api-b': ['./libs/api/b/src/index.ts'],
     });
     expect(out).toContain(
-      `      "@demo/a": ["./libs/a/src/index.ts"],\n      "@demo/api-b": ["./libs/api/b/src/index.ts"]\n    },`,
+      `      "@anvil/a": ["./libs/a/src/index.ts"],\n      "@anvil/api-b": ["./libs/api/b/src/index.ts"]\n    },`,
     );
   });
 
   it('fills an empty paths block', () => {
     const out = addTsPath(
       `{\n  "compilerOptions": {\n    "paths": {}\n  }\n}\n`,
-      '@demo/x',
+      '@anvil/x',
       './x.ts',
     );
 
     expect(paths(out)).toEqual({
-      '@demo/x': ['./x.ts'],
+      '@anvil/x': ['./x.ts'],
     });
   });
 
   it('breaks a long entry the way prettier does', () => {
     const out = addTsPath(
       base,
-      '@demo/web-notifications-data-access',
+      '@anvil/web-notifications-data-access',
       './libs/web/notifications/data-access/src/index.ts',
     );
 
     expect(out).toContain(
-      `      "@demo/web-notifications-data-access": [\n        "./libs/web/notifications/data-access/src/index.ts"\n      ]\n`,
+      `      "@anvil/web-notifications-data-access": [\n        "./libs/web/notifications/data-access/src/index.ts"\n      ]\n`,
     );
   });
 
   it('is idempotent', () => {
-    expect(addTsPath(base, '@demo/a', './elsewhere.ts')).toBe(base);
+    expect(addTsPath(base, '@anvil/a', './elsewhere.ts')).toBe(base);
   });
 
   it('refuses a tsconfig without a paths block', () => {
-    expect(() => addTsPath('{}', '@demo/x', './x.ts')).toThrow('"paths"');
+    expect(() => addTsPath('{}', '@anvil/x', './x.ts')).toThrow('"paths"');
   });
 });
 
