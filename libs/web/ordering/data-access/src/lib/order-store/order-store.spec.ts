@@ -210,6 +210,7 @@ describe('OrderStore', () => {
       expect(await adding).toBe(false);
       expect(store.order()).toEqual({ ...draft, orderId: 'o2' });
       expect(store.busy()).toBe(false);
+      expect(store.commandError()).toBe('');
     });
 
     it('does not put a status change on the other order', async () => {
@@ -224,6 +225,7 @@ describe('OrderStore', () => {
 
       expect(await placing).toBe(false);
       expect(store.order()).toEqual({ ...draft, orderId: 'o2' });
+      expect(store.commandError()).toBe('');
     });
   });
 
