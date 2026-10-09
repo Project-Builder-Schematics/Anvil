@@ -31,7 +31,7 @@ describe('MemoryPayments (Payments contract)', () => {
     expect(await payments.byOrderId('o1')).toBe(retried);
   });
 
-  describe('save over another id', () => {
+  describe('save compares the payment id', () => {
     it('does not replace the stored payment with one of another id', async () => {
       const payments = new MemoryPayments();
       const current = pending('o1', 'p2');

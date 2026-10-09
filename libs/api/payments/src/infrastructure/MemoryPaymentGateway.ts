@@ -20,7 +20,7 @@ interface Remembered {
   readonly outcome: ChargeOutcome;
 }
 
-/** What the fake throws when it cannot answer a request; the use case treats it as any gateway failure. */
+/** A gateway failure with no outcome: the fake throws it for a key reused with other parameters, and scenarios use it for a call that gives no answer. The use case treats every gateway failure alike. */
 export class GatewayError extends Error {}
 
 @Injectable()

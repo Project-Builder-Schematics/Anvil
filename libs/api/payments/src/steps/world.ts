@@ -26,12 +26,12 @@ export class PaymentsWorld extends QuickPickleWorld {
   /** What a gateway that gives no answer throws. */
   readonly timeout = new GatewayError('gateway timeout');
 
-  /** Runs a command; a business refusal or a gateway error is kept until a step claims it, or the After hook fails the scenario. Anything else is a bug and fails the step. */
+  /** Runs a command; a business refusal or the `timeout` a scenario injects is kept until a step claims it, or the After hook fails the scenario. Anything else, the fake's own guard included, is a bug and fails the step. */
   async attempt<T>(run: () => Promise<T>): Promise<T | undefined> {
     try {
       return await run();
     } catch (error) {
-      if (error instanceof PaymentsError || error instanceof GatewayError) {
+      if (error instanceof PaymentsError || error === this.timeout) {
         this.refusals.push(error);
         return undefined;
       }
