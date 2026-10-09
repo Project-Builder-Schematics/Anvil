@@ -126,7 +126,7 @@ The advisory findings:
     - A command with no open order sends nothing, answers `false` and sets `ORDER_NOT_FOUND`. RED: the three specs failed; no code was exposed.
   - Notice after a param change (0778bf4): the param-change spec was added to `OrderPage`. Clearing on a param change already worked (that spec passed on arrival); the real defect was a command finishing after the change, which announced on the new order. RED, with the old store: `Order o1` shown on `/orders/o2`.
   - `@for` key (7c96a1f): the rows track by `$index`. RED: Angular's NG0955 duplicate-key warning on `console.warn` when the list is updated with a repeated product. Angular only detects duplicates on update, not on first render.
-  - `Order.lines` is `readonly OrderLine[]` (7c96a1f), and `LineList.lines` accepts it. RED: `tsc -p libs/web/ordering/domain/tsconfig.spec.json` failed with TS2578 (unused `@ts-expect-error`) against the old type. The web libs have no `typecheck` target, so this check is by `tsc`.
+  - `Order.lines` is `readonly OrderLine[]` (7c96a1f), and `LineList.lines` accepts it. RED: `tsc -p libs/web/ordering/domain/tsconfig.spec.json` failed with TS2578 (unused `@ts-expect-error`) against the old type. The web libs have no `typecheck` target, so this check is by `tsc`. Resolved in 9a143df: the web domain libs now have a `typecheck` target that checks the spec.
 - [x] Schematics, done together with S8 (6470ca2):
   - `ng-component` validates `type_import` as a package or relative path.
   - A type named like the component class or `Component` is refused, and an input or output with a second colon is refused instead of cut.
