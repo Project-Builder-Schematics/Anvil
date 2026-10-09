@@ -87,8 +87,8 @@ const id: Identity = {
   webPort: 4207,
   apiPort: 3007,
   debugPort: 9236,
-  composeProject: 'demo-x-abc123',
-  dbName: 'demo_x_abc123',
+  composeProject: 'anvil-x-abc123',
+  dbName: 'anvil_x_abc123',
 };
 
 describe('composeEnv', () => {
@@ -108,7 +108,7 @@ describe('composeEnv', () => {
       WEB_PORT: '4207',
       API_PORT: '3007',
       DEBUG_PORT: '9236',
-      DB_NAME: 'demo_x_abc123',
+      DB_NAME: 'anvil_x_abc123',
       CORS_ORIGIN: 'http://localhost:4207',
     });
   });
@@ -121,8 +121,8 @@ describe('statusLines', () => {
         'web_url=http://localhost:4207',
         'api_url=http://localhost:3007/api',
         'debug_port=9236',
-        'compose_project=demo-x-abc123',
-        'db_name=demo_x_abc123',
+        'compose_project=anvil-x-abc123',
+        'db_name=anvil_x_abc123',
         'web=running',
         'api=stopped',
       ].join('\n'),
@@ -132,14 +132,14 @@ describe('statusLines', () => {
 
 describe('seedFailureMessage', () => {
   it('says the database was dropped when it was', () => {
-    expect(seedFailureMessage('demo_x', false)).toBe(
-      'seed failed; the new database demo_x was dropped so the next run seeds it again',
+    expect(seedFailureMessage('anvil_x', false)).toBe(
+      'seed failed; the new database anvil_x was dropped so the next run seeds it again',
     );
   });
 
   it('says it is still there when the drop failed, so the next run is not trusted to seed it', () => {
-    expect(seedFailureMessage('demo_x', true)).toContain(
-      'demo_x could not be dropped',
+    expect(seedFailureMessage('anvil_x', true)).toContain(
+      'anvil_x could not be dropped',
     );
   });
 });

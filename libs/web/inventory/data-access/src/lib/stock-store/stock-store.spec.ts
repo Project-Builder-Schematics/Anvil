@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { StockLevel } from '@demo/web-inventory-domain';
+import type { StockLevel } from '@anvil/web-inventory-domain';
 import { StockStore } from './stock-store';
 
 const keyboard: StockLevel = { productId: 'keyboard', onHand: 50, reserved: 0 };

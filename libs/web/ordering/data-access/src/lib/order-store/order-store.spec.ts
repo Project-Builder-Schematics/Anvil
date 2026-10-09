@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { Order } from '@demo/web-ordering-domain';
+import type { Order } from '@anvil/web-ordering-domain';
 import { OrderStore } from './order-store';
 
 const keyboard = {

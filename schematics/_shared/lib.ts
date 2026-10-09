@@ -59,7 +59,7 @@ export const title = (dashedCase: string): string => {
 /** How a context relates to the one it depends on; the Context map table of a README uses these words. */
 export const RELATIONSHIPS = ['customer-supplier', 'conformist', 'acl'];
 
-export const SCOPE = '@demo';
+export const SCOPE = '@anvil';
 export const TSCONFIG_BASE = 'tsconfig.base.json';
 export const ESLINT_CONFIG = 'eslint.config.mjs';
 export const DOMAIN_MODEL = 'domain-model.md';

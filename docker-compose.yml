@@ -1,4 +1,4 @@
-# Shared infra (db, pgadmin) runs in project "demo"; each worktree runs only `api` in its own project.
+# Shared infra (db, pgadmin) runs in project "anvil"; each worktree runs only `api` in its own project.
 # Published ports are bound to 127.0.0.1; defaults are documented in .env.example.
 # `bun run dev` creates the external network and starts everything in the right order.
 services:
@@ -7,8 +7,8 @@ services:
     ports:
       - '127.0.0.1:${DB_PORT:-5432}:5432'
     environment:
-      POSTGRES_DB: demo
-      POSTGRES_USER: ${DB_USER:-demo}
+      POSTGRES_DB: anvil
+      POSTGRES_USER: ${DB_USER:-anvil}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-demo}
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -35,7 +35,7 @@ services:
     working_dir: /repo
     # The inspector must listen on a non-loopback address: Docker forwards the published port to the container's own
     # address, so a 127.0.0.1 bind would refuse the host. It has no authentication; it is reachable from the host only
-    # through 127.0.0.1 and from the containers on demo-shared-net (db, pgadmin, the other worktrees' api).
+    # through 127.0.0.1 and from the containers on anvil-shared-net (db, pgadmin, the other worktrees' api).
     # node_modules lives in a volume so the container installs its own Linux binaries and the host's stay intact.
     # Bun reads the tsconfig of its working directory, not the one nearest each file, and --tsconfig-override does not
     # bring in experimentalDecorators, so the API runs from apps/api or Nest's legacy decorators break at startup.
@@ -52,8 +52,8 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-demo}
-      DB_USER: ${DB_USER:-demo}
+      DB_NAME: ${DB_NAME:-anvil}
+      DB_USER: ${DB_USER:-anvil}
       DB_PASSWORD: ${DB_PASSWORD:-demo}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4200}
     networks: [shared]
@@ -73,5 +73,5 @@ volumes:
 
 networks:
   shared:
-    name: demo-shared-net
+    name: anvil-shared-net
     external: true

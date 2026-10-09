@@ -6,13 +6,13 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import type { Order } from '@demo/web-ordering-domain';
+import type { Order } from '@anvil/web-ordering-domain';
 import {
   EXPERIMENT_OVERRIDES,
   ExposureSink,
   SUBJECT_ID,
-} from '@demo/web-shared-design-system';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+} from '@anvil/web-shared-design-system';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { OrderPage } from './order-page';
 
 const keyboard = {

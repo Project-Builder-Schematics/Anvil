@@ -6,7 +6,7 @@ The Nx 23 template uses TS project references (`@nx/js/typescript`). `@nx/angula
 
 ## Decision
 
-`tsconfig.base.json` with `paths` for `@demo/*`, no composite, no package-manager workspaces. `NX_IGNORE_UNSUPPORTED_TS_SETUP` is not used.
+`tsconfig.base.json` with `paths` for `@anvil/*`, no composite, no package-manager workspaces. `NX_IGNORE_UNSUPPORTED_TS_SETUP` is not used.
 
 ## Consequences
 

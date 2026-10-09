@@ -2,15 +2,15 @@ import { describe, expect, it } from 'bun:test';
 import { deriveIdentity } from './worktree';
 
 const primary = {
-  toplevel: '/work/demo',
-  gitDir: '/work/demo/.git',
-  commonDir: '/work/demo/.git',
+  toplevel: '/work/anvil',
+  gitDir: '/work/anvil/.git',
+  commonDir: '/work/anvil/.git',
 };
 const shared = [5432, 5050];
 const linked = {
-  toplevel: '/work/demo-feat/Checkout Flow!',
-  gitDir: '/work/demo/.git/worktrees/x',
-  commonDir: '/work/demo/.git',
+  toplevel: '/work/anvil-feat/Checkout Flow!',
+  gitDir: '/work/anvil/.git/worktrees/x',
+  commonDir: '/work/anvil/.git',
 };
 
 describe('deriveIdentity', () => {
@@ -21,8 +21,8 @@ describe('deriveIdentity', () => {
       webPort: 4200,
       apiPort: 3000,
       debugPort: 9229,
-      composeProject: 'demo',
-      dbName: 'demo',
+      composeProject: 'anvil',
+      dbName: 'anvil',
     });
   });
 
@@ -33,14 +33,14 @@ describe('deriveIdentity', () => {
     expect(first.offset).toBeGreaterThanOrEqual(2);
     expect(first.offset).toBeLessThan(200);
     expect(first.apiPort).toBe(3000 + first.offset);
-    expect(first.composeProject).toMatch(/^demo-checkout_flow_-[0-9a-f]{6}$/);
-    expect(first.dbName).toMatch(/^demo_checkout_flow__[0-9a-f]{6}$/);
+    expect(first.composeProject).toMatch(/^anvil-checkout_flow_-[0-9a-f]{6}$/);
+    expect(first.dbName).toMatch(/^anvil_checkout_flow__[0-9a-f]{6}$/);
   });
 
   it('cuts the slug to 24 characters', () => {
     const long = { ...linked, toplevel: '/w/' + 'a'.repeat(40) };
     expect(deriveIdentity(long, undefined, shared).composeProject).toMatch(
-      /^demo-a{24}-[0-9a-f]{6}$/,
+      /^anvil-a{24}-[0-9a-f]{6}$/,
     );
   });
 

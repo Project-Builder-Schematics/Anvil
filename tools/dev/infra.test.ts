@@ -7,8 +7,10 @@ import { databaseUrl, loadInfraEnv, parseEnvFile, sharedPorts } from './infra';
 describe('parseEnvFile', () => {
   it('reads KEY=VALUE lines and skips comments and blanks', () => {
     expect(
-      parseEnvFile('# note\n\nDB_USER=demo\nURL=http://a/?x=1\n  # indented\n'),
-    ).toEqual({ DB_USER: 'demo', URL: 'http://a/?x=1' });
+      parseEnvFile(
+        '# note\n\nDB_USER=anvil\nURL=http://a/?x=1\n  # indented\n',
+      ),
+    ).toEqual({ DB_USER: 'anvil', URL: 'http://a/?x=1' });
   });
 
   it('accepts = or : with spaces around the value, and an empty value', () => {
@@ -63,7 +65,7 @@ describe('loadInfraEnv', () => {
     return root;
   };
   const files = {
-    '.env.example': 'DB_USER=demo\nDB_PORT=5432\n',
+    '.env.example': 'DB_USER=anvil\nDB_PORT=5432\n',
     '.env': 'DB_USER=local\nIGNORED=1\n',
   };
 
@@ -80,7 +82,7 @@ describe('loadInfraEnv', () => {
     });
     expect(
       loadInfraEnv({}, workspace({ '.env.example': files['.env.example'] })),
-    ).toEqual({ DB_USER: 'demo', DB_PORT: '5432' });
+    ).toEqual({ DB_USER: 'anvil', DB_PORT: '5432' });
   });
 
   it('falls through an empty value, like ${VAR:-default}', () => {
@@ -96,7 +98,7 @@ describe('loadInfraEnv', () => {
   });
 
   it('reads the repo defaults', () => {
-    expect(loadInfraEnv({})['DB_USER']).toBe('demo');
+    expect(loadInfraEnv({})['DB_USER']).toBe('anvil');
   });
 });
 
@@ -113,8 +115,8 @@ describe('what the dev scripts take from the infra env', () => {
   });
 
   it('connects to the published loopback address, with the credentials escaped', () => {
-    expect(databaseUrl(infra, 'demo_x')).toBe(
-      'postgres://dev%20user:p%40ss%2Fword@127.0.0.1:5433/demo_x',
+    expect(databaseUrl(infra, 'anvil_x')).toBe(
+      'postgres://dev%20user:p%40ss%2Fword@127.0.0.1:5433/anvil_x',
     );
   });
 });

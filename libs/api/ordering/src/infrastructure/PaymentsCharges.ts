@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CHARGE_PAYMENT, type ChargePayment } from '@demo/api-payments';
+import { CHARGE_PAYMENT, type ChargePayment } from '@anvil/api-payments';
 import type { Money } from '../domain/Money';
 import type { OrderId } from '../domain/OrderId';
 import type { Charges } from '../domain/driven-ports/Charges';

@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { envSchema } from '../config';
 import { HealthController } from './health.controller';
-import { OrderingModule } from '@demo/api-ordering';
-import { InventoryModule } from '@demo/api-inventory';
+import { OrderingModule } from '@anvil/api-ordering';
+import { InventoryModule } from '@anvil/api-inventory';
 
 @Module({
   imports: [

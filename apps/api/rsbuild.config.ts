@@ -10,6 +10,6 @@ export default defineConfig({
     target: 'node',
     distPath: { root: 'dist' },
     // Keep node_modules external: Nest lazy-requires optional peer deps that must not be bundled.
-    externals: [/^(?!\.|\/|@demo\/)/],
+    externals: [/^(?!\.|\/|@anvil\/)/],
   },
 });

@@ -5,11 +5,11 @@ export const appRoutes: Route[] = [
   {
     path: 'orders',
     loadChildren: () =>
-      import('@demo/web-ordering-feature').then((m) => m.orderingRoutes),
+      import('@anvil/web-ordering-feature').then((m) => m.orderingRoutes),
   },
   {
     path: 'stock/:productId',
     loadComponent: () =>
-      import('@demo/web-inventory-feature').then((m) => m.StockPage),
+      import('@anvil/web-inventory-feature').then((m) => m.StockPage),
   },
 ];

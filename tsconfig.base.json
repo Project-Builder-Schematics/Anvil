@@ -14,41 +14,43 @@
     "strict": true,
     "target": "es2022",
     "paths": {
-      "@demo/api-catalog": ["./libs/api/catalog/src/index.ts"],
-      "@demo/api-inventory": ["./libs/api/inventory/src/index.ts"],
-      "@demo/api-ordering": ["./libs/api/ordering/src/index.ts"],
-      "@demo/api-payments": ["./libs/api/payments/src/index.ts"],
-      "@demo/api-shipping": ["./libs/api/shipping/src/index.ts"],
-      "@demo/api-notifications": ["./libs/api/notifications/src/index.ts"],
-      "@demo/api-shared-kernel": ["./libs/api/shared-kernel/src/index.ts"],
-      "@demo/web-catalog-ui": ["./libs/web/catalog/ui/src/index.ts"],
-      "@demo/web-catalog-feature": ["./libs/web/catalog/feature/src/index.ts"],
-      "@demo/web-catalog-data-access": [
+      "@anvil/api-catalog": ["./libs/api/catalog/src/index.ts"],
+      "@anvil/api-inventory": ["./libs/api/inventory/src/index.ts"],
+      "@anvil/api-ordering": ["./libs/api/ordering/src/index.ts"],
+      "@anvil/api-payments": ["./libs/api/payments/src/index.ts"],
+      "@anvil/api-shipping": ["./libs/api/shipping/src/index.ts"],
+      "@anvil/api-notifications": ["./libs/api/notifications/src/index.ts"],
+      "@anvil/api-shared-kernel": ["./libs/api/shared-kernel/src/index.ts"],
+      "@anvil/web-catalog-ui": ["./libs/web/catalog/ui/src/index.ts"],
+      "@anvil/web-catalog-feature": ["./libs/web/catalog/feature/src/index.ts"],
+      "@anvil/web-catalog-data-access": [
         "./libs/web/catalog/data-access/src/index.ts"
       ],
-      "@demo/web-catalog-domain": ["./libs/web/catalog/domain/src/index.ts"],
-      "@demo/web-ordering-ui": ["./libs/web/ordering/ui/src/index.ts"],
-      "@demo/web-ordering-feature": [
+      "@anvil/web-catalog-domain": ["./libs/web/catalog/domain/src/index.ts"],
+      "@anvil/web-ordering-ui": ["./libs/web/ordering/ui/src/index.ts"],
+      "@anvil/web-ordering-feature": [
         "./libs/web/ordering/feature/src/index.ts"
       ],
-      "@demo/web-ordering-data-access": [
+      "@anvil/web-ordering-data-access": [
         "./libs/web/ordering/data-access/src/index.ts"
       ],
-      "@demo/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"],
-      "@demo/web-shared-design-system": [
+      "@anvil/web-ordering-domain": ["./libs/web/ordering/domain/src/index.ts"],
+      "@anvil/web-shared-design-system": [
         "./libs/web/shared/design-system/src/index.ts"
       ],
-      "@demo/web-shared-design-system/testing": [
+      "@anvil/web-shared-design-system/testing": [
         "./libs/web/shared/design-system/src/testing/axe.ts"
       ],
-      "@demo/web-inventory-ui": ["./libs/web/inventory/ui/src/index.ts"],
-      "@demo/web-inventory-feature": [
+      "@anvil/web-inventory-ui": ["./libs/web/inventory/ui/src/index.ts"],
+      "@anvil/web-inventory-feature": [
         "./libs/web/inventory/feature/src/index.ts"
       ],
-      "@demo/web-inventory-data-access": [
+      "@anvil/web-inventory-data-access": [
         "./libs/web/inventory/data-access/src/index.ts"
       ],
-      "@demo/web-inventory-domain": ["./libs/web/inventory/domain/src/index.ts"]
+      "@anvil/web-inventory-domain": [
+        "./libs/web/inventory/domain/src/index.ts"
+      ]
     },
     "noUncheckedIndexedAccess": true,
     "noPropertyAccessFromIndexSignature": true,

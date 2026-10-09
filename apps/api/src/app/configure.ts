@@ -19,7 +19,7 @@ export function configureApp(
   if (!options.openApi) return;
   const document = SwaggerModule.createDocument(
     app,
-    new DocumentBuilder().setTitle('Demo API').build(),
+    new DocumentBuilder().setTitle('Anvil API').build(),
     {
       standardSchemaConverter: (schema, { schemaType }) => ({
         schema: z.toJSONSchema(schema as z.ZodType, { io: schemaType }),

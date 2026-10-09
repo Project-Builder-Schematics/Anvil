@@ -45,8 +45,8 @@ export function deriveIdentity(
     webPort: 4200 + offset,
     apiPort: 3000 + offset,
     debugPort: 9229 + offset,
-    composeProject: primary ? 'demo' : `demo-${slug}-${hash}`,
-    dbName: primary ? 'demo' : `demo_${slug}_${hash}`,
+    composeProject: primary ? 'anvil' : `anvil-${slug}-${hash}`,
+    dbName: primary ? 'anvil' : `anvil_${slug}_${hash}`,
   };
 
   const clash = [identity.webPort, identity.apiPort, identity.debugPort].find(

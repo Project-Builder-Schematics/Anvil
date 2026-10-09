@@ -23,14 +23,14 @@ const boundaryErrors = async (
 describe('the context map in the lint boundaries', () => {
   it('accepts the barrel of a declared relation', async () => {
     expect(
-      await boundaryErrors('shipping', "import '@demo/api-ordering';\n"),
+      await boundaryErrors('shipping', "import '@anvil/api-ordering';\n"),
     ).toEqual([]);
   });
 
   it('rejects the barrel of an undeclared relation', async () => {
     const errors = await boundaryErrors(
       'shipping',
-      "import '@demo/api-catalog';\n",
+      "import '@anvil/api-catalog';\n",
     );
 
     expect(errors).toHaveLength(1);
@@ -41,11 +41,11 @@ describe('the context map in the lint boundaries', () => {
 
   it('rejects the reverse of a declared relation', async () => {
     expect(
-      await boundaryErrors('ordering', "import '@demo/api-shipping';\n"),
+      await boundaryErrors('ordering', "import '@anvil/api-shipping';\n"),
     ).toHaveLength(1);
   });
 
-  // `@demo/api-<ctx>/src/...` has no tsconfig path, so tsc (the typecheck target) rejects it;
+  // `@anvil/api-<ctx>/src/...` has no tsconfig path, so tsc (the typecheck target) rejects it;
   // the lint rule only sees what resolves, so the relative form is the one it can reject.
   it('rejects a relative deep import into a declared context', async () => {
     const errors = await boundaryErrors(

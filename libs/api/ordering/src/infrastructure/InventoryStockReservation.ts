@@ -6,7 +6,7 @@ import {
   type CommitStock,
   type ReleaseStock,
   type ReserveStock,
-} from '@demo/api-inventory';
+} from '@anvil/api-inventory';
 import type { OrderId } from '../domain/OrderId';
 import type { OrderLine } from '../domain/OrderLine';
 import type { StockReservation } from '../domain/driven-ports/StockReservation';

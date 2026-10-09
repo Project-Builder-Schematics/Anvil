@@ -24,7 +24,7 @@
     },
     "type_import": {
       "type": "string",
-      "label": "Module the PascalCase input and output types are imported from with `import type` (e.g. @demo/web-ordering-domain). Required when any input or output uses one",
+      "label": "Module the PascalCase input and output types are imported from with `import type` (e.g. @anvil/web-ordering-domain). Required when any input or output uses one",
       "required": false,
       "default": ""
     },

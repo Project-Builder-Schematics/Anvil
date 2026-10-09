@@ -62,11 +62,11 @@ describe('hex-bounded-context: the lib', () => {
     ).toEqual([]);
   });
 
-  it('registers the @demo/api-<context> alias in tsconfig.base.json and nowhere else', async () => {
+  it('registers the @anvil/api-<context> alias in tsconfig.base.json and nowhere else', async () => {
     const { tree } = await go();
 
     expect(tree.get('tsconfig.base.json')).toContain(
-      '"@demo/api-tenancy": ["./libs/api/tenancy/src/index.ts"]',
+      '"@anvil/api-tenancy": ["./libs/api/tenancy/src/index.ts"]',
     );
     expect(tree.has('package.json')).toBe(false);
   });
@@ -76,8 +76,8 @@ describe('hex-bounded-context: the lib', () => {
       ...workspace,
       'tsconfig.base.json':
         workspace['tsconfig.base.json']?.replace(
-          '"@demo/api-ledger"',
-          '"@demo/api-tenancy"',
+          '"@anvil/api-ledger"',
+          '"@anvil/api-tenancy"',
         ) ?? '',
     };
     const { tree } = await go({}, seed);
@@ -268,7 +268,7 @@ describe('hex-bounded-context: the docs', () => {
           ...workspace,
           'tsconfig.base.json': (workspace['tsconfig.base.json'] ?? '').replace(
             '"paths": {',
-            '"paths": {\n      "@demo/api-catalog": ["./libs/api/catalog/src/index.ts"],',
+            '"paths": {\n      "@anvil/api-catalog": ["./libs/api/catalog/src/index.ts"],',
           ),
         },
       );

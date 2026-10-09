@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { axeViolations } from '@demo/web-shared-design-system/testing';
+import { axeViolations } from '@anvil/web-shared-design-system/testing';
 import { OrderNew } from './order-new';
 
 @Component({ template: '' })

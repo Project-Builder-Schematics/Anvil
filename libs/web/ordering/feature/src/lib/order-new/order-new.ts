@@ -1,8 +1,8 @@
 import { Component, computed, DestroyRef, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { OrderStore } from '@demo/web-ordering-data-access';
-import { messageFor } from '@demo/web-ordering-domain';
-import { Button } from '@demo/web-shared-design-system';
+import { OrderStore } from '@anvil/web-ordering-data-access';
+import { messageFor } from '@anvil/web-ordering-domain';
+import { Button } from '@anvil/web-shared-design-system';
 
 @Component({
   imports: [Button],

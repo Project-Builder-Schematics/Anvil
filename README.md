@@ -1,6 +1,6 @@
-# Demo
+# Anvil
 
-Order management demo: an Nx monorepo with a NestJS API and an Angular web app, organised as bounded contexts (catalog, inventory, ordering, payments, shipping, notifications). Domain modelling comes later; this repo is the stack and the skeleton.
+Anvil, an order management example: an Nx monorepo with a NestJS API and an Angular web app, organised as bounded contexts (catalog, inventory, ordering, payments, shipping, notifications). Domain modelling comes later; this repo is the stack and the skeleton.
 
 ## Stack
 
@@ -67,12 +67,12 @@ Each git worktree gets its own ports, compose project and database, so any numbe
 |                         | Primary checkout   | Linked worktree        |
 | ----------------------- | ------------------ | ---------------------- |
 | Web / API / debug ports | 4200 / 3000 / 9229 | base + offset (2..199) |
-| Compose project         | `demo`             | `demo-<slug>-<hash>`   |
-| Database                | `demo`             | `demo_<slug>_<hash>`   |
+| Compose project         | `anvil`            | `anvil-<slug>-<hash>`  |
+| Database                | `anvil`            | `anvil_<slug>_<hash>`  |
 
-One shared Postgres and pgadmin (project `demo`, network `demo-shared-net`) serve every worktree; each worktree runs only its own `api` container. Angular runs on the host and proxies `/api` to that worktree's API port.
+One shared Postgres and pgadmin (project `anvil`, network `anvil-shared-net`) serve every worktree; each worktree runs only its own `api` container. Angular runs on the host and proxies `/api` to that worktree's API port.
 
-Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect=0.0.0.0:9229` (a loopback bind would refuse the host through Docker's published port; the unauthenticated inspector is reachable only from `127.0.0.1` on the host and from the containers on `demo-shared-net`); open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
+Published ports are bound to `127.0.0.1`. The shared-infra ports and credentials default to the values in `.env.example`; copy it to `.env` to override them (`.env` is git-ignored). The api container installs its own `node_modules` into a volume and starts Bun with `--inspect=0.0.0.0:9229` (a loopback bind would refuse the host through Docker's published port; the unauthenticated inspector is reachable only from `127.0.0.1` on the host and from the containers on `anvil-shared-net`); open the `https://debug.bun.sh/#127.0.0.1:<debug_port>/...` URL that `bun run dev:logs` prints.
 
 ```sh
 bun run dev                 # shared infra, DB, api container, then the web dev server (Ctrl+C stops this worktree's api)

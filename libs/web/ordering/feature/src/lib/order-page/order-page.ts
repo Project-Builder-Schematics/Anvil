@@ -2,20 +2,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
-import { OrderStore } from '@demo/web-ordering-data-access';
+import { OrderStore } from '@anvil/web-ordering-data-access';
 import {
   canCancel,
   canEdit,
   canPlace,
   messageFor,
   type AddLine,
-} from '@demo/web-ordering-domain';
+} from '@anvil/web-ordering-domain';
 import {
   AddLineForm,
   LineList,
   OrderActions,
   OrderSummary,
-} from '@demo/web-ordering-ui';
+} from '@anvil/web-ordering-ui';
 
 @Component({
   imports: [RouterLink, OrderSummary, LineList, AddLineForm, OrderActions],

@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import type { OrderStatus } from '@demo/web-ordering-domain';
+import type { OrderStatus } from '@anvil/web-ordering-domain';
 
 @Component({
   selector: 'ordering-order-summary',
