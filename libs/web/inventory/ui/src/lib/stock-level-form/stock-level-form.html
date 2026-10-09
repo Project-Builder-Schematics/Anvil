@@ -1,0 +1,23 @@
+<form [formRoot]="form">
+  <div class="field">
+    <label for="stock-level">Units on hand</label>
+    <input
+      id="stock-level"
+      type="number"
+      inputmode="numeric"
+      aria-required="true"
+      [formField]="form.onHand"
+      [attr.aria-invalid]="levelError() ? 'true' : null"
+      [attr.aria-describedby]="
+        levelError() ? 'stock-level-hint stock-level-error' : 'stock-level-hint'
+      "
+    />
+    <p id="stock-level-hint" class="hint">
+      A whole number of 0 or more, not below the units already reserved.
+    </p>
+    @if (levelError(); as message) {
+    <p id="stock-level-error" class="error">{{ message }}</p>
+    }
+  </div>
+  <ds-button type="submit">Set level</ds-button>
+</form>

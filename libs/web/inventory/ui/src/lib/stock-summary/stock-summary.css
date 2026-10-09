@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-lg);
+  margin: 0;
+  font-family: var(--ds-type-body-family);
+  font-size: var(--ds-type-body-size);
+  line-height: var(--ds-type-body-line-height);
+}
+
+dt {
+  color: var(--ds-color-body);
+}
+
+dd {
+  margin: 0;
+  color: var(--ds-color-ink);
+  font-weight: 600;
+}

@@ -4,5 +4,24 @@
   "sourceRoot": "libs/web/inventory/ui/src",
   "prefix": "inventory",
   "projectType": "library",
-  "tags": ["scope:web", "context:inventory", "type:ui"]
+  "tags": ["scope:web", "context:inventory", "type:ui"],
+  "targets": {
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "libs/web/inventory/ui/tsconfig.spec.json",
+        "buildTarget": "web:build:development",
+        "watch": false,
+        "coverage": true,
+        "coverageExclude": ["**/*.spec.ts", "**/index.ts"],
+        "coverageThresholds": {
+          "lines": 70,
+          "branches": 70,
+          "functions": 70,
+          "statements": 70
+        },
+        "coverageInclude": ["libs/web/inventory/ui/src/**/*.ts"]
+      }
+    }
+  }
 }
