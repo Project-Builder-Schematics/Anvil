@@ -4,7 +4,7 @@ import type { OrderLine } from '../domain/OrderLine';
 import type { Charges } from '../domain/driven-ports/Charges';
 import type { StockReservation } from '../domain/driven-ports/StockReservation';
 
-/** A gateway that took the request but whose answer never arrived. */
+/** A provider that took the request but whose answer never arrived. */
 export class NoAnswer extends Error {}
 
 interface Level {
@@ -22,6 +22,12 @@ export class FakeStockReservation implements StockReservation {
     { status: Status; lines: readonly OrderLine[] }
   >();
   readonly requests: (readonly OrderLine[])[] = [];
+  private silent = false;
+
+  /** The next commit gives no answer and changes nothing. */
+  giveNoAnswerOnce(): void {
+    this.silent = true;
+  }
 
   setOnHand(product: string, onHand: number): void {
     this.levels.set(product, {
@@ -59,6 +65,10 @@ export class FakeStockReservation implements StockReservation {
   }
 
   commit(orderId: OrderId): Promise<void> {
+    if (this.silent) {
+      this.silent = false;
+      return Promise.reject(new NoAnswer());
+    }
     this.settle(orderId, 'Committed', -1);
     return Promise.resolve();
   }
@@ -81,7 +91,7 @@ export class FakeStockReservation implements StockReservation {
   }
 }
 
-/** Keeps payments' contract: `tok_decline` is declined and not remembered, a captured order is charged once. */
+/** Keeps payments' contract: `tok_decline` and an amount it refuses (rule 21) are declined and not remembered, a captured order is charged once. */
 export class FakeCharges implements Charges {
   readonly requests: { total: Money; token: string }[] = [];
   private readonly captured = new Set<string>();
@@ -102,6 +112,7 @@ export class FakeCharges implements Charges {
     token: string,
   ): Promise<'Captured' | 'Declined'> {
     this.requests.push({ total, token });
+    if (total.amount <= 0) return Promise.resolve('Declined');
     if (this.captured.has(orderId.value)) return Promise.resolve('Captured');
     if (token === 'tok_decline') return Promise.resolve('Declined');
     this.captured.add(orderId.value);

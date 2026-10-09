@@ -1,4 +1,5 @@
 import { Given, When } from 'quickpickle';
+import { expect } from 'vitest';
 import type { OrderingWorld } from './world';
 
 When(
@@ -13,10 +14,11 @@ When(
 Given(
   'the order has been paid with the payment method {string}',
   async (world: OrderingWorld, token: string) => {
-    await world.placeOrder({
+    const { status } = await world.placeOrder({
       orderId: world.currentId,
       paymentMethodToken: token,
     });
+    expect(status).toBe('Paid');
   },
 );
 
@@ -30,6 +32,7 @@ Given(
         paymentMethodToken: 'tok_visa',
       }),
     );
+    expect(world.noAnswers).toBe(1);
     world.noAnswers = 0;
   },
 );

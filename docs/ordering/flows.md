@@ -73,7 +73,7 @@ sequenceDiagram
     U-->>C: INSUFFICIENT_STOCK (409)
   end
   U->>P: charge(orderId, total, paymentMethodToken)
-  alt declined (rule 14)
+  alt declined, or INVALID_AMOUNT (rules 14, 21)
     U->>S: release(orderId)
     U->>R: save(order Draft)
     U-->>C: PAYMENT_DECLINED (402)
@@ -84,6 +84,7 @@ sequenceDiagram
   U->>S: commit(orderId)
   U->>R: save(order Paid)
   U->>E: publish(OrderPaid)
+  Note over U: a failure from here on is not compensated (rule 20): the error propagates
   U-->>C: { orderId, status: Paid }
   Note over C: 200
 ```

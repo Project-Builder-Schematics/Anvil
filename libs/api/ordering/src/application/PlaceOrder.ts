@@ -62,7 +62,7 @@ export const makePlaceOrder = (
     await stockReservation.commit(placed.id);
     const paid = placed.pay();
     await orderRepository.save(paid);
-    await domainEvents.publish({ type: 'OrderPaid', orderId });
+    await domainEvents.publish({ type: 'OrderPaid', orderId: paid.id.value });
     return { orderId: paid.id.value, status: paid.status };
   };
 

@@ -40,8 +40,15 @@ describe('PaymentsCharges', () => {
     expect(await charges.charge(id, total, 'tok_decline')).toBe('Declined');
   });
 
+  it('answers Declined when payments refuses with INVALID_AMOUNT, as nothing was charged', async () => {
+    const charges = new PaymentsCharges(() =>
+      Promise.reject(refusal('INVALID_AMOUNT')),
+    );
+    expect(await charges.charge(id, total, 'tok_visa')).toBe('Declined');
+  });
+
   it.each([
-    ['another refusal', refusal('INVALID_AMOUNT')],
+    ['another refusal', refusal('SOMETHING_ELSE')],
     ['a failure without a code', new Error('timeout')],
   ])('lets %s through, as the outcome is unknown', async (_name, error) => {
     const charges = new PaymentsCharges(() => Promise.reject(error));

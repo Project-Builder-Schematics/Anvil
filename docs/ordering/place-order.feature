@@ -182,3 +182,43 @@ Feature: Place order
       When the order is placed with the payment method "tok_visa"
       Then it is refused with "INSUFFICIENT_STOCK"
       And the order is "Draft"
+
+  Rule: Rule 20 - Nothing is compensated once the charge is captured
+
+    @draft
+    Scenario: a stock commit with no answer leaves the order placed with the money taken
+      Given inventory gives no answer to the next commit
+      And 2 of "keyboard" is added to the order
+      When the order is placed with the payment method "tok_visa"
+      Then inventory gave no answer
+      And the order is "Placed"
+      And the number of charges payments has captured is 1
+      And the stock of "keyboard" is 5 on hand and 2 reserved
+      And no event is published
+
+    @draft
+    Scenario: placing the order again after the failed commit pays it with one charge
+      Given inventory gives no answer to the next commit
+      And 2 of "keyboard" is added to the order
+      When the order is placed with the payment method "tok_visa"
+      Then inventory gave no answer
+      When the order is placed with the payment method "tok_visa"
+      Then the order is "Paid"
+      And the number of charges payments has captured is 1
+      And the stock of "keyboard" is 3 on hand and 0 reserved
+      And the events published are
+        | event     |
+        | OrderPaid |
+
+  Rule: Rule 21 - A refusal that leaves nothing charged is treated as a decline
+
+    @draft
+    Scenario: an order with a total of 0 is refused as declined and goes back to Draft
+      Given the catalog prices "sticker" at 0 "USD"
+      And the stock of "sticker" is 5
+      And 1 of "sticker" is added to the order
+      When the order is placed with the payment method "tok_visa"
+      Then it is refused with "PAYMENT_DECLINED"
+      And the order is "Draft"
+      And the stock of "sticker" is 5 on hand and 0 reserved
+      And no event is published

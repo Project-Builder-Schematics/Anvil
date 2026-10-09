@@ -16,6 +16,9 @@ const setup = (
   outcomes: {
     reserve?: 'Reserved' | 'OutOfStock';
     charge?: 'Captured' | 'Declined' | Error;
+    commit?: Error;
+    savePaid?: Error;
+    publish?: Error;
   } = {},
 ) => {
   const calls: string[] = [];
@@ -28,8 +31,10 @@ const setup = (
     nextId: () => id,
     byId: () => Promise.resolve(stored),
     save: (saved) => {
-      stored = saved;
       calls.push(`save ${saved.status}`);
+      if (saved.status === 'Paid' && outcomes.savePaid)
+        return Promise.reject(outcomes.savePaid);
+      stored = saved;
       return Promise.resolve();
     },
   };
@@ -44,7 +49,9 @@ const setup = (
     },
     commit: () => {
       calls.push('commit');
-      return Promise.resolve();
+      return outcomes.commit
+        ? Promise.reject(outcomes.commit)
+        : Promise.resolve();
     },
   };
   const charges: Charges = {
@@ -59,7 +66,9 @@ const setup = (
   const events: DomainEvents = {
     publish: (event) => {
       calls.push(`publish ${event.type} ${event.orderId}`);
-      return Promise.resolve();
+      return outcomes.publish
+        ? Promise.reject(outcomes.publish)
+        : Promise.resolve();
     },
   };
   return {
@@ -116,6 +125,54 @@ describe('PlaceOrder', () => {
     await expect(place(command)).rejects.toBe(down);
     expect(calls).toEqual(['save Placed', 'reserve', 'charge 9000 tok']);
     expect(stored().status).toBe('Placed');
+  });
+
+  it('publishes the id of the order it paid, not the one in the command', async () => {
+    const { place, calls } = setup();
+
+    await place({ ...command, orderId: ' a' });
+
+    expect(calls).toContain('publish OrderPaid a');
+  });
+
+  describe('once the charge is captured', () => {
+    const down = new Error('down');
+
+    it('leaves the order placed, with its stock reserved, when the commit fails', async () => {
+      const { place, calls, stored } = setup({ commit: down });
+
+      await expect(place(command)).rejects.toBe(down);
+      expect(calls).toEqual([
+        'save Placed',
+        'reserve',
+        'charge 9000 tok',
+        'commit',
+      ]);
+      expect(stored().status).toBe('Placed');
+    });
+
+    it('leaves the order placed, without releasing the stock, when saving it paid fails', async () => {
+      const { place, calls, stored } = setup({ savePaid: down });
+
+      await expect(place(command)).rejects.toBe(down);
+      expect(calls).toEqual([
+        'save Placed',
+        'reserve',
+        'charge 9000 tok',
+        'commit',
+        'save Paid',
+      ]);
+      expect(stored().status).toBe('Placed');
+    });
+
+    it('keeps the order paid and loses the event when the publish fails', async () => {
+      const { place, calls, stored } = setup({ publish: down });
+
+      await expect(place(command)).rejects.toBe(down);
+      expect(calls.at(-1)).toBe('publish OrderPaid a');
+      expect(calls).not.toContain('release');
+      expect(stored().status).toBe('Paid');
+    });
   });
 
   it('runs two placements of one order one after the other', async () => {

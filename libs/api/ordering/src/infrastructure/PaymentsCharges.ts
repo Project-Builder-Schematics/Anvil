@@ -26,7 +26,10 @@ export class PaymentsCharges implements Charges {
       });
       return 'Captured';
     } catch (error) {
-      if (refusalCode(error) === 'PAYMENT_DECLINED') return 'Declined';
+      // INVALID_AMOUNT is checked before anything is stored or sent, so its outcome is known (rule 21).
+      const code = refusalCode(error);
+      if (code === 'PAYMENT_DECLINED' || code === 'INVALID_AMOUNT')
+        return 'Declined';
       throw error;
     }
   }

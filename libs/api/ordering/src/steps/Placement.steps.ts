@@ -13,7 +13,14 @@ Given('payments gives no answer to the next charge', (world: OrderingWorld) => {
   world.charges.giveNoAnswerOnce();
 });
 
-Then('payments gave no answer', (world: OrderingWorld) => {
+Given(
+  'inventory gives no answer to the next commit',
+  (world: OrderingWorld) => {
+    world.stock.giveNoAnswerOnce();
+  },
+);
+
+Then('{word} gave no answer', (world: OrderingWorld) => {
   expect(world.noAnswers).toBe(1);
   world.noAnswers = 0;
 });
