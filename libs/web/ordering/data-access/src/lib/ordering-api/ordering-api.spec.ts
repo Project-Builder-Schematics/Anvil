@@ -65,23 +65,32 @@ describe('OrderingApi', () => {
     expect(result).toEqual(order);
   });
 
-  it.each(['place', 'cancel'] as const)(
-    'posts %s with no body and answers the new status',
-    (action) => {
-      let result: unknown;
-      api[action]('o1').subscribe((value) => (result = value));
+  it('posts place with the payment method token and answers the new status', () => {
+    let result: unknown;
+    api.place('o1', 'tok_visa').subscribe((value) => (result = value));
 
-      const request = http.expectOne(`/api/orders/o1/${action}`);
-      expect(request.request.method).toBe('POST');
-      expect(request.request.body).toBeNull();
-      request.flush({ orderId: 'o1', status: 'Placed' });
+    const request = http.expectOne('/api/orders/o1/place');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ paymentMethodToken: 'tok_visa' });
+    request.flush({ orderId: 'o1', status: 'Paid' });
 
-      expect(result).toEqual({ orderId: 'o1', status: 'Placed' });
-    },
-  );
+    expect(result).toEqual({ orderId: 'o1', status: 'Paid' });
+  });
+
+  it('posts cancel with no body and answers the new status', () => {
+    let result: unknown;
+    api.cancel('o1').subscribe((value) => (result = value));
+
+    const request = http.expectOne('/api/orders/o1/cancel');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ orderId: 'o1', status: 'Cancelled' });
+
+    expect(result).toEqual({ orderId: 'o1', status: 'Cancelled' });
+  });
 
   it('encodes the order id in the path', () => {
-    api.place('a/b c').subscribe();
+    api.place('a/b c', 'tok_visa').subscribe();
 
     http.expectOne('/api/orders/a%2Fb%20c/place').flush({});
   });

@@ -54,8 +54,16 @@ export class OrderStore {
     );
   }
 
-  place(): Promise<boolean> {
-    return this.changeStatus((orderId) => this.api.place(orderId));
+  /** A server error leaves the payment outcome unknown (rule 17): read the order again, which stays `Placed`. */
+  async place(paymentMethodToken: string): Promise<boolean> {
+    const placed = await this.changeStatus((orderId) =>
+      this.api.place(orderId, paymentMethodToken),
+    );
+    if (!placed && this.commandError() === 'SERVER_ERROR') {
+      this._commandError.set('PAYMENT_OUTCOME_UNKNOWN');
+      this.resource.reload();
+    }
+    return placed;
   }
 
   cancel(): Promise<boolean> {

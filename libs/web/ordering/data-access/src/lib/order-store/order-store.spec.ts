@@ -152,7 +152,7 @@ describe('OrderStore', () => {
         false,
       );
       expect(store.error()).toBe('COMMAND_IN_PROGRESS');
-      expect(await store.place()).toBe(false);
+      expect(await store.place('tok_visa')).toBe(false);
 
       http
         .expectOne('/api/orders/o1/lines')
@@ -179,7 +179,7 @@ describe('OrderStore', () => {
 
   describe.each([
     ['addLine', (store: OrderStore) => store.addLine(keyboard)],
-    ['place', (store: OrderStore) => store.place()],
+    ['place', (store: OrderStore) => store.place('tok_visa')],
     ['cancel', (store: OrderStore) => store.cancel()],
   ] as const)('%s without an open order', (_name, command) => {
     it('sends nothing and says the order was not found', async () => {
@@ -215,12 +215,12 @@ describe('OrderStore', () => {
 
     it('does not put a status change on the other order', async () => {
       await open({ ...draft, lines: [keyboard] });
-      const placing = store.place();
+      const placing = store.place('tok_visa');
       await openSecond();
 
       http.expectOne('/api/orders/o1/place').flush({
         orderId: 'o1',
-        status: 'Placed',
+        status: 'Paid',
       });
 
       expect(await placing).toBe(false);
@@ -276,13 +276,13 @@ describe('OrderStore', () => {
   });
 
   describe.each([
-    ['place', 'Placed'],
-    ['cancel', 'Cancelled'],
-  ] as const)('%s', (action, status) => {
+    ['place', 'Paid', (store: OrderStore) => store.place('tok_visa')],
+    ['cancel', 'Cancelled', (store: OrderStore) => store.cancel()],
+  ] as const)('%s', (action, status, command) => {
     it(`sets the status to ${status} and keeps the lines`, async () => {
       await open({ ...draft, lines: [keyboard] });
 
-      const done = store[action]();
+      const done = command(store);
       http
         .expectOne(`/api/orders/o1/${action}`)
         .flush({ orderId: 'o1', status });
@@ -294,7 +294,7 @@ describe('OrderStore', () => {
     it('exposes the code of a refusal and leaves the order as it was', async () => {
       await open();
 
-      const done = store[action]();
+      const done = command(store);
       http
         .expectOne(`/api/orders/o1/${action}`)
         .flush(
@@ -305,6 +305,76 @@ describe('OrderStore', () => {
       expect(await done).toBe(false);
       expect(store.order()).toEqual(draft);
       expect(store.error()).toBe('ORDER_NOT_EDITABLE');
+    });
+  });
+
+  describe('place with a payment token', () => {
+    const withLine = { ...draft, lines: [keyboard] };
+
+    it('sends the token', async () => {
+      await open(withLine);
+
+      const placing = store.place('tok_visa');
+      const request = http.expectOne('/api/orders/o1/place');
+      expect(request.request.body).toEqual({ paymentMethodToken: 'tok_visa' });
+      request.flush({ orderId: 'o1', status: 'Paid' });
+
+      expect(await placing).toBe(true);
+    });
+
+    it.each([
+      [402, 'PAYMENT_DECLINED'],
+      [409, 'INSUFFICIENT_STOCK'],
+    ])(
+      'keeps the order a draft when the server refuses with %d %s',
+      async (status, code) => {
+        await open(withLine);
+
+        const placing = store.place('tok_decline');
+        http
+          .expectOne('/api/orders/o1/place')
+          .flush({ statusCode: status, code }, refusal(status, code));
+
+        expect(await placing).toBe(false);
+        expect(store.order()).toEqual(withLine);
+        expect(store.error()).toBe(code);
+      },
+    );
+
+    it('reads the order again when the outcome is unknown, and finds it placed', async () => {
+      await open(withLine);
+
+      const placing = store.place('tok_visa');
+      http
+        .expectOne('/api/orders/o1/place')
+        .flush(
+          { statusCode: 500, message: 'Internal server error' },
+          refusal(500, 'Internal Server Error'),
+        );
+
+      expect(await placing).toBe(false);
+      expect(store.error()).toBe('PAYMENT_OUTCOME_UNKNOWN');
+      TestBed.tick();
+      http.expectOne('/api/orders/o1').flush({ ...withLine, status: 'Placed' });
+      await settle();
+
+      expect(store.order()?.status).toBe('Placed');
+      expect(store.error()).toBe('PAYMENT_OUTCOME_UNKNOWN');
+    });
+
+    it('does not call another command unknown on a server error', async () => {
+      await open(withLine);
+
+      const cancelling = store.cancel();
+      http
+        .expectOne('/api/orders/o1/cancel')
+        .flush(
+          { statusCode: 500, message: 'Internal server error' },
+          refusal(500, 'Internal Server Error'),
+        );
+
+      expect(await cancelling).toBe(false);
+      expect(store.error()).toBe('SERVER_ERROR');
     });
   });
 });

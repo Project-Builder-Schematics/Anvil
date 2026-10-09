@@ -12,7 +12,7 @@
   [canPlace]="canPlace(order)"
   [canCancel]="canCancel(order)"
   [busy]="store.busy()"
-  (placeOrder)="place()"
+  (placeOrder)="place($event)"
   (cancelOrder)="cancel()"
 />
 } @else {

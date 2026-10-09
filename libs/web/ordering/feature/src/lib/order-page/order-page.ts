@@ -50,8 +50,8 @@ export class OrderPage {
     return this.announce(this.store.addLine(line), 'Line added.');
   }
 
-  protected place(): Promise<void> {
-    return this.announce(this.store.place(), 'Order placed.');
+  protected place(paymentMethodToken: string): Promise<void> {
+    return this.announce(this.store.place(paymentMethodToken), 'Order paid.');
   }
 
   protected cancel(): Promise<void> {

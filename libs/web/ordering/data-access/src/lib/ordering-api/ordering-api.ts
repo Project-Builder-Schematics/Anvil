@@ -22,8 +22,10 @@ export class OrderingApi {
     return this.http.post<Order>(path(orderId, '/lines'), line);
   }
 
-  place(orderId: string) {
-    return this.http.post<OrderStatusChange>(path(orderId, '/place'), null);
+  place(orderId: string, paymentMethodToken: string) {
+    return this.http.post<OrderStatusChange>(path(orderId, '/place'), {
+      paymentMethodToken,
+    });
   }
 
   cancel(orderId: string) {

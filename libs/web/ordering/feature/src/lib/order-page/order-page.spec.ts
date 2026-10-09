@@ -155,21 +155,92 @@ describe('OrderPage', () => {
     expect(text('[role=alert]')).toBe('');
   });
 
-  it('places the order: it is paid, and editing, placing and cancelling are closed', async () => {
+  const place = async (token = 'tok_visa') => {
+    await type('#payment-token', token);
+    button('Place order')?.click();
+    await settle();
+  };
+
+  it('places the order with the payment token: it is paid, and editing, placing and cancelling are closed', async () => {
     await open(withLine);
+
+    await place('  tok_visa ');
+    const request = http.expectOne('/api/orders/o1/place');
+    expect(request.request.body).toEqual({ paymentMethodToken: 'tok_visa' });
+    request.flush({ orderId: 'o1', status: 'Paid' });
+    await settle();
+
+    expect(text('.status')).toBe('Status: Paid');
+    expect(text('[role=status]')).toBe('Order paid.');
+    expect(text('[role=alert]')).toBe('');
+    expect(button('Place order')?.disabled).toBe(true);
+    expect(button('Add line')?.disabled).toBe(true);
+    expect(
+      page.querySelector<HTMLInputElement>('#add-line-product')?.disabled,
+    ).toBe(true);
+    expect(
+      page.querySelector<HTMLInputElement>('#payment-token')?.disabled,
+    ).toBe(true);
+    expect(button('Cancel order')?.disabled).toBe(true);
+  });
+
+  it('asks for a payment token before it places', async () => {
+    await open(withLine);
+
+    button('Place order')?.click();
+    await settle();
+
+    http.expectNone('/api/orders/o1/place');
+    expect(text('#payment-token-error')).toBe('Enter a payment token.');
+  });
+
+  it.each([
+    [402, 'PAYMENT_DECLINED', 'tok_decline', 'The payment was declined'],
+    [409, 'INSUFFICIENT_STOCK', 'tok_visa', 'There is not enough stock'],
+  ])(
+    'shows the message of a %d %s and leaves a draft that can be placed again',
+    async (status, code, token, message) => {
+      await open(withLine);
+
+      await place(token);
+      await answer('/api/orders/o1/place', null, status, code);
+
+      expect(text('[role=alert]')).toContain(message);
+      expect(text('.status')).toBe('Status: Draft');
+      expect(text('[role=status]')).toBe('');
+      expect(button('Place order')?.disabled).toBe(false);
+      expect(button('Cancel order')?.disabled).toBe(false);
+      expect(
+        page.querySelector<HTMLInputElement>('#payment-token')?.value,
+      ).toBe(token);
+    },
+  );
+
+  it('says the payment result is unknown after a server error, shows the order placed, and lets the user place it again', async () => {
+    await open(withLine);
+
+    await place();
+    // The order is read again right away, so the app is not stable until that read is answered.
+    http
+      .expectOne('/api/orders/o1/place')
+      .flush({ message: 'oops' }, { status: 500, statusText: 'Server Error' });
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    harness.detectChanges();
+    await answer('/api/orders/o1', { ...withLine, status: 'Placed' });
+
+    expect(text('[role=alert]')).toContain('payment result is unknown');
+    expect(text('[role=alert]')).toContain('placing the order again is safe');
+    expect(text('.status')).toBe('Status: Placed');
+    expect(button('Place order')?.disabled).toBe(false);
+    expect(button('Cancel order')?.disabled).toBe(true);
 
     button('Place order')?.click();
     await settle();
     await answer('/api/orders/o1/place', { orderId: 'o1', status: 'Paid' });
 
     expect(text('.status')).toBe('Status: Paid');
-    expect(text('[role=status]')).toBe('Order placed.');
-    expect(button('Place order')?.disabled).toBe(true);
-    expect(button('Add line')?.disabled).toBe(true);
-    expect(
-      page.querySelector<HTMLInputElement>('#add-line-product')?.disabled,
-    ).toBe(true);
-    expect(button('Cancel order')?.disabled).toBe(true);
+    expect(text('[role=status]')).toBe('Order paid.');
+    expect(text('[role=alert]')).toBe('');
   });
 
   it('lets an order left placed by an unknown payment outcome be placed again, but not cancelled (rules 17 and 19)', async () => {
@@ -252,6 +323,10 @@ describe('OrderPage', () => {
     button('Cancel order')?.click();
     await settle();
     await answer('/api/orders/o1/cancel', null, 409, 'ORDER_NOT_CANCELLABLE');
+    expect(await axeViolations(page)).toEqual([]);
+
+    await place('tok_decline');
+    await answer('/api/orders/o1/place', null, 402, 'PAYMENT_DECLINED');
     expect(await axeViolations(page)).toEqual([]);
   });
 

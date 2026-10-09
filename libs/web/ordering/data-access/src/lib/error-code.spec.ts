@@ -17,12 +17,25 @@ describe('errorCodeOf', () => {
     );
   });
 
+  it('calls a server failure without a code a server error', () => {
+    expect(
+      errorCodeOf(failure(500, { message: 'Internal server error' })),
+    ).toBe('SERVER_ERROR');
+    expect(errorCodeOf(failure(502, 'Bad Gateway'))).toBe('SERVER_ERROR');
+    expect(errorCodeOf(failure(500, null))).toBe('SERVER_ERROR');
+  });
+
+  it('keeps the code of a coded server failure', () => {
+    expect(
+      errorCodeOf(failure(500, { statusCode: 500, code: 'SOMETHING_NEW' })),
+    ).toBe('SOMETHING_NEW');
+  });
+
   it('calls everything else unknown: a body without a code, a body that is not an object, any other error', () => {
     expect(errorCodeOf(failure(400, { message: ['bad body'] }))).toBe(
       'UNKNOWN',
     );
-    expect(errorCodeOf(failure(500, 'Internal Server Error'))).toBe('UNKNOWN');
-    expect(errorCodeOf(failure(500, null))).toBe('UNKNOWN');
+    expect(errorCodeOf(failure(404, 'Not Found'))).toBe('UNKNOWN');
     expect(errorCodeOf(new Error('boom'))).toBe('UNKNOWN');
     expect(errorCodeOf(undefined)).toBe('UNKNOWN');
   });
